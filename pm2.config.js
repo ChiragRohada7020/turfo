@@ -1,0 +1,30 @@
+module.exports = {
+  apps: [
+    {
+      name: 'turf-app',
+      script: 'npm',
+      args: 'start',
+      cwd: '/home/ubuntu/turf_2.0',
+      instances: 1,
+      exec_mode: 'fork',
+      env: {
+        NODE_ENV: 'production',
+        PORT: 3000,
+        DATABASE_URL: 'postgresql://postgres:postgres@localhost:5432/turf_booking',
+        NEXTAUTH_URL: 'https://erp.rohadas.in',
+        NEXTAUTH_SECRET: 'generate-with-openssl-rand-base64-32',
+      },
+      error_file: '/home/ubuntu/turf_2.0/logs/turf-app-error.log',
+      out_file: '/home/ubuntu/turf_2.0/logs/turf-app-out.log',
+      log_file: '/home/ubuntu/turf_2.0/logs/turf-app-combined.log',
+      time: true,
+      max_memory_restart: '1G',
+      node_args: '--max-old-space-size=1024',
+      watch: false,
+      ignore_watch: ['node_modules', '.next', 'logs', '*.log'],
+      restart_delay: 5000,
+      max_restarts: 10,
+      min_uptime: '30s',
+    },
+  ],
+}

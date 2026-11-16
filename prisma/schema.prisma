@@ -1,0 +1,282 @@
+// Prisma Schema for Sports Booking Platform
+// Oracle Database compatible (requires @prisma/adapter-oracle)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Core models
+model User {
+  id              String    @id @default(cuid())
+  email           String    @unique
+  passwordHash    String?
+  name            String?
+  phone           String?
+  role            Role      @default(PLAYER)
+  avatarUrl       String?
+  isPhoneVerified Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  facilities      Facility[]
+  bookings        Booking[]
+  reviews         Review[]
+  notifications   Notification[]
+  cashfreeAccount CashfreeAccount?
+  teamMembers     TeamMember[]
+  captainOf       Team[]    @relation("TeamCaptain")
+}
+
+model Facility {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  address     String
+  city        String
+  state       String
+  country     String
+  postalCode  String
+  latitude    Float
+  longitude   Float
+  sportTypes  SportType[]
+  amenities   String[]
+  images      String[]
+  ownerId     String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  owner       User       @relation(fields: [ownerId], references: [id])
+  courts      Court[]
+  bookings    Booking[]
+  reviews     Review[]
+  pricingRules PricingRule[]
+  availability Availability[]
+}
+
+model Court {
+  id           String   @id @default(cuid())
+  name         String
+  facilityId   String
+  sportType    SportType
+  surfaceType  SurfaceType?
+  capacity     Int
+  dimensions   String?
+  isActive     Boolean  @default(true)
+
+  facility     Facility     @relation(fields: [facilityId], references: [id])
+  pricingRules PricingRule[]
+  availability Availability[]
+  bookings     Booking[]
+}
+
+model PricingRule {
+  id           String   @id @default(cuid())
+  facilityId   String?
+  courtId      String?
+  name         String
+  dayOfWeek    Int[]
+  startTime    String
+  endTime      String
+  pricePerHour Float
+  minDuration  Int      @default(60)
+  maxDuration  Int?
+  isActive     Boolean  @default(true)
+
+  facility     Facility? @relation(fields: [facilityId], references: [id])
+  court        Court?    @relation(fields: [courtId], references: [id])
+}
+
+model Availability {
+  id         String   @id @default(cuid())
+  facilityId String?
+  courtId    String?
+  date       DateTime
+  startTime  String
+  endTime    String
+  isBlocked  Boolean  @default(false)
+  note       String?
+
+  facility   Facility? @relation(fields: [facilityId], references: [id])
+  court      Court?    @relation(fields: [courtId], references: [id])
+}
+
+model Booking {
+  id              String       @id @default(cuid())
+  userId          String
+  facilityId      String
+  courtId         String?
+  teamId          String?
+  startTime       DateTime
+  endTime         DateTime
+  duration        Int
+  totalPrice      Float
+  status          BookingStatus @default(PENDING)
+  cashfreeOrderId String?
+  cashfreePaymentId String?
+  notes           String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  user            User         @relation(fields: [userId], references: [id])
+  facility        Facility     @relation(fields: [facilityId], references: [id])
+  court           Court?       @relation(fields: [courtId], references: [id])
+  team            Team?        @relation(fields: [teamId], references: [id])
+  payment         Payment?
+  review          Review?
+}
+
+model Payment {
+  id                 String        @id @default(cuid())
+  bookingId          String        @unique
+  amount             Float
+  platformFee        Float
+  ownerPayout        Float
+  cashfreePaymentId  String
+  cashfreeOrderId    String
+  status             PaymentStatus @default(PENDING)
+  paidAt             DateTime?
+  payoutId           String?
+  payoutStatus       PayoutStatus  @default(PENDING)
+  createdAt          DateTime      @default(now())
+
+  booking            Booking       @relation(fields: [bookingId], references: [id])
+}
+
+model Review {
+  id          String   @id @default(cuid())
+  userId      String
+  facilityId  String
+  bookingId   String   @unique
+  rating      Int
+  comment     String?
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id])
+  facility    Facility @relation(fields: [facilityId], references: [id])
+  booking     Booking  @relation(fields: [bookingId], references: [id])
+}
+
+model Team {
+  id          String   @id @default(cuid())
+  name        String
+  captainId   String
+  createdAt   DateTime @default(now())
+
+  members     TeamMember[]
+  bookings    Booking[]
+  captain     User     @relation("TeamCaptain", fields: [captainId], references: [id])
+}
+
+model TeamMember {
+  id        String   @id @default(cuid())
+  userId    String
+  teamId    String
+  role      TeamRole @default(MEMBER)
+  joinedAt  DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id])
+  team      Team     @relation(fields: [teamId], references: [id])
+
+  @@unique([userId, teamId])
+}
+
+model Notification {
+  id        String            @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String
+  data      Json?
+  isRead    Boolean           @default(false)
+  createdAt DateTime          @default(now())
+
+  user      User              @relation(fields: [userId], references: [id])
+}
+
+model CashfreeAccount {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  cashfreeContactId String @unique
+  isVerified      Boolean  @default(false)
+  bankAccountVerified Boolean @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user            User     @relation(fields: [userId], references: [id])
+}
+
+// Enums
+enum Role {
+  PLAYER
+  OWNER
+  ADMIN
+}
+
+enum SportType {
+  FOOTBALL
+  CRICKET
+  TENNIS
+  BADMINTON
+  BASKETBALL
+  VOLLEYBALL
+  SWIMMING
+  GYM
+  MULTI_SPORT
+  OTHER
+}
+
+enum SurfaceType {
+  GRASS
+  ARTIFICIAL_TURF
+  CLAY
+  HARD_COURT
+  WOOD
+  SYNTHETIC
+  WATER
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+  PARTIAL_REFUND
+}
+
+enum PayoutStatus {
+  PENDING
+  PROCESSING
+  SUCCESS
+  FAILED
+}
+
+enum TeamRole {
+  CAPTAIN
+  MEMBER
+}
+
+enum NotificationType {
+  BOOKING_CONFIRMED
+  BOOKING_CANCELLED
+  BOOKING_REMINDER
+  PAYMENT_SUCCESS
+  PAYOUT_READY
+  REVIEW_RECEIVED
+  SYSTEM
+  OTP_VERIFICATION
+}
