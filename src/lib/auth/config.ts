@@ -41,6 +41,13 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Invalid credentials")
         }
 
+        // Owner accounts require admin approval before they can log in
+        if (user.role === "OWNER" && !user.isVerified) {
+          throw new Error(
+            "Your owner account is pending admin verification. Please wait for approval before signing in."
+          )
+        }
+
         return {
           id: user.id,
           email: user.email,

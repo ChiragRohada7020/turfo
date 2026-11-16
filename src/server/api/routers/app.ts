@@ -1065,7 +1065,7 @@ export const appRouter = createTRPCRouter({
         const [users, total] = await Promise.all([
           prisma.user.findMany({
             where,
-            select: { id: true, email: true, name: true, phone: true, role: true, isPhoneVerified: true, createdAt: true },
+            select: { id: true, email: true, name: true, phone: true, role: true, isPhoneVerified: true, isVerified: true, createdAt: true },
             skip: (input.page - 1) * input.limit,
             take: input.limit,
             orderBy: { createdAt: "desc" },
@@ -1133,6 +1133,56 @@ export const appRouter = createTRPCRouter({
         ])
 
         return { payouts, total, page: input.page, totalPages: Math.ceil(total / input.limit) }
+      }),
+
+    pendingOwners: adminProcedure
+      .input(z.object({ page: z.number().default(1), limit: z.number().default(20) }))
+      .query(async ({ input }) => {
+        const where: Prisma.UserWhereInput = {
+          role: Role.OWNER,
+          isVerified: false,
+        }
+
+        const [users, total] = await Promise.all([
+          prisma.user.findMany({
+            where,
+            select: { id: true, email: true, name: true, phone: true, createdAt: true },
+            skip: (input.page - 1) * input.limit,
+            take: input.limit,
+            orderBy: { createdAt: "desc" },
+          }),
+          prisma.user.count({ where }),
+        ])
+
+        return { users, total, page: input.page, totalPages: Math.ceil(total / input.limit) }
+      }),
+
+    verifyOwner: adminProcedure
+      .input(
+        z.object({
+          userId: z.string(),
+          action: z.enum(["VERIFY", "REJECT"]),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const user = await prisma.user.findUnique({
+          where: { id: input.userId },
+        })
+
+        if (!user) throw new Error("User not found")
+        if (user.role !== "OWNER") throw new Error("Only owner accounts can be verified")
+
+        if (input.action === "VERIFY") {
+          return prisma.user.update({
+            where: { id: input.userId },
+            data: { isVerified: true },
+          })
+        }
+
+        // REJECT: delete the unverified owner account
+        return prisma.user.delete({
+          where: { id: input.userId },
+        })
       }),
   }),
 })

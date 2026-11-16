@@ -196,17 +196,22 @@ export default function SearchPageContent() {
             Pachora, MH
             <ChevronDown className="h-4 w-4 text-slate-500" />
           </div>
-          <div className="relative mx-auto w-full max-w-[590px]">
-            <SearchIcon className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-            <input
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search turfs, sports, or locations..."
-              className="h-10 w-full rounded-xl border border-white/10 bg-[#121b24] pl-10 pr-4 text-sm text-white outline-none placeholder:text-slate-500 focus:border-lime-400/50"
-            />
+          <div className="relative mx-auto w-full max-w-[590px] flex gap-2">
+            <div className="relative flex-1">
+              <SearchIcon className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+              <input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search turfs, sports, or locations..."
+                className="h-10 w-full rounded-xl border border-white/10 bg-[#121b24] pl-10 pr-4 text-sm text-white outline-none placeholder:text-slate-500 focus:border-lime-400/50"
+              />
+            </div>
+            <button className="px-4 py-2 rounded-xl bg-lime-400 text-black font-bold text-sm hover:bg-lime-300 transition shrink-0">
+              Search
+            </button>
           </div>
           <button aria-label="Notifications" className="relative rounded-full border border-white/10 bg-[#121b24] p-2.5 text-slate-300">
-            <BellIcon className="h-4 w-4" />
+            <BellIcon />
             <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500" />
           </button>
           <div className="flex items-center gap-2">

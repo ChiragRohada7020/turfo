@@ -27,6 +27,7 @@ export default function LoginPageContent() {
   const callbackUrl = searchParams.get("callbackUrl") || "/dashboard"
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [verificationError, setVerificationError] = useState<string | null>(null)
 
   const {
     register,
@@ -38,6 +39,7 @@ export default function LoginPageContent() {
 
   const onSubmit = async (data: LoginForm) => {
     setIsLoading(true)
+    setVerificationError(null)
     try {
       const result = await signIn("credentials", {
         email: data.email,
@@ -47,13 +49,16 @@ export default function LoginPageContent() {
       })
 
       if (result?.error) {
+        setVerificationError(result.error)
         toast({ title: "Error", description: result.error, variant: "destructive" })
       } else {
         toast({ title: "Success", description: "Welcome back!" })
         window.location.href = result?.url || callbackUrl
       }
     } catch (error) {
-      toast({ title: "Error", description: "Something went wrong", variant: "destructive" })
+      const msg = error instanceof Error ? error.message : "Something went wrong"
+      setVerificationError(msg)
+      toast({ title: "Error", description: msg, variant: "destructive" })
     } finally {
       setIsLoading(false)
     }
@@ -78,6 +83,11 @@ export default function LoginPageContent() {
             <h1 className="text-2xl font-bold text-center mb-2">Welcome Back</h1>
             <p className="text-slate-400 text-center text-sm mb-6">Sign in to your account to continue</p>
 
+            {verificationError && (
+              <div className="mb-4 p-4 rounded-lg bg-amber-500/10 border border-amber-500/30">
+                <p className="text-sm text-amber-200">{verificationError}</p>
+              </div>
+            )}
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-slate-300">Email</Label>

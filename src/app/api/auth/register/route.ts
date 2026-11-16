@@ -35,6 +35,9 @@ export async function POST(request: NextRequest) {
     // Validate role (only PLAYER or OWNER allowed via registration)
     const userRole = role === "OWNER" ? Role.OWNER : Role.PLAYER
 
+    // Players are auto-verified; owners require admin approval before login
+    const isAutoVerified = userRole === Role.PLAYER
+
     // Hash password
     const passwordHash = await bcrypt.hash(password, 12)
 
@@ -47,6 +50,7 @@ export async function POST(request: NextRequest) {
         phone: phone?.trim() || null,
         role: userRole,
         isPhoneVerified: false,
+        isVerified: isAutoVerified,
       },
     })
 

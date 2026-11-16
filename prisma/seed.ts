@@ -17,6 +17,7 @@ async function main() {
       passwordHash: adminPassword,
       role: Role.ADMIN,
       isPhoneVerified: true,
+      isVerified: true,
     },
   })
   console.log("✅ Admin user created:", admin.email)
@@ -33,6 +34,7 @@ async function main() {
       role: Role.OWNER,
       phone: "+919876543210",
       isPhoneVerified: true,
+      isVerified: false, // pending admin approval
     },
   })
   console.log("✅ Owner user created:", owner.email)
@@ -49,6 +51,7 @@ async function main() {
       role: Role.PLAYER,
       phone: "+919876543211",
       isPhoneVerified: true,
+      isVerified: true,
     },
   })
   console.log("✅ Player user created:", player.email)

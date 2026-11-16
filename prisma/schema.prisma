@@ -20,6 +20,7 @@ model User {
   role            Role      @default(PLAYER)
   avatarUrl       String?
   isPhoneVerified Boolean   @default(false)
+  isVerified      Boolean   @default(false)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
