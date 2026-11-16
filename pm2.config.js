@@ -12,7 +12,7 @@ module.exports = {
         PORT: 3000,
         DATABASE_URL: 'postgresql://postgres:postgres@localhost:5432/turf_booking',
         NEXTAUTH_URL: 'https://erp.rohadas.in',
-        NEXTAUTH_SECRET: 'generate-with-openssl-rand-base64-32',
+        NEXTAUTH_SECRET: 'F50s4ouMIEKRrUTtT3TjLCpCsCOWBvRws+oq/3fQg64=',
       },
       error_file: '/home/ubuntu/turf_2.0/logs/turf-app-error.log',
       out_file: '/home/ubuntu/turf_2.0/logs/turf-app-out.log',

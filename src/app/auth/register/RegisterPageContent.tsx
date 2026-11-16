@@ -45,7 +45,14 @@ export default function RegisterPageContent() {
     formState: { errors },
   } = useForm<RegisterForm>({
     resolver: zodResolver(registerSchema),
-    defaultValues: { role: defaultRole },
+    defaultValues: {
+      name: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+      phone: "",
+      role: defaultRole,
+    },
   })
 
   const password = watch("password")
@@ -81,7 +88,8 @@ export default function RegisterPageContent() {
     }
   }
 
-  const getPasswordStrength = (pwd: string) => {
+  const getPasswordStrength = (pwd?: string | null) => {
+    if (!pwd) return 0
     let strength = 0
     if (pwd.length >= 8) strength++
     if (/[A-Z]/.test(pwd)) strength++
