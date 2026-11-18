@@ -35,7 +35,7 @@ export default function TeamDetailPage() {
           <Users className="w-12 h-12 text-lime-400 mx-auto mb-4" />
           <h1 className="text-2xl font-bold">Team Not Found</h1>
           <p className="mt-2 text-sm text-slate-400">This team does not exist.</p>
-          <Link href="/teams" className="mt-6 w-full">
+          <Link href="/dashboard/teams" className="mt-6 w-full">
             <Button className="w-full bg-lime-400 font-bold text-black hover:bg-lime-300">Back to Teams</Button>
           </Link>
         </div>
@@ -50,7 +50,7 @@ export default function TeamDetailPage() {
       <Sidebar session={session} />
       <div className="pt-14 md:pt-0 md:pl-[262px]">
         <div className="max-w-4xl mx-auto p-4 sm:p-6">
-          <Link href="/teams" className="text-sm text-slate-400 hover:text-white mb-4 inline-block">
+          <Link href="/dashboard/teams" className="text-sm text-slate-400 hover:text-white mb-4 inline-block">
             ← Back to Teams
           </Link>
           <Card className="bg-[#111a22] border-white/10">

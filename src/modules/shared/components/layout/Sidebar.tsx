@@ -52,15 +52,15 @@ export function Sidebar({ session, extra }: SidebarProps) {
       )}
 
       {/* Desktop sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[262px] flex-col border-r border-white/[0.08] bg-[#080f15] md:flex">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[262px] flex-col overflow-hidden border-r border-white/[0.08] bg-[#080f15] md:flex">
         <Brand />
-        <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-5">
+        <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto px-4 py-6">
           {navItems.map((item) => (
             <Link
               key={item.name}
               href={item.href}
               className={cn(
-                "flex items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-medium transition",
+                "flex items-center gap-3 rounded-xl px-4 py-3.5 text-sm font-medium transition",
                 active(item.href)
                   ? "bg-green-600 text-white shadow-lg shadow-green-950/30"
                   : "text-slate-300 hover:bg-white/[0.06] hover:text-white"
@@ -88,7 +88,7 @@ export function Sidebar({ session, extra }: SidebarProps) {
       {/* Mobile slide-out sidebar */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-[280px] flex-col border-r border-white/10 bg-[#080f15] transition-transform md:hidden",
+          "fixed inset-y-0 left-0 z-50 flex w-[280px] flex-col overflow-hidden border-r border-white/10 bg-[#080f15] transition-transform md:hidden",
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
@@ -102,14 +102,14 @@ export function Sidebar({ session, extra }: SidebarProps) {
             <X className="h-5 w-5" />
           </button>
         </div>
-        <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-5">
+        <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto px-4 py-6">
           {navItems.map((item) => (
             <Link
               key={item.name}
               href={item.href}
               onClick={() => setSidebarOpen(false)}
               className={cn(
-                "flex items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-medium transition",
+                "flex items-center gap-3 rounded-xl px-4 py-3.5 text-sm font-medium transition",
                 active(item.href)
                   ? "bg-green-600 text-white shadow-lg shadow-green-950/30"
                   : "text-slate-300 hover:bg-white/[0.06] hover:text-white"

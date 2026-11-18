@@ -1,0 +1,8 @@
+/bin/bash: line 1: svg]:w-full
+                dangerouslySetInnerHTML={{ __html: svgContent }}
+              />
+            ) : ('''
+)
+open('src/components/booking/QRCodeModal.tsx', 'w').write(content)
+print('done')
+: No such file or directory

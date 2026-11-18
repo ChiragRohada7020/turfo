@@ -27,7 +27,7 @@ import { toast } from "@/hooks/use-toast"
 import { Sidebar } from "@/modules/shared/components/layout/Sidebar"
 
 export default function OpenGamesPage() {
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
   const [search, setSearch] = useState("")
   const [activeFilter, setActiveFilter] = useState("All Games")
 
@@ -38,8 +38,7 @@ export default function OpenGamesPage() {
   } = trpc.bookings.publicBookings.useQuery(
     { limit: 20 },
     {
-      refetchOnMount: true,
-      refetchOnWindowFocus: true
+      keepPreviousData: true,
     }
   )
 
@@ -102,6 +101,14 @@ export default function OpenGamesPage() {
       sum + 1 + (game.participants?.length || 0),
     0
   )
+
+  if (status === "loading") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#070d12]">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-lime-400 border-t-transparent" />
+      </div>
+    )
+  }
 
   if (!session) {
     return (

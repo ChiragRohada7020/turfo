@@ -37,7 +37,7 @@ const navigation = [
   { name: "Home", href: "/", icon: Home },
   { name: "Search", href: "/search", icon: Search },
   { name: "Bookings", href: "/dashboard/bookings", icon: Calendar },
-  { name: "Teams", href: "/teams", icon: Users },
+  { name: "Teams", href: "/dashboard/teams", icon: Users },
 ]
 
 export function MobileBottomNav() {

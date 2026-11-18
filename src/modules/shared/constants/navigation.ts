@@ -27,7 +27,7 @@ export const PLAYER_NAV: NavItem[] = [
   { name: "My Bookings", href: "/dashboard/bookings", icon: Ticket },
   { name: "Open Games", href: "/dashboard/open-games", icon: Users },
   { name: "Offers", href: "/dashboard/offers", icon: Gift },
-  { name: "Find Players", href: "/dashboard/teams", icon: Users },
+  { name: "Find Players", href: "/find-players", icon: Users },
   { name: "Teams", href: "/dashboard/teams", icon: ShieldCheck },
   { name: "Tournaments", href: "/tournaments", icon: Trophy },
   { name: "Wallet", href: "/wallet", icon: Wallet },

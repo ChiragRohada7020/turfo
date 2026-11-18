@@ -12,7 +12,7 @@ import { toast } from "@/hooks/use-toast"
 import { Sidebar } from "@/components/layout/Sidebar"
 
 export default function VerifyOfferPage() {
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
   const [code, setCode] = useState("")
   const [result, setResult] = useState<any>(null)
   const [loading, setLoading] = useState(false)
@@ -47,6 +47,14 @@ export default function VerifyOfferPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  if (status === "loading") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#070d12]">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-lime-400 border-t-transparent" />
+      </div>
+    )
   }
 
   if (!session) {

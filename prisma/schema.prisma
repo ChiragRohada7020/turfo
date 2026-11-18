@@ -30,6 +30,7 @@ model User {
   latitude        Float?
   longitude       Float?
   reliabilityScore Float    @default(100)
+  rewardPoints     Int      @default(0)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
@@ -37,6 +38,9 @@ model User {
   bookings        Booking[]
   bookingParticipants BookingParticipant[]
   joinRequests        JoinRequest[]
+  userTasks           UserTask[]
+  tasks               Task[]
+  rewardTransactions  RewardTransaction[]
   reviews         Review[]
   notifications   Notification[]
   cashfreeAccount CashfreeAccount?
@@ -142,6 +146,7 @@ model Booking {
   cashfreePaymentId String?
   verificationCode String?   @unique
   maxPlayers      Int?      @default(1)
+  offlineFriends  Int?      @default(0)
   isPublic        Boolean   @default(false)
   notes           String?
   createdAt       DateTime @default(now())
@@ -507,4 +512,71 @@ enum NotificationType {
   REVIEW_RECEIVED
   SYSTEM
   OTP_VERIFICATION
+}
+
+// Task-based rewards
+model Task {
+  id            String   @id @default(cuid())
+  title         String
+  description   String?
+  type          TaskType
+  target        Int      @default(1)
+  rewardPoints  Int      @default(0)
+  isActive      Boolean  @default(true)
+  isAiGenerated Boolean  @default(false)
+  userId        String?
+  targetTurfId  String?
+  targetSport   SportType?
+  targetTimeSlot String?
+  expiresAt     DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user          User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userTasks     UserTask[]
+}
+
+enum TaskType {
+  PLAY_GAMES
+  BOOK_TURFS
+  JOIN_OPEN_GAMES
+  CREATE_TEAM
+  REFER_FRIEND
+  COMPLETE_PROFILE
+  PLAY_TOURNAMENT
+}
+
+model UserTask {
+  id            String   @id @default(cuid())
+  userId        String
+  taskId        String
+  progress      Int      @default(0)
+  completed     Boolean  @default(false)
+  completedAt   DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task          Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, taskId])
+}
+
+model RewardTransaction {
+  id            String   @id @default(cuid())
+  userId        String
+  points        Int
+  type          RewardType
+  description   String?
+  referenceId   String?
+  createdAt     DateTime @default(now())
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum RewardType {
+  EARNED
+  REDEEMED
+  EXPIRED
+  BONUS
 }

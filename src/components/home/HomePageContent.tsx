@@ -102,7 +102,7 @@ function getSportIcon(sport: string): string {
 }
 
 export default function HomePageContent() {
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [search, setSearch] = useState("")
   const { data: sportTypesData } = trpc.facilities.sportTypes.useQuery()

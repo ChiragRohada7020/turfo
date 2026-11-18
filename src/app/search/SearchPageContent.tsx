@@ -6,6 +6,8 @@ import Link from "next/link"
 import Image from "next/image"
 import { useSession, signOut } from "next-auth/react"
 import { Button } from "@/components/ui/button"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ChevronDown, ChevronRight, MapPin, Menu, Search as SearchIcon, Users, LogOut, Home, CalendarDays, Ticket, ShieldCheck, Trophy, Gift, Wallet, Bell } from "lucide-react"
@@ -13,19 +15,6 @@ import { formatCurrency } from "@/lib/utils"
 import { trpc } from "@/lib/trpc"
 import { Sidebar } from "@/components/layout/Sidebar"
 
-
-const NAV_ITEMS = [
-  { name: "Dashboard", href: "/dashboard", icon: Home },
-  { name: "Book a Game", href: "/search", icon: CalendarDays },
-  { name: "My Bookings", href: "/dashboard/bookings", icon: Ticket },
-  { name: "Find Players", href: "/teams", icon: Users },
-  { name: "Teams", href: "/teams", icon: ShieldCheck },
-  { name: "Tournaments", href: "/tournaments", icon: Trophy },
-  { name: "Offers & Rewards", href: "/offers", icon: Gift },
-  { name: "Wallet", href: "/wallet", icon: Wallet },
-  { name: "Notifications", href: "/notifications", icon: Bell },
-  { name: "Support", href: "/help", icon: ShieldCheck },
-]
 
 const SPORT_FILTERS = ["All Sports", "Football", "Cricket", "Badminton", "Tennis", "Pickleball", "Basketball", "Swimming", "Box Cricket", "Multi-Sport"]
 
@@ -184,24 +173,72 @@ export default function SearchPageContent() {
     <div className="min-h-screen bg-[#070d12] text-white">
       <Sidebar session={session} />
 
+      <Sidebar session={session} />
+
       <div className="min-h-screen pt-14 md:pt-0 md:pl-[262px]">
-        <header className="md:hidden sticky top-0 z-20 h-auto flex flex-col gap-2 border-b border-white/[0.08] bg-[#080f15]/95 px-4 py-3 backdrop-blur-xl pl-14">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-[#121c25] px-3 py-2 text-sm text-slate-300 sm:flex">
-              <MapPin className="h-4 w-4" />
-              <span className="text-xs">Pachora, MH</span>
-            </div>
-            <button aria-label="Notifications" className="relative rounded-full border border-white/10 bg-[#121b24] p-2 text-slate-300">
-              <BellIcon />
-              <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500" />
-            </button>
+        <header className="sticky top-0 z-20 flex h-[64px] items-center gap-3 border-b border-white/[0.08] bg-[#080f15]/95 px-4 backdrop-blur-xl sm:px-6">
+          <div className="hidden shrink-0 items-center gap-2 rounded-xl border border-white/10 bg-[#121c25] px-3 py-2 text-sm text-slate-300 sm:flex">
+            <MapPin className="h-4 w-4" />
+            Pachora, MH
+            <ChevronDown className="h-4 w-4 text-slate-500" />
           </div>
+          <div className="relative mx-auto w-full max-w-[590px]">
+            <SearchIcon className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+            <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search turfs, sports, or locations..." className="h-10 w-full rounded-xl border border-white/10 bg-[#121b24] pl-10 pr-4 text-sm text-white outline-none placeholder:text-slate-500 focus:border-lime-400/50" />
+          </div>
+          <button aria-label="Notifications" className="relative rounded-full border border-white/10 bg-[#121b24] p-2.5 text-slate-300">
+            <Bell className="h-4 w-4" />
+            <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500" />
+          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="flex shrink-0 items-center gap-2 rounded-xl p-1.5 hover:bg-white/5">
+                <Avatar className="h-9 w-9 border border-white/10">
+                  <AvatarImage src={session.user?.image || ""} alt={session.user?.name || "User"} />
+                  <AvatarFallback className="bg-lime-400 font-bold text-black">{(session.user?.name || "U")[0]?.toUpperCase()}</AvatarFallback>
+                </Avatar>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="border-white/10 bg-[#111a22] text-white">
+              <DropdownMenuItem>{session.user?.email || "Account"}</DropdownMenuItem>
+              <DropdownMenuSeparator className="bg-white/10" />
+              <DropdownMenuItem onClick={() => signOut({ callbackUrl: "/" })}>
+                <LogOut className="mr-2 h-4 w-4" /> Sign Out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </header>
 
-        <main className="mx-auto max-w-[1800px] p-4 sm:p-6 xl:p-7">
-          <div className="mb-6 flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+        <main className="mx-auto max-w-[1800px] space-y-6 p-4 sm:p-6 xl:p-8">
+          {/* Hero */}
+          <section className="relative mb-6 overflow-hidden rounded-3xl border border-white/10 bg-[#10251a]">
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_75%_50%,rgba(34,197,94,0.2),transparent_55%),linear-gradient(110deg,#07150f,#12351d_60%,#07120f)]" />
+            <div className="absolute inset-0 opacity-20 bg-[linear-gradient(90deg,transparent_49%,rgba(255,255,255,0.08)_50%,transparent_51%)]" />
+            <div className="relative flex flex-wrap items-center justify-between gap-6 p-6 sm:p-9">
+              <div>
+                <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-lime-400">
+                  <CalendarDays className="h-4 w-4" /> Book a Game
+                </div>
+                <h1 className="text-3xl font-black tracking-tight sm:text-4xl">
+                  Find & <span className="text-lime-400">Book</span> Turfs
+                </h1>
+                <p className="mt-2 text-sm text-slate-300 sm:text-base">
+                  Find, compare and book the best turfs near you.
+                </p>
+              </div>
+              <div className="hidden gap-3 sm:flex">
+                <div className="min-w-[120px] rounded-2xl border border-white/10 bg-black/20 p-4 backdrop-blur-md">
+                  <MapPin className="mb-2 h-5 w-5 text-lime-400" />
+                  <p className="text-xl font-black">Pachora</p>
+                  <p className="text-[10px] text-slate-400">Your location</p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">Book a Game</h1>
+              <h2 className="text-xl font-bold">Available Turfs</h2>
               <p className="mt-1 text-sm text-slate-400">Find, compare and book the best turfs near you</p>
             </div>
             <div className="flex items-center gap-2 text-xs font-medium text-slate-400">

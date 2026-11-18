@@ -1064,7 +1064,7 @@ export const appRouter = createTRPCRouter({
 
         const maxPlayers = booking.maxPlayers || 1
         const spotsTaken = booking.participants.length
-        if (spotsTaken >= maxPlayers - 1) throw new Error("No spots available")
+        if (spotsTaken >= maxPlayers) throw new Error("No spots available")
 
         // Check if already joined
         const existing = booking.participants.find((p) => p.userId === ctx.session.user.id)
@@ -1134,7 +1134,7 @@ export const appRouter = createTRPCRouter({
         }
 
         const maxPlayers = joinRequest.booking.maxPlayers || 1
-        if (joinRequest.booking.participants.length >= maxPlayers - 1) {
+        if (joinRequest.booking.participants.length >= maxPlayers) {
           throw new Error("No spots available")
         }
 
@@ -1345,7 +1345,7 @@ export const appRouter = createTRPCRouter({
         return { markedNoShows: noShows.length }
       }),
     togglePublic: protectedProcedure
-      .input(z.object({ bookingId: z.string(), isPublic: z.boolean(), maxPlayers: z.number().min(1).max(20).optional() }))
+      .input(z.object({ bookingId: z.string(), isPublic: z.boolean(), maxPlayers: z.number().min(1).max(20).optional(), offlineFriends: z.number().min(0).max(20).optional() }))
       .mutation(async ({ ctx, input }) => {
         const booking = await prisma.booking.findUnique({
           where: { id: input.bookingId },
@@ -1361,6 +1361,7 @@ export const appRouter = createTRPCRouter({
           data: {
             isPublic: input.isPublic,
             ...(input.maxPlayers && { maxPlayers: input.maxPlayers }),
+            ...(input.offlineFriends !== undefined && { offlineFriends: input.offlineFriends }),
           },
         })
 
@@ -1856,6 +1857,281 @@ payments: createTRPCRouter({
           validTo: offer.validTo,
           score: Math.round(score),
         }))
+      }),
+
+    // List all active tasks
+    tasks: protectedProcedure
+      .query(async ({ ctx }) => {
+        const tasks = await prisma.task.findMany({
+          where: { isActive: true },
+          orderBy: { createdAt: "asc" },
+        })
+
+        const userTasks = await prisma.userTask.findMany({
+          where: { userId: ctx.session.user.id },
+        })
+
+        const userTaskMap = new Map(userTasks.map((ut) => [ut.taskId, ut]))
+
+        return tasks.map((task) => {
+          const ut = userTaskMap.get(task.id)
+          return {
+            id: task.id,
+            title: task.title,
+            description: task.description,
+            type: task.type,
+            target: task.target,
+            rewardPoints: task.rewardPoints,
+            progress: ut?.progress || 0,
+            completed: ut?.completed || false,
+            completedAt: ut?.completedAt,
+          }
+        })
+      }),
+
+    // Update task progress
+    updateTaskProgress: protectedProcedure
+      .input(z.object({ taskId: z.string(), increment: z.number().min(1).default(1) }))
+      .mutation(async ({ ctx, input }) => {
+        const task = await prisma.task.findUnique({ where: { id: input.taskId } })
+        if (!task) throw new Error("Task not found")
+
+        const userTask = await prisma.userTask.upsert({
+          where: { userId_taskId: { userId: ctx.session.user.id, taskId: input.taskId } },
+          create: { userId: ctx.session.user.id, taskId: input.taskId, progress: input.increment },
+          update: { progress: { increment: input.increment } },
+        })
+
+        // Check if task is now complete
+        if (!userTask.completed && userTask.progress >= task.target) {
+          await prisma.userTask.update({
+            where: { id: userTask.id },
+            data: { completed: true, completedAt: new Date() },
+          })
+
+          // Award reward points
+          await prisma.user.update({
+            where: { id: ctx.session.user.id },
+            data: { rewardPoints: { increment: task.rewardPoints } },
+          })
+
+          await prisma.rewardTransaction.create({
+            data: {
+              userId: ctx.session.user.id,
+              points: task.rewardPoints,
+              type: "EARNED",
+              description: `Completed task: ${task.title}`,
+              referenceId: task.id,
+            },
+          }).catch(() => {})
+
+          return { completed: true, pointsAwarded: task.rewardPoints }
+        }
+
+        return { completed: false, pointsAwarded: 0 }
+      }),
+
+    // Get user's reward points
+    myRewardPoints: protectedProcedure
+      .query(async ({ ctx }) => {
+        const user = await prisma.user.findUnique({
+          where: { id: ctx.session.user.id },
+          select: { rewardPoints: true },
+        })
+        return user?.rewardPoints || 0
+      }),
+
+    // Get user's reward transactions
+    myRewardTransactions: protectedProcedure
+      .query(async ({ ctx }) => {
+        return prisma.rewardTransaction.findMany({
+          where: { userId: ctx.session.user.id },
+          orderBy: { createdAt: "desc" },
+          take: 20,
+        })
+      }),
+
+    // AI-generated personalized tasks
+    generateTasks: protectedProcedure
+      .mutation(async ({ ctx }) => {
+        const userId = ctx.session.user.id
+        const now = new Date()
+
+        // Get user's booking history
+        const userBookings = await prisma.booking.findMany({
+          where: { userId },
+          include: { facility: { select: { id: true, name: true, city: true } }, court: { select: { sportType: true } } },
+          orderBy: { createdAt: "desc" },
+          take: 50,
+        })
+
+        // Analyze user behavior
+        const bookingCount = userBookings.length
+        const sportCounts: Record<string, number> = {}
+        const cityCounts: Record<string, number> = {}
+        const dayCounts: Record<number, number> = {}
+        const hourCounts: Record<number, number> = {}
+
+        userBookings.forEach((b) => {
+          const sport = b.court?.sportType || "FOOTBALL"
+          sportCounts[sport] = (sportCounts[sport] || 0) + 1
+          const city = b.facility?.city
+          if (city) cityCounts[city] = (cityCounts[city] || 0) + 1
+          const day = new Date(b.startTime).getDay()
+          dayCounts[day] = (dayCounts[day] || 0) + 1
+          const hour = new Date(b.startTime).getHours()
+          hourCounts[hour] = (hourCounts[hour] || 0) + 1
+        })
+
+        const mostBookedSport = Object.entries(sportCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "FOOTBALL"
+        const leastBookedDay = [0,1,2,3,4,5,6].sort((a, b) => (dayCounts[a] || 0) - (dayCounts[b] || 0))[0]
+        const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+
+        // Find underutilized turfs (less crowded)
+        const allFacilities = await prisma.facility.findMany({
+          where: { isActive: true },
+          include: { _count: { select: { bookings: true } } },
+          orderBy: { createdAt: "desc" },
+          take: 10,
+        })
+
+        // Score facilities by booking count (lower = less crowded = better for throughput)
+        const underutilized = allFacilities
+          .sort((a, b) => (a._count?.bookings || 0) - (b._count?.bookings || 0))
+          .slice(0, 3)
+
+        // Generate personalized tasks
+        const tasksToCreate: any[] = []
+
+        // Task 1: Play consistency - based on user's booking frequency
+        const playTarget = Math.max(2, Math.min(5, Math.ceil(bookingCount / 5) + 1))
+        tasksToCreate.push({
+          title: `Play ${playTarget} Games This Week`,
+          description: `Book and play ${playTarget} games this week to earn bonus points. You can play on any day or time that suits you.`,
+          type: "PLAY_GAMES",
+          target: playTarget,
+          rewardPoints: playTarget * 25,
+          isAiGenerated: true,
+          userId,
+          expiresAt: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000),
+        })
+
+        // Task 2: Try an underutilized turf
+        if (underutilized.length > 0) {
+          const turf = underutilized[0]
+          tasksToCreate.push({
+            title: `Discover ${turf.name}`,
+            description: `This turf has fewer bookings - visit it on ${dayNames[leastBookedDay]} for a quieter experience and help improve its visibility!`,
+            type: "BOOK_TURFS",
+            target: 1,
+            rewardPoints: 75,
+            isAiGenerated: true,
+            userId,
+            targetTurfId: turf.id,
+            expiresAt: new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000),
+          })
+        }
+
+        // Task 3: Try a different sport
+        const sports = ["FOOTBALL", "CRICKET", "BADMINTON", "TENNIS", "BASKETBALL", "VOLLEYBALL"]
+        const untriedSport = sports.find((s) => !sportCounts[s]) || sports[Math.floor(Math.random() * sports.length)]
+        tasksToCreate.push({
+          title: `Try ${untriedSport.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c: string) => c.toUpperCase())}`,
+          description: `Book a ${untriedSport.toLowerCase().replace(/_/g, " ")} session to diversify your game and earn bonus points.`,
+          type: "BOOK_TURFS",
+          target: 1,
+          rewardPoints: 50,
+          isAiGenerated: true,
+          userId,
+          targetSport: untriedSport as any,
+          expiresAt: new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000),
+        })
+
+        // Task 4: Join open games
+        tasksToCreate.push({
+          title: "Join Open Games",
+          description: "Join 2 open games to meet new players and earn points.",
+          type: "JOIN_OPEN_GAMES",
+          target: 2,
+          rewardPoints: 100,
+          isAiGenerated: true,
+          userId,
+          expiresAt: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000),
+        })
+
+        // Create tasks (skip if already exists for this user with same title)
+        const existingTasks = await prisma.task.findMany({
+          where: { userId, isAiGenerated: true, expiresAt: { gte: now } },
+        })
+        const existingTitles = new Set(existingTasks.map((t) => t.title))
+
+        let created = 0
+        for (const taskData of tasksToCreate) {
+          if (existingTitles.has(taskData.title)) continue
+          const task = await prisma.task.create({ data: taskData })
+          // Create UserTask entry
+          await prisma.userTask.create({
+            data: { userId, taskId: task.id, progress: 0 },
+          })
+          created++
+        }
+
+        return { created, total: tasksToCreate.length }
+      }),
+
+    // Get user's personalized tasks (global + AI-generated for this user)
+    myTasks: protectedProcedure
+      .query(async ({ ctx }) => {
+        const now = new Date()
+        const tasks = await prisma.task.findMany({
+          where: {
+            isActive: true,
+            OR: [
+              { userId: null },
+              { userId: ctx.session.user.id },
+            ],
+            ...( { expiresAt: { gte: now } } ),
+          },
+          orderBy: { createdAt: "desc" },
+        })
+
+        // Also include expired AI tasks that are still in progress
+        const expiredTasks = await prisma.task.findMany({
+          where: {
+            isActive: true,
+            userId: ctx.session.user.id,
+            expiresAt: { lt: now },
+          },
+          orderBy: { createdAt: "desc" },
+        })
+
+        const allTasks = [...tasks, ...expiredTasks.filter((t) => !tasks.find((x) => x.id === t.id))]
+
+        const userTasks = await prisma.userTask.findMany({
+          where: { userId: ctx.session.user.id },
+        })
+
+        const userTaskMap = new Map(userTasks.map((ut) => [ut.taskId, ut]))
+
+        return allTasks.map((task) => {
+          const ut = userTaskMap.get(task.id)
+          return {
+            id: task.id,
+            title: task.title,
+            description: task.description,
+            type: task.type,
+            target: task.target,
+            rewardPoints: task.rewardPoints,
+            progress: ut?.progress || 0,
+            completed: ut?.completed || false,
+            completedAt: ut?.completedAt,
+            isAiGenerated: task.isAiGenerated,
+            expiresAt: task.expiresAt,
+            targetTurfId: task.targetTurfId,
+            targetSport: task.targetSport,
+            targetTimeSlot: task.targetTimeSlot,
+          }
+        })
       }),
 
     // Redeem an offer

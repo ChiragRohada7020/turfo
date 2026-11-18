@@ -12,10 +12,18 @@ import { formatCurrency } from "@/lib/utils"
 import { Sidebar } from "@/components/layout/Sidebar"
 
 export default function PayoutsPage() {
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
   const { data: earnings } = trpc.cashfree.ownerEarnings.useQuery()
   const { data: payoutsData } = trpc.cashfree.ownerPayouts.useQuery({ limit: 20 })
   const payouts = payoutsData?.payouts || []
+
+  if (status === "loading") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#070d12]">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-lime-400 border-t-transparent" />
+      </div>
+    )
+  }
 
   if (!session) {
     return (

@@ -13,7 +13,7 @@ import { Sidebar } from "@/components/layout/Sidebar"
 import { Html5Qrcode } from "html5-qrcode"
 
 export default function VerifyBookingPage() {
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
   const [code, setCode] = useState("")
   const [result, setResult] = useState<any>(null)
   const [loading, setLoading] = useState(false)
@@ -133,6 +133,14 @@ export default function VerifyBookingPage() {
       }
     }
   }, [])
+
+  if (status === "loading") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#070d12]">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-lime-400 border-t-transparent" />
+      </div>
+    )
+  }
 
   if (!session) {
     return (

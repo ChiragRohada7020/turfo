@@ -178,7 +178,7 @@ function TeamCard({
 }
 
 export default function TeamsPage() {
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
   const [tab, setTab] = useState<"my" | "joined" | "invites">("my")
 
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null)
@@ -197,12 +197,12 @@ export default function TeamsPage() {
   const [memberUserId, setMemberUserId] = useState("")
 
   const { data: myTeamsData, isLoading: myLoading } =
-    trpc.teams.myTeams.useQuery()
+    trpc.teams.myTeams.useQuery(undefined, { keepPreviousData: true })
 
   const myTeams = (myTeamsData || []).map((item: any) => item.team)
 
   const { data: discoverData, isLoading: discoverLoading } =
-    trpc.teams.list.useQuery({ page: 1, limit: 6 })
+    trpc.teams.list.useQuery({ page: 1, limit: 6 }, { keepPreviousData: true })
 
   const discoverTeams = discoverData?.teams || []
   const myTeamIds = new Set(myTeams.map((t: any) => t.id))
@@ -275,6 +275,14 @@ export default function TeamsPage() {
   const filteredDiscover = discoverTeams.filter(
     (team: any) => !myTeamIds.has(team.id) && team.name.toLowerCase().includes(search.toLowerCase())
   )
+
+  if (status === "loading") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#070d12]">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-lime-400 border-t-transparent" />
+      </div>
+    )
+  }
 
   if (!session) {
     return (
@@ -436,7 +444,7 @@ export default function TeamsPage() {
                       title="Discover Teams"
                       subtitle="Find teams and players in your area."
                       action={
-                        <Link href="/teams" className="text-xs font-semibold text-lime-400 hover:text-lime-300">
+                        <Link href="/dashboard/teams" className="text-xs font-semibold text-lime-400 hover:text-lime-300">
                           View all <ArrowUpRight className="inline h-3.5 w-3.5" />
                         </Link>
                       }

@@ -14,7 +14,7 @@ import { trpc } from "@/lib/trpc"
 import { Sidebar } from "@/components/layout/Sidebar"
 
 export default function SettingsPage() {
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
   const [isLoading, setIsLoading] = useState(false)
   const isOwner = session?.user?.role === "OWNER" || session?.user?.role === "ADMIN"
 
@@ -113,6 +113,14 @@ export default function SettingsPage() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  if (status === "loading") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#070d12]">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-lime-400 border-t-transparent" />
+      </div>
+    )
   }
 
   if (!session) {

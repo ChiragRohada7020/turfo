@@ -16,7 +16,7 @@ import { toast } from "@/hooks/use-toast"
 import { Sidebar } from "@/components/layout/Sidebar"
 
 export default function SponsorDashboardPage() {
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [newOffer, setNewOffer] = useState({
     code: "",
@@ -47,6 +47,14 @@ export default function SponsorDashboardPage() {
       toast({ title: "Error", description: e.message, variant: "destructive" })
     },
   })
+
+  if (status === "loading") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#070d12]">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-lime-400 border-t-transparent" />
+      </div>
+    )
+  }
 
   if (!session) {
     return (
