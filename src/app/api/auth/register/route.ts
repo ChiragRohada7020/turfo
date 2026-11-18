@@ -6,7 +6,7 @@ import { Role } from "@prisma/client"
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { name, email, password, phone, role } = body
+    const { name, email, password, phone, role, phoneVerified } = body
 
     if (!email || !password) {
       return NextResponse.json({ error: "Email and password are required" }, { status: 400 })
@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
         passwordHash,
         phone: phone?.trim() || null,
         role: userRole,
-        isPhoneVerified: false,
+        isPhoneVerified: phoneVerified === true,
         isVerified: isAutoVerified,
       },
     })

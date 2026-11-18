@@ -7,20 +7,22 @@ import { useSession } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ChevronDown, ChevronRight, MapPin, Menu, Search as SearchIcon, Star, Users, Trophy, Gift, CalendarDays, Bell, X, Zap, Shield, Activity, Target } from "lucide-react"
+import { ChevronDown, ChevronRight, MapPin, Menu, Search as SearchIcon, Star, Users, Trophy, Gift, CalendarDays, Bell, X, Zap, Shield, Activity, Target, Home, Ticket, ShieldCheck, Wallet } from "lucide-react"
 import { formatCurrency } from "@/lib/utils"
+import { Sidebar } from "@/components/layout/Sidebar"
+import { trpc } from "@/lib/trpc"
 
 const NAV_ITEMS = [
-  { name: "Home", href: "/" },
-  { name: "Book a Turf", href: "/search" },
-  { name: "My Bookings", href: "/dashboard/bookings" },
-  { name: "Find Players", href: "/teams" },
-  { name: "Teams", href: "/teams" },
-  { name: "Tournaments", href: "/tournaments" },
-  { name: "Offers & Rewards", href: "/offers" },
-  { name: "Wallet", href: "/wallet" },
-  { name: "Notifications", href: "/notifications" },
-  { name: "Support", href: "/help" },
+  { name: "Home", href: "/", icon: Home },
+  { name: "Book a Game", href: "/search", icon: CalendarDays },
+  { name: "My Bookings", href: "/dashboard/bookings", icon: Ticket },
+  { name: "Find Players", href: "/teams", icon: Users },
+  { name: "Teams", href: "/teams", icon: ShieldCheck },
+  { name: "Tournaments", href: "/tournaments", icon: Trophy },
+  { name: "Offers & Rewards", href: "/offers", icon: Gift },
+  { name: "Wallet", href: "/wallet", icon: Wallet },
+  { name: "Notifications", href: "/notifications", icon: Bell },
+  { name: "Support", href: "/help", icon: ShieldCheck },
 ]
 
 const SPORTS = [
@@ -28,8 +30,10 @@ const SPORTS = [
   { name: "Cricket", icon: "🏏", count: "90+ nets", color: "from-blue-600 to-indigo-700" },
   { name: "Badminton", icon: "🏸", count: "120+ courts", color: "from-orange-600 to-red-700" },
   { name: "Tennis", icon: "🎾", count: "80+ courts", color: "from-yellow-600 to-amber-700" },
+  { name: "Pickleball", icon: "🏓", count: "40+ courts", color: "from-pink-600 to-rose-700" },
   { name: "Basketball", icon: "🏀", count: "60+ courts", color: "from-purple-600 to-violet-700" },
   { name: "Swimming", icon: "🏊", count: "50+ pools", color: "from-cyan-600 to-teal-700" },
+  { name: "Table Tennis", icon: "🏓", count: "30+ tables", color: "from-amber-600 to-orange-700" },
 ]
 
 const FEATURES = [
@@ -88,50 +92,30 @@ const MOCK_TURFS = [
   },
 ]
 
+function getSportIcon(sport: string): string {
+  const icons: Record<string, string> = {
+    FOOTBALL: "⚽", CRICKET: "🏏", TENNIS: "🎾", BADMINTON: "🏸",
+    BASKETBALL: "🏀", VOLLEYBALL: "🏐", SWIMMING: "🏊", GYM: "💪",
+    MULTI_SPORT: "🏟️", PICKLEBALL: "🏓", TABLE_TENNIS: "🏓", OTHER: "🏃",
+  }
+  return icons[sport] || "🏃"
+}
+
 export default function HomePageContent() {
   const { data: session } = useSession()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [search, setSearch] = useState("")
+  const { data: sportTypesData } = trpc.facilities.sportTypes.useQuery()
+  const sports = sportTypesData ?? []
+
+  const { data: facilitiesData } = trpc.facilities.list.useQuery({ city: "Pachora", sportTypes: [], page: 1, limit: 4 })
+  const realTurfs = facilitiesData?.facilities ?? []
 
   return (
     <div className="min-h-screen bg-[#070d12] text-white">
-      {session && (
-        <aside className="hidden w-[262px] flex-col border-r border-white/[0.08] bg-[#080f15] md:flex fixed inset-y-0 left-0 z-30">
-          <div className="flex h-[76px] shrink-0 items-center gap-3 border-b border-white/[0.08] px-5">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-lime-400 text-lime-400">
-              <span className="text-lg">🏟️</span>
-            </div>
-            <div>
-              <Link href="/" className="text-[22px] font-black tracking-tight">
-                Turf<span className="text-lime-400">Play</span>
-              </Link>
-              <p className="text-[10px] tracking-wide text-slate-500">Book · Play · Compete</p>
-            </div>
-          </div>
-          <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-5">
-            {NAV_ITEMS.map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
-                className="flex items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-medium transition text-slate-300 hover:bg-white/[0.06] hover:text-white"
-              >
-                <span className="truncate">{item.name}</span>
-              </Link>
-            ))}
-          </nav>
-          <div className="mx-4 mb-5 rounded-2xl border border-green-500/20 bg-gradient-to-br from-[#10271d] to-[#0b1714] p-4 text-center">
-            <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-white/10 text-3xl">⚽</div>
-            <p className="text-base font-bold">Invite Friends</p>
-            <p className="mt-1 text-sm font-semibold text-amber-300">Get ₹100 Credit</p>
-            <p className="mt-1 text-xs leading-5 text-slate-400">for each friend who books!</p>
-            <Button size="sm" className="mt-3 rounded-xl bg-lime-400 font-bold text-black hover:bg-lime-300">
-              Invite Now
-            </Button>
-          </div>
-        </aside>
-      )}
+      {session && <Sidebar session={session} />}
 
-      <div className={session ? "min-h-screen md:pl-[262px]" : "min-h-screen"}>
+      <div className={session ? "min-h-screen pt-14 md:pt-0 md:pl-[262px]" : "min-h-screen"}>
         <header className="sticky top-0 z-20 h-[60px] flex items-center justify-between border-b border-white/[0.08] bg-[#080f15]/95 px-4 backdrop-blur-xl sm:px-6">
           <button onClick={() => setSidebarOpen(!sidebarOpen)} className="rounded-lg border border-white/10 p-2 text-slate-300 md:hidden">
             <Menu className="h-5 w-5" />
@@ -182,10 +166,10 @@ export default function HomePageContent() {
               <div className="flex flex-wrap gap-3 mt-5">
                 <Link href="/search">
                   <Button size="lg" className="px-6 bg-lime-400 font-bold text-black hover:bg-lime-300">
-                    Book a Turf
+                    Book a Game
                   </Button>
                 </Link>
-                <Link href="/teams" className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-white/10 hover:bg-white/20 border border-white/10 text-sm font-medium text-white transition-colors">
+                <Link href="/dashboard/teams" className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-white/10 hover:bg-white/20 border border-white/10 text-sm font-medium text-white transition-colors">
                   <Users className="h-4 w-4" />
                   Find Players
                 </Link>
@@ -216,13 +200,13 @@ export default function HomePageContent() {
           <div className="mb-6">
             <h2 className="text-xl font-bold mb-3">Popular Sports</h2>
             <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
-              {SPORTS.map((sport) => (
-                <Link key={sport.name} href={`/search?sport=${sport.name.toLowerCase()}`} className="group">
+              {sports.map((sport: any) => (
+                <Link key={sport.sport} href={`/search?sport=${sport.sport.toLowerCase()}`} className="group">
                   <Card className={`bg-gradient-to-br ${sport.color} border-0 p-3 text-center hover:scale-105 transition-transform`}>
                     <CardContent className="p-0">
-                      <div className="text-2xl mb-1">{sport.icon}</div>
-                      <p className="text-xs font-bold text-white">{sport.name}</p>
-                      <p className="text-[10px] text-white/70">{sport.count}</p>
+                      <div className="text-2xl mb-1">{getSportIcon(sport.sport)}</div>
+                      <p className="text-xs font-bold text-white">{sport.sport}</p>
+                      <p className="text-[10px] text-white/70">{sport.count} facilities</p>
                     </CardContent>
                   </Card>
                 </Link>
@@ -249,14 +233,14 @@ export default function HomePageContent() {
           {/* Recommended Turfs */}
           <div className="mb-6">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-xl font-bold">Recommended Turfs Near You</h2>
+              <h2 className="text-xl font-bold">Recommended Facilities Near You</h2>
               <Link href="/search" className="text-sm text-lime-400 hover:underline">View All</Link>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {MOCK_TURFS.map((turf) => (
+              {realTurfs.map((turf: any) => (
                 <Card key={turf.id} className="bg-[#111a22] border-white/10 overflow-hidden hover:border-lime-400/30 transition-colors">
                   <div className="relative h-28 overflow-hidden bg-[#1a3027]">
-                    <Image src={turf.image} alt={turf.name} fill sizes="200px" className="object-cover" />
+                    <Image src={turf.images?.[0] || "/placeholder.svg"} alt={turf.name} fill sizes="200px" className="object-cover" />
                   </div>
                   <CardContent className="p-3">
                     <div className="flex justify-between items-start mb-1">
@@ -268,7 +252,7 @@ export default function HomePageContent() {
                     </p>
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-slate-400">{turf.distance}</span>
-                      <span className="font-bold text-lime-400">{formatCurrency(turf.price)}/hr</span>
+                      <span className="font-bold text-lime-400">{turf.minPrice ? formatCurrency(turf.minPrice) : "Contact"}/hr</span>
                     </div>
                     <Button size="sm" className="w-full mt-3 bg-lime-400 font-bold text-black hover:bg-lime-300" asChild>
                       <Link href="/search">Book Now</Link>

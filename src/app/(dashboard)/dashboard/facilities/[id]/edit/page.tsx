@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
+import { useSession } from "next-auth/react"
 import Link from "next/link"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -14,7 +15,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { ArrowLeft, Building2, MapPin, Plus, Loader2 } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import { trpc } from "@/lib/trpc"
-import { SportType } from "@prisma/client"
+import { SportType, SurfaceType } from "@prisma/client"
+import { Sidebar } from "@/components/layout/Sidebar"
 
 const facilitySchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters"),
@@ -42,6 +44,8 @@ const SPORT_OPTIONS = [
   { value: "VOLLEYBALL", label: "Volleyball" },
   { value: "SWIMMING", label: "Swimming" },
   { value: "GYM", label: "Gym" },
+  { value: "PICKLEBALL", label: "Pickleball" },
+  { value: "TABLE_TENNIS", label: "Table Tennis" },
   { value: "MULTI_SPORT", label: "Multi-Sport" },
 ]
 
@@ -53,13 +57,17 @@ const AMENITY_OPTIONS = [
 export default function EditFacilityPage() {
   const params = useParams()
   const router = useRouter()
+  const { data: session } = useSession()
   const facilityId = params.id as string
   const [selectedSports, setSelectedSports] = useState<string[]>([])
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [isActive, setIsActive] = useState(true)
+  const [showAddCourt, setShowAddCourt] = useState(false)
+  const [newCourt, setNewCourt] = useState({ name: "", sportType: "FOOTBALL", surfaceType: "ARTIFICIAL_TURF", capacity: 10, dimensions: "" })
+  const [newPrice, setNewPrice] = useState({ name: "Standard", pricePerHour: 500, dayOfWeek: [0,1,2,3,4,5,6], startTime: "06:00", endTime: "22:00", minDuration: 60 })
 
-  const { data: facility, isLoading: loadingFacility } = trpc.facilities.get.useQuery({ id: facilityId })
+  const { data: facility, isLoading: loadingFacility, refetch } = trpc.facilities.get.useQuery({ id: facilityId })
 
   const {
     register,
@@ -92,6 +100,33 @@ export default function EditFacilityPage() {
       setIsActive(facility.isActive)
     }
   }, [facility, reset])
+
+  const createCourt = trpc.courts.create.useMutation({
+    onSuccess: () => {
+      toast({ title: "Court Added", description: "Court created successfully" })
+      refetchFacility()
+      setShowAddCourt(false)
+    },
+    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  })
+
+  const deleteCourt = trpc.courts.delete.useMutation({
+    onSuccess: () => {
+      toast({ title: "Deleted", description: "Court removed" })
+      refetchFacility()
+    },
+    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  })
+
+  const createPricing = trpc.pricing.create.useMutation({
+    onSuccess: () => {
+      toast({ title: "Pricing Added", description: "Pricing rule created" })
+      refetchFacility()
+    },
+    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  })
+
+  const refetchFacility = () => { refetch() }
 
   const updateFacility = trpc.facilities.update.useMutation({
     onSuccess: () => {
@@ -155,7 +190,9 @@ export default function EditFacilityPage() {
 
   return (
     <div className="min-h-screen bg-[#070d12] text-white">
-      <div className="max-w-3xl mx-auto p-4 sm:p-6 xl:p-7">
+      <Sidebar session={session} />
+      <div className="pt-14 md:pt-0 md:pl-[262px]">
+        <div className="max-w-3xl mx-auto p-4 sm:p-6 xl:p-7">
         <div className="mb-6">
           <Link href="/dashboard/facilities" className="inline-flex items-center gap-2 text-slate-400 hover:text-white mb-4">
             <ArrowLeft className="h-4 w-4" /> Back to Facilities
@@ -352,6 +389,119 @@ export default function EditFacilityPage() {
             </CardContent>
           </Card>
 
+          <Card className="bg-[#111a22] border-white/10 rounded-2xl">
+            <CardHeader>
+              <CardTitle className="text-lg font-bold flex items-center gap-2">
+                <Plus className="h-5 w-5 text-lime-400" /> Courts & Pricing
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {facility?.courts && facility.courts.length > 0 && (
+                <div className="space-y-2">
+                  {facility.courts.map((court: any) => (
+                    <div key={court.id} className="flex items-center justify-between p-3 bg-[#121b24] rounded-lg border border-white/10">
+                      <div>
+                        <p className="font-medium text-white">{court.name}</p>
+                        <p className="text-xs text-slate-400">{court.sportType} · {court.surfaceType} · Capacity: {court.capacity}</p>
+                        {court.pricingRules && court.pricingRules.length > 0 && (
+                          <p className="text-xs text-lime-400 mt-1">
+                            {court.pricingRules.map((r: any) => `Rs.${r.pricePerHour}/hr`).join(", ")}
+                          </p>
+                        )}
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-red-500/30 text-red-400 hover:bg-red-500/10"
+                        onClick={() => deleteCourt.mutate({ id: court.id })}
+                        disabled={deleteCourt.isPending}
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {showAddCourt ? (
+                <div className="space-y-3 p-4 bg-[#121b24] rounded-lg border border-white/10">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-slate-300 text-xs">Court Name</Label>
+                      <Input value={newCourt.name} onChange={(e) => setNewCourt({ ...newCourt, name: e.target.value })} placeholder="Court 1" className="bg-[#070d12] border-white/10 text-white" />
+                    </div>
+                    <div>
+                      <Label className="text-slate-300 text-xs">Sport Type</Label>
+                      <select value={newCourt.sportType} onChange={(e) => setNewCourt({ ...newCourt, sportType: e.target.value })} className="w-full bg-[#070d12] border border-white/10 rounded-lg px-3 py-2 text-white text-sm">
+                        {SPORT_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <Label className="text-slate-300 text-xs">Surface Type</Label>
+                      <select value={newCourt.surfaceType} onChange={(e) => setNewCourt({ ...newCourt, surfaceType: e.target.value })} className="w-full bg-[#070d12] border border-white/10 rounded-lg px-3 py-2 text-white text-sm">
+                        <option value="ARTIFICIAL_TURF">Artificial Turf</option>
+                        <option value="GRASS">Grass</option>
+                        <option value="CLAY">Clay</option>
+                        <option value="HARD_COURT">Hard Court</option>
+                        <option value="WOOD">Wood</option>
+                        <option value="SYNTHETIC">Synthetic</option>
+                      </select>
+                    </div>
+                    <div>
+                      <Label className="text-slate-300 text-xs">Capacity</Label>
+                      <Input type="number" value={newCourt.capacity} onChange={(e) => setNewCourt({ ...newCourt, capacity: parseInt(e.target.value) })} className="bg-[#070d12] border-white/10 text-white" />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-slate-300 text-xs">Price per Hour (Rs.)</Label>
+                    <Input type="number" value={newPrice.pricePerHour} onChange={(e) => setNewPrice({ ...newPrice, pricePerHour: parseFloat(e.target.value) })} className="bg-[#070d12] border-white/10 text-white" />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      className="bg-lime-400 font-bold text-black hover:bg-lime-300"
+                      onClick={async () => {
+                        try {
+                          const court = await createCourt.mutateAsync({
+                            facilityId,
+                            name: newCourt.name,
+                            sportType: newCourt.sportType as SportType,
+                            surfaceType: newCourt.surfaceType as SurfaceType,
+                            capacity: newCourt.capacity,
+                            dimensions: newCourt.dimensions || undefined,
+                          })
+                          await createPricing.mutateAsync({
+                            courtId: court.id,
+                            name: "Standard",
+                            dayOfWeek: [0, 1, 2, 3, 4, 5, 6],
+                            startTime: "06:00",
+                            endTime: "22:00",
+                            pricePerHour: newPrice.pricePerHour,
+                            minDuration: 60,
+                          })
+                          setNewCourt({ name: "", sportType: "FOOTBALL", surfaceType: "ARTIFICIAL_TURF", capacity: 10, dimensions: "" })
+                          setShowAddCourt(false)
+                        } catch (e) {
+                          // Error handled by mutation
+                        }
+                      }}
+                      disabled={createCourt.isPending || !newCourt.name}
+                    >
+                      {createCourt.isPending ? "Adding..." : "Add Court"}
+                    </Button>
+                    <Button size="sm" variant="outline" className="border-white/10 text-white" onClick={() => setShowAddCourt(false)}>
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <Button variant="outline" className="w-full border-white/10 text-white hover:bg-white/5" onClick={() => setShowAddCourt(true)}>
+                  <Plus className="h-4 w-4 mr-2" /> Add Court
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+
           <div className="flex gap-3">
             <Link href="/dashboard/facilities" className="flex-1">
               <Button variant="outline" className="w-full border-white/10 text-white hover:bg-white/5">
@@ -363,6 +513,7 @@ export default function EditFacilityPage() {
             </Button>
           </div>
         </form>
+      </div>
       </div>
     </div>
   )

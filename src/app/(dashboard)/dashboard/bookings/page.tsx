@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useSession } from "next-auth/react"
 import { Button } from "@/components/ui/button"
@@ -9,16 +9,73 @@ import { Badge } from "@/components/ui/badge"
 import { CalendarDays, Clock3, MapPin, Users, DollarSign, CheckCircle2, XCircle, AlertCircle } from "lucide-react"
 import { formatCurrency, formatDate, formatTime } from "@/lib/utils"
 import { trpc } from "@/lib/trpc"
+import { toast } from "@/hooks/use-toast"
 import { BookingStatus } from "@prisma/client"
+import { Sidebar } from "@/components/layout/Sidebar"
+import { QRCodeDisplay } from "@/components/booking/QRCodeDisplay"
+import { ConfirmCancelModal } from "@/components/booking/ConfirmCancelModal"
+import { JoinRequestsPanel } from "@/components/booking/JoinRequestsPanel"
+import { OpenGameModal } from "@/components/booking/OpenGameModal"
 
 export default function BookingsPage() {
   const { data: session } = useSession()
   const [statusFilter, setStatusFilter] = useState<string>("all")
+  const [cancelModalOpen, setCancelModalOpen] = useState(false)
+  const [cancelBookingId, setCancelBookingId] = useState<string | null>(null)
+  const [cancelBookingName, setCancelBookingName] = useState("")
+  const [cancelRequiresReason, setCancelRequiresReason] = useState(false)
+  const [openGameModalOpen, setOpenGameModalOpen] = useState(false)
+  const [openGameBookingId, setOpenGameBookingId] = useState<string | null>(null)
 
-  const { data, isLoading } = trpc.bookings.myBookings.useQuery({
+  const { data, isLoading, refetch } = trpc.bookings.myBookings.useQuery({
     status: statusFilter !== "all" ? statusFilter as BookingStatus : undefined,
     limit: 20,
   })
+
+  const cancelBooking = trpc.bookings.cancel.useMutation()
+  const togglePublic = trpc.bookings.togglePublic.useMutation({
+    onSuccess: () => {
+      toast({ title: "Updated", description: "Booking visibility updated" })
+      refetch()
+    },
+    onError: (e) => {
+      toast({ title: "Error", description: e.message, variant: "destructive" })
+    },
+  })
+
+  const approveRequest = trpc.bookings.approveJoinRequest.useMutation({
+    onSuccess: () => {
+      toast({ title: "Approved", description: "Player has been added to the game" })
+      refetch()
+    },
+    onError: (e) => {
+      toast({ title: "Error", description: e.message, variant: "destructive" })
+    },
+  })
+
+  const rejectRequest = trpc.bookings.rejectJoinRequest.useMutation({
+    onSuccess: () => {
+      toast({ title: "Rejected", description: "Join request rejected" })
+      refetch()
+    },
+    onError: (e) => {
+      toast({ title: "Error", description: e.message, variant: "destructive" })
+    },
+  })
+
+  const markAttendance = trpc.bookings.markAttendance.useMutation({
+    onSuccess: (data) => {
+      toast({ title: "Attendance Marked", description: `${data.markedNoShows} no-shows recorded` })
+      refetch()
+    },
+    onError: (e) => {
+      toast({ title: "Error", description: e.message, variant: "destructive" })
+    },
+  })
+
+  useEffect(() => {
+    fetch("/api/bookings/cleanup", { method: "POST" }).then(() => refetch()).catch(() => {})
+  }, [refetch])
 
   if (!session) {
     return (
@@ -58,8 +115,10 @@ export default function BookingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#070d12] text-white">
-      <div className="max-w-[1800px] mx-auto p-4 sm:p-6 xl:p-7">
+    <>
+      <Sidebar session={session} />
+      <div className="pt-14 md:pt-0 md:pl-[262px] min-h-screen bg-[#070d12] text-white">
+        <div className="max-w-[1800px] mx-auto p-4 sm:p-6 xl:p-7">
         <div className="mb-6">
           <h1 className="text-3xl font-bold tracking-tight">My Bookings</h1>
           <p className="mt-1 text-sm text-slate-400">View and manage your bookings</p>
@@ -109,6 +168,35 @@ export default function BookingsPage() {
                         </Badge>
                       </div>
                       <p className="text-sm text-slate-400 mb-2">{booking.court?.name || "Facility booking"}</p>
+                      {booking.status === "CONFIRMED" && booking.verificationCode && (
+                        <div className="mt-3 flex items-center gap-3 p-3 bg-white/5 rounded-lg">
+                          <QRCodeDisplay value={booking.verificationCode} size={80} />
+                          <div>
+                            <p className="text-xs text-slate-400">Show this QR code to the owner for verification</p>
+                            <p className="text-[10px] text-slate-500 font-mono mt-1">{booking.verificationCode.slice(0, 12)}...</p>
+                          </div>
+                        </div>
+                      )}
+                      {booking.isPublic && booking.userId === session?.user?.id && (
+                        <JoinRequestsPanel bookingId={booking.id} approveRequest={approveRequest} rejectRequest={rejectRequest} />
+                      )}
+                      {booking.isPublic && booking.userId === session?.user?.id && booking.participants && booking.participants.length > 0 && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="border-amber-500/30 text-amber-400 hover:bg-amber-500/10 text-[10px]"
+                          onClick={() => {
+                            const attended = prompt("Enter comma-separated names of players who showed up (leave empty for none):")
+                            const attendedIds = booking.participants
+                              .filter((p: any) => attended?.toLowerCase().includes(p.user?.name?.toLowerCase() || ""))
+                              .map((p: any) => p.userId)
+                            markAttendance.mutate({ bookingId: booking.id, attendedUserIds: attendedIds })
+                          }}
+                          disabled={markAttendance.isPending}
+                        >
+                          {markAttendance.isPending ? "Marking..." : "Mark Attendance"}
+                        </Button>
+                      )}
                       <div className="flex items-center gap-4 text-sm text-slate-500">
                         <span className="flex items-center gap-1">
                           <CalendarDays className="h-3.5 w-3.5" />
@@ -124,11 +212,41 @@ export default function BookingsPage() {
                         </span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex flex-col items-end gap-1 shrink-0">
                       <span className="font-semibold text-lg text-lime-400">{formatCurrency(booking.totalPrice)}</span>
+                      <span className="text-[10px] text-slate-500">Booked: {formatDate(booking.createdAt)} {formatTime(booking.createdAt)}</span>
+{booking.status === "CONFIRMED" && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className={booking.isPublic ? "border-lime-400/30 text-lime-400 hover:bg-lime-400/10 text-[10px]" : "border-white/10 text-slate-400 hover:bg-white/5 text-[10px]"}
+                          onClick={() => {
+                            if (!booking.isPublic) {
+                              setOpenGameBookingId(booking.id)
+                              setOpenGameModalOpen(true)
+                            } else {
+                              togglePublic.mutate({ bookingId: booking.id, isPublic: false })
+                            }
+                          }}
+                          disabled={togglePublic.isPending}
+                        >
+                          {booking.isPublic ? "Open for Players ✓" : "Open for Players"}
+                        </Button>
+                      )}
                       {booking.status === "PENDING" || booking.status === "CONFIRMED" ? (
-                        <Button variant="outline" size="sm" className="border-red-500/30 text-red-400 hover:bg-red-500/10">
-                          Cancel
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="border-red-500/30 text-red-400 hover:bg-red-500/10"
+                          onClick={() => {
+                            setCancelBookingId(booking.id)
+                            setCancelBookingName(booking.facility?.name || "this booking")
+                            setCancelRequiresReason(booking.status === "CONFIRMED")
+                            setCancelModalOpen(true)
+                          }}
+                          disabled={cancelBooking.isPending}
+                        >
+                          {cancelBooking.isPending ? "Cancelling..." : "Cancel"}
                         </Button>
                       ) : null}
                     </div>
@@ -149,5 +267,40 @@ export default function BookingsPage() {
         )}
       </div>
     </div>
+    <OpenGameModal
+        isOpen={openGameModalOpen}
+        isLoading={togglePublic.isPending}
+        onClose={() => {
+          setOpenGameModalOpen(false)
+          setOpenGameBookingId(null)
+        }}
+        onConfirm={(maxPlayers) => {
+          if (openGameBookingId) {
+            togglePublic.mutate({ bookingId: openGameBookingId, isPublic: true, maxPlayers })
+          }
+          setOpenGameModalOpen(false)
+          setOpenGameBookingId(null)
+        }}
+      />
+      <ConfirmCancelModal
+        isOpen={cancelModalOpen}
+      bookingName={cancelBookingName}
+      requiresReason={cancelRequiresReason}
+      isLoading={cancelBooking.isPending}
+      onCancel={() => setCancelModalOpen(false)}
+      onConfirm={async (reason) => {
+        if (!cancelBookingId) return
+        try {
+          const result = await cancelBooking.mutateAsync({ id: cancelBookingId, reason })
+          toast({ title: "Cancelled", description: "Booking cancelled successfully" })
+          setCancelModalOpen(false)
+          setCancelBookingId(null)
+          refetch()
+        } catch (e: any) {
+          toast({ title: "Error", description: e.message || "Failed to cancel", variant: "destructive" })
+        }
+      }}
+    />
+  </>
   )
 }

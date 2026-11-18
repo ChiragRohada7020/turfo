@@ -1,30 +1,33 @@
 "use client"
 
 import { useState, useMemo } from "react"
+import { useSearchParams } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
-import { useSession } from "next-auth/react"
+import { useSession, signOut } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ChevronDown, ChevronRight, MapPin, Menu, Search as SearchIcon, Users } from "lucide-react"
+import { ChevronDown, ChevronRight, MapPin, Menu, Search as SearchIcon, Users, LogOut, Home, CalendarDays, Ticket, ShieldCheck, Trophy, Gift, Wallet, Bell } from "lucide-react"
 import { formatCurrency } from "@/lib/utils"
 import { trpc } from "@/lib/trpc"
+import { Sidebar } from "@/components/layout/Sidebar"
+
 
 const NAV_ITEMS = [
-  { name: "Dashboard", href: "/dashboard" },
-  { name: "Book a Turf", href: "/search" },
-  { name: "My Bookings", href: "/dashboard/bookings" },
-  { name: "Find Players", href: "/teams" },
-  { name: "Teams", href: "/teams" },
-  { name: "Tournaments", href: "/tournaments" },
-  { name: "Offers & Rewards", href: "/offers" },
-  { name: "Wallet", href: "/wallet" },
-  { name: "Notifications", href: "/notifications" },
-  { name: "Support", href: "/help" },
+  { name: "Dashboard", href: "/dashboard", icon: Home },
+  { name: "Book a Game", href: "/search", icon: CalendarDays },
+  { name: "My Bookings", href: "/dashboard/bookings", icon: Ticket },
+  { name: "Find Players", href: "/teams", icon: Users },
+  { name: "Teams", href: "/teams", icon: ShieldCheck },
+  { name: "Tournaments", href: "/tournaments", icon: Trophy },
+  { name: "Offers & Rewards", href: "/offers", icon: Gift },
+  { name: "Wallet", href: "/wallet", icon: Wallet },
+  { name: "Notifications", href: "/notifications", icon: Bell },
+  { name: "Support", href: "/help", icon: ShieldCheck },
 ]
 
-const SPORT_FILTERS = ["All Sports", "Football", "Cricket", "Box Cricket", "Multi-Sport"]
+const SPORT_FILTERS = ["All Sports", "Football", "Cricket", "Badminton", "Tennis", "Pickleball", "Basketball", "Swimming", "Box Cricket", "Multi-Sport"]
 
 const MOCK_TURFS = [
   {
@@ -101,18 +104,43 @@ const MOCK_TURFS = [
   },
 ]
 
+function getSportCards(facility: any): { sport: string; price: number; courtName: string }[] {
+  const cards: { sport: string; price: number; courtName: string }[] = []
+  const seen = new Set<string>()
+  facility.courts?.forEach((court: any) => {
+    if (!seen.has(court.sportType)) {
+      seen.add(court.sportType)
+      const price = court.pricingRules?.length > 0
+        ? Math.min(...court.pricingRules.map((p: any) => p.pricePerHour))
+        : null
+      cards.push({ sport: court.sportType, price: price || 0, courtName: court.name })
+    }
+  })
+  // Fallback to facility sportTypes if no courts
+  if (cards.length === 0 && facility.sportTypes?.length > 0) {
+    const price = facility.minPrice || 0
+    facility.sportTypes.forEach((sport: string) => {
+      cards.push({ sport, price, courtName: facility.name })
+    })
+  }
+  return cards
+}
+
 export default function SearchPageContent() {
   const { data: session } = useSession()
+  const searchParams = useSearchParams()
+  const sportParam = searchParams.get("sport") || ""
   const [searchQuery, setSearchQuery] = useState("")
-  const [activeFilter, setActiveFilter] = useState("All Sports")
+  const [activeFilter, setActiveFilter] = useState(sportParam ? sportParam.charAt(0).toUpperCase() + sportParam.slice(1) : "All Sports")
 
   const { data: facilitiesData } = trpc.facilities.list.useQuery({
+    city: "Pachora",
     sportTypes: [],
     page: 1,
     limit: 12,
   })
 
-  const allTurfs = (facilitiesData ? facilitiesData.facilities : MOCK_TURFS) as any[]
+  const allTurfs = (facilitiesData ? facilitiesData.facilities : []) as any[]
 
   // Filter turfs based on search query and sport filter
   const filteredTurfs = useMemo(() => {
@@ -126,8 +154,10 @@ export default function SearchPageContent() {
       )
     }
     if (activeFilter !== "All Sports") {
+      const norm = (s: string) => s.toLowerCase().replace(/_/g, " ")
       result = result.filter((t: any) =>
-        t.sports?.some((s: string) => s.toLowerCase().includes(activeFilter.toLowerCase()))
+        t.sportTypes?.some((s: string) => norm(s) === norm(activeFilter)) ||
+        t.sports?.some((s: string) => norm(s) === norm(activeFilter))
       )
     }
     return result
@@ -140,7 +170,7 @@ export default function SearchPageContent() {
           <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-lime-400 text-black flex items-center justify-center">
             <span className="text-lg">🏟️</span>
           </div>
-          <h1 className="text-2xl font-bold">Book a Turf</h1>
+          <h1 className="text-2xl font-bold">Book a Game</h1>
           <p className="mt-2 text-sm text-slate-400">Please sign in to book turfs.</p>
           <Link href="/auth/login?callbackUrl=/search" className="mt-6 w-full">
             <Button className="w-full bg-lime-400 font-bold text-black hover:bg-lime-300">Sign In</Button>
@@ -152,81 +182,26 @@ export default function SearchPageContent() {
 
   return (
     <div className="min-h-screen bg-[#070d12] text-white">
-      <aside className="hidden w-[262px] flex-col border-r border-white/[0.08] bg-[#080f15] md:flex fixed inset-y-0 left-0 z-30">
-        <div className="flex h-[76px] shrink-0 items-center gap-3 border-b border-white/[0.08] px-5">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-lime-400 text-lime-400">
-            <span className="text-lg">🏟️</span>
-          </div>
-          <div>
-            <Link href="/" className="text-[22px] font-black tracking-tight">
-              Turf<span className="text-lime-400">Play</span>
-            </Link>
-            <p className="text-[10px] tracking-wide text-slate-500">Book · Play · Compete</p>
-          </div>
-        </div>
-        <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-5">
-          {NAV_ITEMS.map((item) => (
-            <Link
-              key={item.name}
-              href={item.href}
-              className="flex items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-medium transition text-slate-300 hover:bg-white/[0.06] hover:text-white"
-            >
-              <span className="truncate">{item.name}</span>
-            </Link>
-          ))}
-        </nav>
-        <div className="mx-4 mb-5 rounded-2xl border border-green-500/20 bg-gradient-to-br from-[#10271d] to-[#0b1714] p-4 text-center">
-          <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-white/10 text-3xl">⚽</div>
-          <p className="text-base font-bold">Invite Friends</p>
-          <p className="mt-1 text-sm font-semibold text-amber-300">Get ₹100 Credit</p>
-          <p className="mt-1 text-xs leading-5 text-slate-400">for each friend who books!</p>
-          <Button size="sm" className="mt-3 rounded-xl bg-lime-400 font-bold text-black hover:bg-lime-300">
-            Invite Now
-          </Button>
-        </div>
-      </aside>
+      <Sidebar session={session} />
 
-      <div className="min-h-screen md:pl-[262px]">
-        <header className="md:hidden sticky top-0 z-20 h-[72px] flex items-center justify-between border-b border-white/[0.08] bg-[#080f15]/95 px-4 backdrop-blur-xl sm:px-6">
-          <button className="rounded-lg border border-white/10 p-2 text-slate-300 md:hidden">
-            <Menu className="h-5 w-5" />
-          </button>
-          <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-[#121c25] px-3 py-2 text-sm text-slate-300 sm:flex">
-            <MapPin className="h-4 w-4" />
-            Pachora, MH
-            <ChevronDown className="h-4 w-4 text-slate-500" />
-          </div>
-          <div className="relative mx-auto w-full max-w-[590px] flex gap-2">
-            <div className="relative flex-1">
-              <SearchIcon className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-              <input
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search turfs, sports, or locations..."
-                className="h-10 w-full rounded-xl border border-white/10 bg-[#121b24] pl-10 pr-4 text-sm text-white outline-none placeholder:text-slate-500 focus:border-lime-400/50"
-              />
+      <div className="min-h-screen pt-14 md:pt-0 md:pl-[262px]">
+        <header className="md:hidden sticky top-0 z-20 h-auto flex flex-col gap-2 border-b border-white/[0.08] bg-[#080f15]/95 px-4 py-3 backdrop-blur-xl pl-14">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-[#121c25] px-3 py-2 text-sm text-slate-300 sm:flex">
+              <MapPin className="h-4 w-4" />
+              <span className="text-xs">Pachora, MH</span>
             </div>
-            <button className="px-4 py-2 rounded-xl bg-lime-400 text-black font-bold text-sm hover:bg-lime-300 transition shrink-0">
-              Search
+            <button aria-label="Notifications" className="relative rounded-full border border-white/10 bg-[#121b24] p-2 text-slate-300">
+              <BellIcon />
+              <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500" />
             </button>
-          </div>
-          <button aria-label="Notifications" className="relative rounded-full border border-white/10 bg-[#121b24] p-2.5 text-slate-300">
-            <BellIcon />
-            <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500" />
-          </button>
-          <div className="flex items-center gap-2">
-            <div className="flex shrink-0 items-center gap-2 rounded-full p-1 text-white">
-              <span className="h-9 w-9 border border-white/10 rounded-full flex items-center justify-center">
-                <span className="text-sm font-semibold">C</span>
-              </span>
-            </div>
           </div>
         </header>
 
         <main className="mx-auto max-w-[1800px] p-4 sm:p-6 xl:p-7">
           <div className="mb-6 flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">Book a Turf</h1>
+              <h1 className="text-3xl font-bold tracking-tight">Book a Game</h1>
               <p className="mt-1 text-sm text-slate-400">Find, compare and book the best turfs near you</p>
             </div>
             <div className="flex items-center gap-2 text-xs font-medium text-slate-400">
@@ -252,6 +227,22 @@ export default function SearchPageContent() {
             </div>
           </div>
 
+          {/* Search Bar */}
+          <div className="mb-4 flex items-center gap-3">
+            <div className="relative flex-1 max-w-lg">
+              <SearchIcon className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+              <input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search turfs, sports, or locations..."
+                className="h-10 w-full rounded-xl border border-white/10 bg-[#121b24] pl-10 pr-4 text-sm text-white outline-none placeholder:text-slate-500 focus:border-lime-400/50"
+              />
+            </div>
+            <button className="px-4 py-2 rounded-xl bg-lime-400 text-black font-bold text-sm hover:bg-lime-300 transition shrink-0">
+              Search
+            </button>
+          </div>
+
           <div className="mb-4 flex items-center justify-between gap-3">
             <div className="flex gap-2 flex-wrap">
               {SPORT_FILTERS.map((sport) => (
@@ -272,56 +263,50 @@ export default function SearchPageContent() {
 
           <div className="mb-4 flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-bold">{filteredTurfs.length} Turfs Found in Pachora</h2>
+              <h2 className="text-lg font-bold">{filteredTurfs.length} Games Found in Pachora</h2>
               <p className="mt-1 text-xs text-slate-500">Showing 1-{Math.min(filteredTurfs.length, 12)}</p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {filteredTurfs.map((turf: any) => (
-              <div key={turf.id} className="group overflow-hidden rounded-xl border-white/10 bg-[#111a22] transition hover:-translate-y-1 hover:border-lime-400/30">
-                <div className="relative h-32 overflow-hidden bg-[#1a3027]">
-                  <Image src={turf.image || turf.images?.[0] || "/placeholder.svg"} alt={turf.name} fill sizes="(max-width: 640px) 100vw, 33vw" className="object-cover transition duration-500 group-hover:scale-105" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-                  <button className="absolute top-2 right-2 h-8 w-8 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/20 transition">
-                    <span className="h-4 w-4">❤️</span>
-                  </button>
-                  {turf.tags?.[0] && (
-                    <div className="absolute top-2 left-2 flex items-center gap-1 px-2 py-1 rounded bg-black/60 backdrop-blur-sm text-[10px] font-semibold">
-                      <span className="text-[10px]">{turf.tags[0] === "Available Today" ? "🟢" : "🟠"}</span>
-                      {turf.tags[0]}
-                    </div>
+          {filteredTurfs.map((facility: any) => {
+            const sportCards = getSportCards(facility).filter((card: any) =>
+              activeFilter === "All Sports" || card.sport.toLowerCase().replace(/_/g, " ") === activeFilter.toLowerCase().replace(/_/g, " ")
+            )
+            if (sportCards.length === 0) return null
+            return (
+              <div key={facility.id} className="mb-6">
+                <div className="flex items-center gap-2 mb-3">
+                  <h3 className="text-lg font-bold text-white">{facility.name}</h3>
+                  <span className="text-xs text-slate-500">{facility.city}, {facility.state}</span>
+                  {facility.avgRating > 0 && (
+                    <span className="text-xs text-amber-300 ml-auto">★ {facility.avgRating.toFixed(1)} ({facility.reviewCount})</span>
                   )}
                 </div>
-                <div className="p-3.5">
-                  <div className="flex items-start justify-between gap-2">
-                    <h3 className="font-bold">{turf.name}</h3>
-                    <span className="shrink-0 text-xs font-semibold text-amber-300">★ {turf.rating}</span>
-                  </div>
-                  <p className="mt-1 flex items-center gap-1 text-xs text-slate-500">
-                    <MapPin className="h-3 w-3" /> {turf.city} ({turf.distance})
-                  </p>
-                  <div className="mt-3 flex flex-wrap gap-1.5">
-                    {turf.sports?.slice(0, 2).map((sport: string) => (
-                      <Badge key={sport} className="bg-white/[0.07] text-[10px] text-slate-300 hover:bg-white/[0.07]">
-                        {sport}
-                      </Badge>
-                    ))}
-                  </div>
-                  <div className="mt-4 flex items-center justify-between">
-                    <p className="font-bold text-lime-300">
-                      {formatCurrency(turf.price)}<span className="text-xs font-normal text-slate-500"> /hour</span>
-                    </p>
-                    <Button asChild size="sm" className="rounded-lg bg-lime-400 font-bold text-black hover:bg-lime-300">
-                      <Link href="/facility/[id]" replace>
-                        Book Now
-                      </Link>
-                    </Button>
-                  </div>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {sportCards.map((card, idx) => (
+                    <div key={idx} className="group overflow-hidden rounded-xl border-white/10 bg-[#111a22] transition hover:-translate-y-1 hover:border-lime-400/30">
+                      <div className="relative h-24 overflow-hidden bg-[#1a3027]">
+                        <Image src={facility.images?.[0] || "/placeholder.svg"} alt={facility.name} fill sizes="200px" className="object-cover transition duration-500 group-hover:scale-105" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                        <div className="absolute top-2 left-2 px-2 py-1 rounded bg-lime-400 text-black text-xs font-bold">{card.sport.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()).toLowerCase().replace(/\b\w/g, (c: string) => c.toUpperCase())}</div>
+                      </div>
+                      <div className="p-3">
+                        <p className="text-xs text-slate-400">{card.courtName}</p>
+                        <div className="mt-2 flex items-center justify-between">
+                          <p className="font-bold text-lime-300">{card.price ? formatCurrency(card.price) : "Contact"}<span className="text-xs font-normal text-slate-500"> /hr</span></p>
+                          <Button asChild size="sm" className="rounded-lg bg-lime-400 font-bold text-black hover:bg-lime-300">
+                            <Link href={"/facility/" + facility.id + "?sport=" + encodeURIComponent(card.sport)} replace>
+                              Book Now
+                            </Link>
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
-            ))}
-          </div>
+            )
+          })}
 
           {filteredTurfs.length === 0 && (
             <div className="text-center py-16">

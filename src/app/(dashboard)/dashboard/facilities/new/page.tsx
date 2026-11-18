@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { useForm } from "react-hook-form"
@@ -16,19 +17,16 @@ import { ArrowLeft, Building2, MapPin, Plus } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import { trpc } from "@/lib/trpc"
 import { SportType } from "@prisma/client"
+import { Sidebar } from "@/components/layout/Sidebar"
 
 const facilitySchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters"),
   description: z.string().optional(),
-  address: z.string().min(5, "Address is required"),
-  city: z.string().min(2, "City is required"),
-  state: z.string().min(2, "State is required"),
-  country: z.string().min(2, "Country is required"),
-  postalCode: z.string().min(4, "Postal code is required"),
-  latitude: z.coerce.number(),
-  longitude: z.coerce.number(),
   sportTypes: z.array(z.string()).min(1, "Select at least one sport"),
   amenities: z.array(z.string()).default([]),
+  images: z.array(z.string()).default([]),
+  openTime: z.string().default("06:00"),
+  closeTime: z.string().default("22:00"),
 })
 
 type FacilityForm = z.infer<typeof facilitySchema>
@@ -42,6 +40,8 @@ const SPORT_OPTIONS = [
   { value: "VOLLEYBALL", label: "Volleyball" },
   { value: "SWIMMING", label: "Swimming" },
   { value: "GYM", label: "Gym" },
+  { value: "PICKLEBALL", label: "Pickleball" },
+  { value: "TABLE_TENNIS", label: "Table Tennis" },
   { value: "MULTI_SPORT", label: "Multi-Sport" },
 ]
 
@@ -52,8 +52,10 @@ const AMENITY_OPTIONS = [
 
 export default function AddFacilityPage() {
   const router = useRouter()
+  const { data: session } = useSession()
   const [selectedSports, setSelectedSports] = useState<string[]>([])
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>([])
+  const [imageUrls, setImageUrls] = useState<string[]>([""])
   const [isLoading, setIsLoading] = useState(false)
 
   const {
@@ -64,11 +66,12 @@ export default function AddFacilityPage() {
   } = useForm<FacilityForm>({
     resolver: zodResolver(facilitySchema),
     defaultValues: {
-      country: "India",
       sportTypes: [],
       amenities: [],
     },
   })
+
+  const { data: profile } = trpc.auth.getProfile.useQuery()
 
   const createFacility = trpc.facilities.create.useMutation({
     onSuccess: () => {
@@ -80,6 +83,7 @@ export default function AddFacilityPage() {
     },
   })
 
+
   const onSubmit = async (data: FacilityForm) => {
     setIsLoading(true)
     try {
@@ -87,6 +91,7 @@ export default function AddFacilityPage() {
         ...data,
         sportTypes: selectedSports as SportType[],
         amenities: selectedAmenities,
+        images: imageUrls.filter((u) => u.trim() !== ""),
       })
     } finally {
       setIsLoading(false)
@@ -107,7 +112,9 @@ export default function AddFacilityPage() {
 
   return (
     <div className="min-h-screen bg-[#070d12] text-white">
-      <div className="max-w-3xl mx-auto p-4 sm:p-6 xl:p-7">
+      <Sidebar session={session} />
+      <div className="pt-14 md:pt-0 md:pl-[262px]">
+        <div className="max-w-3xl mx-auto p-4 sm:p-6 xl:p-7">
         <div className="mb-6">
           <Link href="/dashboard/facilities" className="inline-flex items-center gap-2 text-slate-400 hover:text-white mb-4">
             <ArrowLeft className="h-4 w-4" /> Back to Facilities
@@ -145,88 +152,7 @@ export default function AddFacilityPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="address" className="text-slate-300">Address</Label>
-                  <Input
-                    id="address"
-                    placeholder="Street address"
-                    className="bg-[#121b24] border-white/10 text-white placeholder:text-slate-500 focus:border-lime-400/50"
-                    {...register("address")}
-                  />
-                  {errors.address && <p className="text-sm text-red-400">{errors.address.message}</p>}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="city" className="text-slate-300">City</Label>
-                  <Input
-                    id="city"
-                    placeholder="City"
-                    className="bg-[#121b24] border-white/10 text-white placeholder:text-slate-500 focus:border-lime-400/50"
-                    {...register("city")}
-                  />
-                  {errors.city && <p className="text-sm text-red-400">{errors.city.message}</p>}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="state" className="text-slate-300">State</Label>
-                  <Input
-                    id="state"
-                    placeholder="State"
-                    className="bg-[#121b24] border-white/10 text-white placeholder:text-slate-500 focus:border-lime-400/50"
-                    {...register("state")}
-                  />
-                  {errors.state && <p className="text-sm text-red-400">{errors.state.message}</p>}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="country" className="text-slate-300">Country</Label>
-                  <Input
-                    id="country"
-                    placeholder="Country"
-                    className="bg-[#121b24] border-white/10 text-white placeholder:text-slate-500 focus:border-lime-400/50"
-                    {...register("country")}
-                  />
-                  {errors.country && <p className="text-sm text-red-400">{errors.country.message}</p>}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="postalCode" className="text-slate-300">Postal Code</Label>
-                  <Input
-                    id="postalCode"
-                    placeholder="560001"
-                    className="bg-[#121b24] border-white/10 text-white placeholder:text-slate-500 focus:border-lime-400/50"
-                    {...register("postalCode")}
-                  />
-                  {errors.postalCode && <p className="text-sm text-red-400">{errors.postalCode.message}</p>}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="latitude" className="text-slate-300">Latitude</Label>
-                  <Input
-                    id="latitude"
-                    type="number"
-                    step="any"
-                    placeholder="12.9716"
-                    className="bg-[#121b24] border-white/10 text-white placeholder:text-slate-500 focus:border-lime-400/50"
-                    {...register("latitude")}
-                  />
-                  {errors.latitude && <p className="text-sm text-red-400">{errors.latitude.message}</p>}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="longitude" className="text-slate-300">Longitude</Label>
-                  <Input
-                    id="longitude"
-                    type="number"
-                    step="any"
-                    placeholder="77.5946"
-                    className="bg-[#121b24] border-white/10 text-white placeholder:text-slate-500 focus:border-lime-400/50"
-                    {...register("longitude")}
-                  />
-                  {errors.longitude && <p className="text-sm text-red-400">{errors.longitude.message}</p>}
-                </div>
-              </div>
+              <p className="text-xs text-slate-500">Location will be auto-filled from your profile settings.</p>
             </CardContent>
           </Card>
 
@@ -289,6 +215,53 @@ export default function AddFacilityPage() {
                   ))}
                 </div>
               </div>
+
+              <div className="space-y-2">
+                <Label className="text-slate-300">Images (URLs)</Label>
+                {imageUrls.map((url, idx) => (
+                  <div key={idx} className="flex gap-2">
+                    <Input
+                      value={url}
+                      onChange={(e) => {
+                        const newUrls = [...imageUrls]
+                        newUrls[idx] = e.target.value
+                        setImageUrls(newUrls)
+                      }}
+                      placeholder="https://example.com/image.jpg"
+                      className="bg-[#121b24] border-white/10 text-white placeholder:text-slate-500 focus:border-lime-400/50"
+                    />
+                    {imageUrls.length > 1 && (
+                      <Button type="button" variant="outline" size="sm" className="border-white/10 text-white" onClick={() => setImageUrls(imageUrls.filter((_, i) => i !== idx))}>
+                        ×
+                      </Button>
+                    )}
+                  </div>
+                ))}
+                <Button type="button" variant="outline" size="sm" className="border-white/10 text-white" onClick={() => setImageUrls([...imageUrls, ""])}>
+                  + Add Image URL
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="openTime" className="text-slate-300">Opening Time</Label>
+                  <Input
+                    id="openTime"
+                    type="time"
+                    className="bg-[#121b24] border-white/10 text-white focus:border-lime-400/50"
+                    {...register("openTime")}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="closeTime" className="text-slate-300">Closing Time</Label>
+                  <Input
+                    id="closeTime"
+                    type="time"
+                    className="bg-[#121b24] border-white/10 text-white focus:border-lime-400/50"
+                    {...register("closeTime")}
+                  />
+                </div>
+              </div>
             </CardContent>
           </Card>
 
@@ -303,6 +276,7 @@ export default function AddFacilityPage() {
             </Button>
           </div>
         </form>
+      </div>
       </div>
     </div>
   )

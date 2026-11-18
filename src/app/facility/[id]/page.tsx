@@ -1,466 +1,632 @@
 "use client"
 
-import { useState } from "react"
-import { useParams } from "next/navigation"
+import { useState, useEffect, useMemo, Suspense } from "react"
+import { useParams, useSearchParams } from "next/navigation"
 import Link from "next/link"
-import { Map } from "@/components/ui/map"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Calendar, MapPin, Clock, Star, Users, Shield, Check, X, ChevronLeft, ChevronRight, Heart, Share2 } from "lucide-react"
-import { formatDate, formatTime, cn, getInitials, formatCurrency } from "@/lib/utils"
-import { trpc } from "@/lib/trpc"
-import { BookingStatus } from "@prisma/client"
-import { useDebounce } from "@/hooks/use-debounce"
 import Image from "next/image"
+import { useSession } from "next-auth/react"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import {
+  MapPin,
+  Clock,
+  Star,
+  ChevronLeft,
+  ChevronRight,
+  Heart,
+  Share2,
+  Calendar,
+  X,
+  Check,
+  Building2,
+  Users,
+  Trophy,
+  Gift,
+  Ticket,
+  Home,
+  Bell,
+  Sun,
+  Droplets,
+  Wifi,
+  Coffee,
+  PlusCircle,
+} from "lucide-react"
+import { formatDate, cn, formatCurrency } from "@/lib/utils"
+import { trpc } from "@/lib/trpc"
 import { BookingModal } from "@/components/facility/BookingModal"
 import { FacilitySkeleton } from "@/components/facility/FacilitySkeleton"
+import { Sidebar } from "@/components/layout/Sidebar"
 
-export default function FacilityDetailPage() {
+const AMENITY_ICONS: Record<string, any> = {
+  parking: Building2,
+  lights: Sun,
+  changing_room: Building2,
+  drinking_water: Droplets,
+  wifi: Wifi,
+  cafeteria: Coffee,
+  first_aid: PlusCircle,
+  shower: Droplets,
+}
+function FacilityDetailInner() {
   const params = useParams()
+  const searchParams = useSearchParams()
+  const { data: session } = useSession()
   const facilityId = params.id as string
+  const sportParam = (searchParams.get("sport") || "").toUpperCase().replace(/ /g, "_")
+
   const [selectedDate, setSelectedDate] = useState(new Date())
-  const [selectedCourt, setSelectedCourt] = useState<string | null>(null)
+  const [selectedCourtId, setSelectedCourtId] = useState<string | null>(null)
   const [selectedSlot, setSelectedSlot] = useState<{ start: string; end: string; price: number } | null>(null)
-  const [showBookingModal, setShowBookingModal] = useState(false)
   const [activeImageIndex, setActiveImageIndex] = useState(0)
+  const [showBookingModal, setShowBookingModal] = useState(false)
 
   const { data: facility, isLoading: facilityLoading } = trpc.facilities.get.useQuery({ id: facilityId })
-  const { data: availability, isLoading: availabilityLoading } = trpc.courts.availability.useQuery(
-    { courtId: selectedCourt || "", date: selectedDate.toISOString().split("T")[0] },
-    { enabled: !!selectedCourt }
+  const courtForQuery = selectedCourtId || ""
+const { data: availability, isLoading: availabilityLoading, refetch: refetchAvailability } = trpc.courts.availability.useQuery(
+    { courtId: selectedCourtId || "", date: selectedDate.toISOString().split("T")[0] },
+    { enabled: !!selectedCourtId }
   )
 
-  const courts = facility?.courts || []
+  // Refetch availability when booking modal closes
+  useEffect(() => {
+    if (!showBookingModal) {
+      refetchAvailability()
+    }
+  }, [showBookingModal, refetchAvailability])
+
+  // Refetch availability when page becomes visible (user returns from payment)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        refetchAvailability()
+        fetch("/api/bookings/cleanup", { method: "POST" }).catch(() => {})
+      }
+    }
+    document.addEventListener("visibilitychange", handleVisibilityChange)
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange)
+  }, [refetchAvailability])
+
+  const courts = useMemo(
+    () => (facility?.courts || []).filter((c: any) => !sportParam || c.sportType === sportParam),
+    [facility, sportParam]
+  )
   const images = facility?.images || []
 
-  const handleBooking = () => {
-    if (selectedCourt && selectedSlot) {
-      setShowBookingModal(true)
-    }
+  const selectedCourt = courts.find((c: any) => c.id === selectedCourtId) || courts[0]
+  const slotPrice = selectedSlot?.price ?? selectedCourt?.pricingRules?.[0]?.pricePerHour ?? facility?.minPrice ?? 0
+
+  const availableSlotKeys = new Set<string>()
+  if (availability?.slots) {
+    availability.slots.forEach((s: any) => {
+      availableSlotKeys.add(`${s.startTime}-${s.endTime}`)
+    })
   }
 
-  const mapMarkers = facility ? [
-    {
-      id: facility.id,
-      coordinates: [facility.longitude, facility.latitude] as [number, number],
-      title: facility.name,
-      description: facility.address,
-      sportTypes: facility.sportTypes,
-      pricePerHour: facility.minPrice ?? undefined,
+  useEffect(() => {
+    if (courts.length > 0 && !selectedCourtId) {
+      setSelectedCourtId(courts[0].id)
     }
-  ] : []
+  }, [courts, selectedCourtId])
 
-  if (facilityLoading) {
-    return <FacilitySkeleton />
-  }
+  useEffect(() => {
+    setSelectedSlot(null)
+  }, [selectedCourtId, selectedDate])
 
+  if (facilityLoading) return <FacilitySkeleton />
   if (!facility) {
     return (
-      <div className="container mx-auto px-4 py-16 text-center">
-        <h1 className="text-2xl font-bold mb-4">Facility Not Found</h1>
-        <Link href="/search"><Button>Back to Search</Button></Link>
+      <div className="min-h-screen bg-[#070d12] flex items-center justify-center px-4 text-white">
+        <div className="max-w-md p-8 bg-[#111a22] border border-white/10 rounded-2xl text-center">
+          <h1 className="text-2xl font-bold mb-4">Facility Not Found</h1>
+          <Link href="/search"><Button>Back to Search</Button></Link>
+        </div>
       </div>
     )
   }
 
   const avgRating = facility.avgRating || 0
   const reviewCount = facility.reviewCount || 0
+  const sportLabel = sportParam ? sportParam.replace(/_/g, " ") : facility.sportTypes?.[0]?.replace(/_/g, " ") || "Pickleball"
+
+  const goDay = (delta: number) => {
+    const d = new Date(selectedDate)
+    d.setDate(d.getDate() + delta)
+    setSelectedDate(d)
+  }
+
+  const isToday = (d: Date) => d.toDateString() === new Date().toDateString()
+
+  const dateOptions = []
+  for (let i = 0; i < 7; i++) {
+    const d = new Date()
+    d.setDate(d.getDate() + i)
+    dateOptions.push(d)
+  }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Image Gallery */}
-      <div className="relative h-[400px] w-full">
-        {images.length > 0 ? (
-          <>
-            <Image
-              src={images[activeImageIndex]}
-              alt={`${facility.name} - Image ${activeImageIndex + 1}`}
-              fill
-              className="object-cover"
-              priority
-              sizes="100vw"
-            />
-            {images.length > 1 && (
-              <>
-                <button
-                  onClick={() => setActiveImageIndex((i) => (i === 0 ? images.length - 1 : i - 1))}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 z-10 p-2 bg-background/80 backdrop-blur-sm rounded-full hover:bg-background transition-colors"
-                  aria-label="Previous image"
-                >
-                  <ChevronLeft className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={() => setActiveImageIndex((i) => (i === images.length - 1 ? 0 : i + 1))}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 z-10 p-2 bg-background/80 backdrop-blur-sm rounded-full hover:bg-background transition-colors"
-                  aria-label="Next image"
-                >
-                  <ChevronRight className="w-5 h-5" />
-                </button>
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
-                  {images.map((_, i) => (
-                    <button
-                      key={i}
-                      onClick={() => setActiveImageIndex(i)}
-                      className={cn(
-                        "w-2 h-2 rounded-full transition-all",
-                        i === activeImageIndex ? "bg-primary w-6" : "bg-white/50 hover:bg-white"
-                      )}
-                      aria-label={`View image ${i + 1}`}
-                    />
-                  ))}
-                </div>
-              </>
-            )}
-          </>
-        ) : (
-          <div className="w-full h-full bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center">
-            <span className="text-8xl">🏟️</span>
-          </div>
-        )}
-        <div className="absolute bottom-4 right-4 flex gap-2">
-          <Button variant="secondary" size="icon" className="bg-background/80 backdrop-blur-sm">
-            <Heart className="w-5 h-5" />
-          </Button>
-          <Button variant="secondary" size="icon" className="bg-background/80 backdrop-blur-sm">
-            <Share2 className="w-5 h-5" />
-          </Button>
-        </div>
-      </div>
+    <div className="min-h-screen bg-[#070d12] text-white">
+      <Sidebar session={session as any} />
 
-      <div className="container mx-auto px-4 py-6">
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Header */}
-            <div>
-              <div className="flex flex-wrap gap-2 mb-3">
-                {facility.sportTypes?.map((sport: string) => (
-                  <Badge key={sport} variant="secondary">{sport}</Badge>
-                ))}
-                <Badge variant="outline">{facility.city}, {facility.state}</Badge>
+      <div className="pt-14 md:pt-0 md:pl-[262px] pb-20 md:pb-0">
+        <header className="sticky top-0 z-20 bg-[#070d12]/80 backdrop-blur border-b border-white/10 px-4 py-3 pl-14 md:pl-4">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <Button variant="outline" size="sm" asChild className="border-white/10 text-white px-2 shrink-0">
+                <Link href="/search"><span>←</span></Link>
+              </Button>
+              <span className="text-xs text-slate-400 truncate">{facility.name}</span>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="hidden sm:flex items-center gap-2 rounded-lg border border-white/10 bg-[#080f15] px-3 py-1.5 text-xs text-slate-300">
+                <MapPin className="h-3 w-3" /> Pachora, MH
               </div>
-              <h1 className="text-3xl font-bold mb-2">{facility.name}</h1>
-              <div className="flex items-center gap-4 text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <MapPin className="w-4 h-4" />
-                  {facility.address}, {facility.city}, {facility.state}
-                </span>
-                {avgRating > 0 && (
-                  <span className="flex items-center gap-1">
-                    <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                    <span className="font-medium">{avgRating.toFixed(1)}</span>
-                    <span className="text-sm">({reviewCount} reviews)</span>
-                  </span>
+              <Button variant="outline" size="icon" className="border-white/10 text-slate-300 hover:text-white h-8 w-8">
+                <Bell className="h-4 w-4" />
+              </Button>
+              <Image src="/placeholder.svg" alt="user" width={28} height={28} className="rounded-full border border-white/10" />
+            </div>
+          </div>
+        </header>
+
+        <div className="px-4 py-6 md:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <main className="lg:col-span-7 space-y-6">
+              {/* Image Gallery */}
+              <div className="relative group rounded-2xl overflow-hidden border border-white/10 bg-[#080f15]">
+                <div className="relative h-[420px] w-full">
+                  {images.length > 0 ? (
+                    <>
+                      <Image
+                        src={images[activeImageIndex]}
+                        alt={facility.name}
+                        fill
+                        className="object-cover"
+                        priority
+                        sizes="(max-width: 1024px) 100vw, 560px"
+                      />
+                      <div className="absolute bottom-4 right-4 z-10 flex items-center gap-1 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur text-xs font-medium text-white">
+                        {activeImageIndex + 1} / {images.length}
+                      </div>
+                      {images.length > 1 && (
+                        <>
+                          <button
+                            onClick={() => setActiveImageIndex((i) => (i === 0 ? images.length - 1 : i - 1))}
+                            className="absolute left-4 top-1/2 -translate-y-1/2 z-10 p-2 bg-black/60 backdrop-blur rounded-full hover:bg-black/80"
+                            aria-label="Previous"
+                          >
+                            <ChevronLeft className="w-5 h-5" />
+                          </button>
+                          <button
+                            onClick={() => setActiveImageIndex((i) => (i === images.length - 1 ? 0 : i + 1))}
+                            className="absolute right-4 top-1/2 -translate-y-1/2 z-10 p-2 bg-black/60 backdrop-blur rounded-full hover:bg-black/80"
+                            aria-label="Next"
+                          >
+                            <ChevronRight className="w-5 h-5" />
+                          </button>
+                        </>
+                      )}
+                    </>
+                  ) : (
+                    <div className="h-full flex items-center justify-center"><span className="text-6xl">🏟️</span></div>
+                  )}
+                </div>
+                {images.length > 1 && (
+                  <div className="flex gap-1 px-4 py-3 overflow-x-auto scrollbar-hidden">
+                    {images.map((_, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setActiveImageIndex(i)}
+                        className={cn(
+                          "shrink-0 w-12 h-12 rounded-lg border overflow-hidden",
+                          i === activeImageIndex ? "border-lime-400" : "border-white/10"
+                        )}
+                      >
+                        <Image src={images[i]} alt="" fill className="object-cover" sizes="48px" />
+                      </button>
+                    ))}
+                  </div>
                 )}
               </div>
-            </div>
 
-            {/* Tabs */}
-            <Tabs defaultValue="courts" className="space-y-4">
-              <TabsList>
-                <TabsTrigger value="courts">Courts & Pricing</TabsTrigger>
-                <TabsTrigger value="availability">Availability</TabsTrigger>
-                <TabsTrigger value="amenities">Amenities</TabsTrigger>
-                <TabsTrigger value="reviews">Reviews ({reviewCount})</TabsTrigger>
-                <TabsTrigger value="location">Location</TabsTrigger>
-              </TabsList>
+              <h1 className="text-3xl font-bold tracking-tight">{facility.name}</h1>
 
-              {/* Courts Tab */}
-              <TabsContent value="courts" className="space-y-4">
-                {courts.map((court) => (
-                  <Card key={court.id} className={selectedCourt === court.id ? "ring-2 ring-primary" : ""}>
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className="w-14 h-14 bg-primary/10 rounded-lg flex items-center justify-center">
-                            <Users className="w-6 h-6 text-primary" />
-                          </div>
-                          <div>
-                            <h3 className="font-semibold text-lg">{court.name}</h3>
-                            <p className="text-sm text-muted-foreground">
-                              {court.sportType} • {court.surfaceType || "Standard"} • {court.capacity} players max
-                            </p>
-                            {court.dimensions && <p className="text-sm text-muted-foreground">{court.dimensions}</p>}
-                          </div>
+              <div className="flex items-center gap-4 text-sm text-slate-400">
+                <span className="flex items-center gap-1"><MapPin className="w-4 h-4" /> {facility.address}, {facility.city}</span>
+                <span className="w-px h-4 bg-white/20"></span>
+                <span className="flex items-center gap-1"><Clock className="w-4 h-4" /> Open: 6:00 AM – 12:00 AM</span>
+                <span className="w-px h-4 bg-white/20"></span>
+                <span className="flex items-center gap-1"><Star className="w-4 h-4 fill-yellow-400 text-yellow-400" /><span className="font-medium">{avgRating.toFixed(1)}</span> ({reviewCount} reviews)</span>
+              </div>
+
+              {/* Available Sports */}
+              <div>
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Available Sports at this Turf</p>
+                <div className="flex gap-2">
+                  {facility.sportTypes?.map((sport: string) => (
+                    <Badge
+                      key={sport}
+                      variant={sportParam && sport === sportParam ? "default" : "outline"}
+                      className={cn(
+                        sportParam && sport === sportParam
+                          ? "bg-lime-400 text-black border-lime-400"
+                          : "border-white/10 text-slate-300 hover:border-lime-400/50 hover:text-white"
+                      )}
+                      onClick={() => {
+                        const url = new URL(window.location.href)
+                        url.searchParams.set("sport", sport.replace(/_/g, " "))
+                        window.history.pushState(null, "", url.toString())
+                        setSelectedCourtId(courts.find((c: any) => c.sportType === sport)?.id || null)
+                        setSelectedSlot(null)
+                      }}
+                    >
+                      {sport.replace(/_/g, " ")}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+
+              {/* Court Info Row */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 rounded-xl border border-white/10 bg-[#080f15]">
+                <div className="text-center">
+                  <p className="text-xs text-slate-500">Courts</p>
+                  <p className="font-semibold text-white">{courts.length} Courts</p>
+                </div>
+                <div className="text-center border-l border-white/10 pl-4">
+                  <p className="text-xs text-slate-500">Court Size</p>
+                  <p className="font-semibold text-white">{selectedCourt?.dimensions || "—"}</p>
+                </div>
+                <div className="text-center border-l border-white/10 pl-4">
+                  <p className="text-xs text-slate-500">Surface</p>
+                  <p className="font-semibold text-white">{selectedCourt?.surfaceType?.replace(/_/g, " ") || "—"}</p>
+                </div>
+                <div className="text-center border-l border-white/10 pl-4">
+                  <p className="text-xs text-slate-500">Game Type</p>
+                  <p className="font-semibold text-white">Singles / Doubles</p>
+                </div>
+              </div>
+
+              {/* About */}
+              <div>
+                <h2 className="text-sm font-bold text-white mb-3">About This Turf</h2>
+                <p className="text-sm text-slate-400 leading-relaxed">
+                  {facility.description || `Premium multi-sport turf with dedicated ${sportLabel} courts, professional lighting, clean amenities, and a great playing experience.`}
+                </p>
+              </div>
+
+              {/* Amenities */}
+              <div>
+                <h2 className="text-sm font-bold text-white mb-3">Amenities</h2>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {(facility.amenities || []).map((amenity: string) => {
+                    const Icon = AMENITY_ICONS[amenity] || MapPin
+                    return (
+                      <div key={amenity} className="flex items-center gap-2 p-3 rounded-lg border border-white/10 bg-[#080f15]">
+                        <Icon className="h-5 w-5 text-lime-400" />
+                        <span className="text-xs text-slate-300 capitalize">{amenity.replace(/_/g, " ")}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Courts grid */}
+              <div>
+                <h2 className="text-sm font-bold text-white mb-3">Select Court</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {courts.map((court: any) => {
+                    const active = selectedCourtId === court.id
+                    return (
+                      <button
+                        key={court.id}
+                        onClick={() => { setSelectedCourtId(court.id); setSelectedSlot(null) }}
+                        className={cn(
+                          "flex items-center gap-3 rounded-xl border p-3 text-left transition",
+                          active
+                            ? "border-lime-400 bg-[#080f15]"
+                            : "border-white/10 bg-[#080f15]/50 hover:border-white/20"
+                        )}
+                      >
+                        <div className="shrink-0 w-10 h-10 rounded bg-[#080f15] flex items-center justify-center border border-white/10">
+                          {active ? <Check className="w-5 h-5 text-lime-400" /> : <Users className="w-5 h-5 text-slate-400" />}
                         </div>
-                        <Button
-                          variant={selectedCourt === court.id ? "default" : "outline"}
-                          onClick={() => setSelectedCourt(selectedCourt === court.id ? null : court.id)}
+                        <div>
+                          <p className="font-semibold text-white">{court.name}</p>
+                          <p className="text-xs text-slate-500">{court.sportType.replace(/_/g, " ")}</p>
+                        </div>
+                        <span className="ml-auto text-xs font-bold text-lime-400">
+                          {formatCurrency(court.pricingRules?.[0]?.pricePerHour ?? facility.minPrice ?? 0)}/hr
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            </main>
+
+            <aside className="lg:col-span-5">
+              <div className="sticky top-5">
+                <Card className="bg-[#080f15] border border-white/10 overflow-hidden">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                          <span className="w-6 h-6 rounded-full bg-lime-400 text-[#070d12] flex items-center justify-center text-xs font-bold">🏓</span>
+                          Book {sportLabel}
+                        </h2>
+                        <p className="text-xs text-slate-500">{facility.name}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-slate-400">{sportLabel}</span>
+                        <X className="w-4 h-4 text-slate-400 cursor-pointer hover:text-white" />
+                      </div>
+                    </div>
+
+                    {/* Select Date */}
+                    <div className="mb-4">
+                      <p className="text-xs font-bold text-slate-400 uppercase mb-2">Select Date</p>
+                      <div className="flex items-center justify-between mb-2">
+                        <button
+                          onClick={() => goDay(-7)}
+                          className="text-xs text-slate-400 hover:text-white"
                         >
-                          {selectedCourt === court.id ? "Selected" : "Select"}
+                          <ChevronLeft className="w-3 h-3 mr-1" /> Prev
+                        </button>
+                        <span className="text-sm font-medium text-white">{formatDate(selectedDate)}</span>
+                        <button
+                          onClick={() => goDay(7)}
+                          className="text-xs text-slate-400 hover:text-white"
+                        >
+                          Next <ChevronRight className="w-3 h-3 ml-1" />
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-7 gap-1">
+                        {dateOptions.map((d) => {
+                          const selected = d.toDateString() === selectedDate.toDateString()
+                          return (
+                            <button
+                              key={d.toISOString()}
+                              onClick={() => setSelectedDate(d)}
+                              className={cn(
+                                "aspect-square rounded-lg flex flex-col items-center justify-center text-xs transition",
+                                selected
+                                  ? "bg-lime-400 text-[#070d12] font-bold"
+                                  : isToday(d)
+                                  ? "border border-white/20 text-slate-300"
+                                  : "text-slate-500 hover:text-white hover:bg-white/5"
+                              )}
+                            >
+                              <span>{d.toDateString().slice(0, 3)}</span>
+                              <span className="font-medium">{d.getDate()}</span>
+                              <span className="text-[10px]">{d.toDateString().slice(4, 7)}</span>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Select Time Slot */}
+                    <div className="mb-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-xs font-bold text-slate-400 uppercase">Select Time Slot</p>
+                        <div className="flex gap-1 text-[10px]">
+                          <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-lime-400" /> Available</span>
+                          <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-red-500" /> Booked</span>
+                        </div>
+                      </div>
+{availabilityLoading ? (
+  <p className="text-slate-400 text-sm">Loading slots...</p>
+) : availability?.isBlocked ? (
+  <p className="text-slate-400 text-sm">{availability.note || "No slots available on this date."}</p>
+) : (
+  <div className="space-y-3">
+    <p className="text-xs text-slate-400">
+      {!selectedSlot?.start ? "Select a start time (booked slots shown in red)" : !selectedSlot?.end ? "Now select an end time" : "Slot selected"}
+    </p>
+    <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-1.5">
+      {Array.from({ length: 33 }, (_, i) => {
+        const h = Math.floor((6 * 60 + i * 30) / 60)
+        const m = (6 * 60 + i * 30) % 60
+        const time = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`
+        if (h > 22) return null
+
+        const isStartSelected = selectedSlot?.start === time
+        const isEndSelected = selectedSlot?.end === time
+        const isInRange = selectedSlot?.start && selectedSlot?.end && time > selectedSlot.start && time < selectedSlot.end
+        const isBooked = !availability?.slots?.some((s: any) => s.startTime <= time && s.endTime > time) && !availability?.slots?.some((s: any) => s.startTime === time)
+        // Check if this time falls within any booked slot
+        const bookedSlot = availability?.slots ? null : null
+
+        // Determine if this time is in a booked range
+        // The availability API returns available slots; if a slot is not available, it's booked
+        const isAvailableTime = availability?.slots?.some((s: any) => s.startTime <= time && s.endTime > time) ?? false
+
+        // For start selection: show all times, booked ones red
+        // For end selection: show times after start
+        const canSelectAsStart = !selectedSlot?.start || selectedSlot.start === time
+        const canSelectAsEnd = selectedSlot?.start && time > selectedSlot.start
+
+        // Check if this time is in a booked range
+        const isInBookedRange = !availability?.slots?.some((s: any) => s.startTime <= time && s.endTime > time)
+
+        // Check if selecting this as end time would overlap a booked slot
+        let wouldOverlapBooked = false
+        if (selectedSlot?.start && time > selectedSlot.start) {
+          const startMins = parseInt(selectedSlot.start.split(":")[0]) * 60 + parseInt(selectedSlot.start.split(":")[1])
+          const endMins = parseInt(time.split(":")[0]) * 60 + parseInt(time.split(":")[1])
+          // Check all 30-min intervals between start and end
+          for (let m = startMins + 30; m <= endMins; m += 30) {
+            const hh = String(Math.floor(m / 60)).padStart(2, "0")
+            const mm = String(m % 60).padStart(2, "0")
+            const t = `${hh}:${mm}`
+            if (!availability?.slots?.some((s: any) => s.startTime <= t && s.endTime > t)) {
+              const slotExists = availability?.slots?.some((s: any) => s.startTime === t || (s.startTime < t && s.endTime > t))
+              if (!slotExists) {
+                wouldOverlapBooked = true
+                break
+              }
+            }
+          }
+        }
+
+        let bgClass = "border-white/10 text-white hover:border-lime-400/50 active:bg-white/5"
+        if (isStartSelected || isEndSelected) {
+          bgClass = "bg-lime-400 border-lime-400 text-[#070d12] font-bold"
+        } else if (isInRange) {
+          bgClass = "bg-lime-400/20 border-lime-400/30 text-lime-300"
+        } else if (selectedSlot?.start && (isInBookedRange || wouldOverlapBooked)) {
+          bgClass = "border-red-500/50 text-red-400 bg-red-500/10 cursor-not-allowed"
+        } else if (!isAvailableTime && !selectedSlot?.start) {
+          bgClass = "border-red-500/50 text-red-400 bg-red-500/10 cursor-not-allowed"
+        } else if (selectedSlot?.start && time <= selectedSlot.start) {
+          bgClass = "border-white/5 text-slate-600 cursor-not-allowed opacity-40"
+        } else if (selectedSlot?.start && (() => {
+          const startMins = parseInt(selectedSlot.start.split(":")[0]) * 60 + parseInt(selectedSlot.start.split(":")[1])
+          const endMins = parseInt(time.split(":")[0]) * 60 + parseInt(time.split(":")[1])
+          return (endMins - startMins) > 60
+        })()) {
+          bgClass = "border-white/5 text-slate-600 cursor-not-allowed opacity-40"
+        }
+
+        const isDisabled = selectedSlot?.start
+          ? (time <= selectedSlot.start || isInBookedRange || wouldOverlapBooked || (() => {
+              const startMins = parseInt(selectedSlot.start.split(":")[0]) * 60 + parseInt(selectedSlot.start.split(":")[1])
+              const endMins = parseInt(time.split(":")[0]) * 60 + parseInt(time.split(":")[1])
+              return (endMins - startMins) > 60
+            })())
+          : !isAvailableTime
+
+        return (
+          <button
+            key={time}
+            onClick={() => {
+              if (!selectedSlot?.start) {
+                // Selecting start time
+                if (!isAvailableTime) return
+                setSelectedSlot({ start: time, end: "", price: slotPrice })
+              } else if (time > selectedSlot.start && !isInBookedRange && !wouldOverlapBooked) {
+                // Selecting end time
+                setSelectedSlot({ ...selectedSlot, end: time })
+              }
+            }}
+            disabled={isDisabled}
+            className={cn("rounded-lg border px-1 py-2 text-[11px] font-medium transition min-h-[36px]", bgClass)}
+          >
+            {time}
+          </button>
+        )
+      })}
+    </div>
+    {selectedSlot?.start && selectedSlot?.end && (
+      <div className="p-3 bg-[#17222d] rounded-lg border border-white/10">
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-slate-400">Duration</span>
+          <span className="text-sm font-bold text-white">
+            {(() => {
+              const [sh, sm] = selectedSlot.start.split(":").map(Number)
+              const [eh, em] = selectedSlot.end.split(":").map(Number)
+              const mins = (eh * 60 + em) - (sh * 60 + sm)
+              return `${mins} mins (${(mins / 60).toFixed(1)} hrs)`
+            })()}
+          </span>
+        </div>
+        <div className="flex items-center justify-between mt-1">
+          <span className="text-sm text-slate-400">Price</span>
+          <span className="text-sm font-bold text-lime-400">{formatCurrency(slotPrice)}/hr</span>
+        </div>
+        <button
+          onClick={() => setSelectedSlot(null)}
+          className="mt-2 w-full py-2 rounded-lg border border-white/10 bg-white/5 text-sm text-slate-300 hover:bg-white/10 hover:text-white transition font-medium"
+        >
+          Reset Selection
+        </button>
+      </div>
+    )}
+  </div>
+)}
+                    </div>
+
+                    {/* Booking Summary */}
+                    <div className="border-t border-white/10 pt-4">
+                      <p className="text-xs font-bold text-slate-400 uppercase mb-3">Booking Summary</p>
+                      <div className="space-y-3">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-slate-400">Sport</span>
+                          <span className="text-white">{sportLabel}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-slate-400">Date</span>
+                          <span className="text-white">{formatDate(selectedDate)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-slate-400">Time</span>
+                          <span className="text-white">{selectedSlot ? `${selectedSlot.start} – ${selectedSlot.end} (1 hour)` : "—"}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-slate-400">Court</span>
+                          <span className="text-white">{selectedCourt?.name || "—"}</span>
+                        </div>
+                        <div className="flex justify-between text-sm font-bold">
+                          <span className="text-slate-400">Price</span>
+                          <span className="text-lime-400">₹{slotPrice}</span>
+                        </div>
+                      </div>
+                      <Button
+                        className="w-full bg-lime-400 font-bold text-black hover:bg-lime-300 mt-4"
+                        disabled={!selectedSlot?.start || !selectedSlot?.end}
+                        onClick={() => {
+                          setShowBookingModal(true)
+                        }}
+                      >
+                        Book Now →
+                      </Button>
+                    </div>
+
+                    {/* Mobile sticky bottom bar */}
+                    <div className="fixed bottom-0 left-0 right-0 z-30 md:hidden bg-[#070d12]/95 backdrop-blur border-t border-white/10 p-3 pl-14">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-xs text-slate-400">Selected</p>
+                          <p className="text-sm font-bold text-white truncate">
+                            {selectedSlot ? `${selectedSlot.start} – ${selectedSlot.end}` : "Pick a slot"}
+                          </p>
+                        </div>
+<Button
+                          className="w-full bg-lime-400 font-bold text-black hover:bg-lime-300 mt-4"
+                          disabled={!selectedSlot?.start || !selectedSlot?.end}
+                          onClick={() => {
+                            setShowBookingModal(true)
+                          }}
+                        >
+                          Book Now →
                         </Button>
                       </div>
-
-                      {selectedCourt === court.id && court.pricingRules?.length > 0 && (
-                        <div className="mt-4 pt-4 border-t space-y-2">
-                          <h4 className="font-medium">Pricing Rules</h4>
-                          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-2 text-sm">
-                            {court.pricingRules.map((rule: any) => (
-                              <div key={rule.id} className="p-3 bg-muted/50 rounded-lg">
-                                <p className="font-medium">{rule.name}</p>
-                                <p className="text-muted-foreground">
-                                  {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].filter((_, i) => rule.dayOfWeek.includes(i)).join(", ")}
-                                </p>
-                                <p className="text-muted-foreground">{rule.startTime} - {rule.endTime}</p>
-                                <p className="font-semibold text-primary">₹{rule.pricePerHour}/hr</p>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
-
-                {courts.length === 0 && (
-                  <Card>
-                    <CardContent className="p-8 text-center">
-                      <p className="text-muted-foreground">No courts available at this facility</p>
-                    </CardContent>
-                  </Card>
-                )}
-              </TabsContent>
-
-              {/* Availability Tab */}
-              <TabsContent value="availability" className="space-y-4">
-                <div className="flex items-center gap-4 mb-4">
-                  <label className="text-sm font-medium">Select Date:</label>
-                  <input
-                    type="date"
-                    value={selectedDate.toISOString().split("T")[0]}
-                    onChange={(e) => {
-                      setSelectedDate(new Date(e.target.value))
-                      setSelectedSlot(null)
-                    }}
-                    min={new Date().toISOString().split("T")[0]}
-                    className="border rounded-lg px-3 py-2"
-                  />
-                </div>
-
-                {selectedCourt ? (
-                  <>
-                    {availabilityLoading ? (
-                      <div className="grid grid-cols-3 gap-2">
-                        {[...Array(6)].map((_, i) => (
-                          <div key={i} className="p-4 bg-muted/50 rounded-lg animate-pulse">
-                            <div className="h-4 bg-muted rounded w-1/2 mb-2" />
-                            <div className="h-4 bg-muted rounded w-1/3" />
-                          </div>
-                        ))}
-                      </div>
-                    ) : availability?.isBlocked ? (
-                      <Card>
-                        <CardContent className="p-6 text-center">
-                          <X className="w-12 h-12 text-destructive mx-auto mb-4" />
-                          <h3 className="text-lg font-medium mb-2">Not Available</h3>
-                          <p className="text-muted-foreground">{availability.note || "This court is blocked for the selected date"}</p>
-                        </CardContent>
-                      </Card>
-                    ) : availability?.slots && availability.slots.length > 0 ? (
-                      <div className="grid grid-cols-3 gap-2">
-                        {availability.slots?.map((slot: any) => (
-                          <Button
-                            key={`${slot.startTime}-${slot.endTime}`}
-                            variant={selectedSlot?.start === slot.startTime && selectedSlot?.end === slot.endTime ? "default" : "outline"}
-                            className="h-auto py-3"
-                            onClick={() => setSelectedSlot({ start: slot.startTime, end: slot.endTime, price: slot.pricePerHour })}
-                          >
-                            <div className="text-center">
-                              <div className="font-medium">{slot.startTime} - {slot.endTime}</div>
-                              <div className="text-sm text-muted-foreground">₹{slot.pricePerHour}/hr</div>
-                            </div>
-                          </Button>
-                        ))}
-                      </div>
-                    ) : (
-                      <Card>
-                        <CardContent className="p-6 text-center">
-                          <Clock className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                          <h3 className="text-lg font-medium mb-2">No Slots Available</h3>
-                          <p className="text-muted-foreground">All slots are booked for this date</p>
-                        </CardContent>
-                      </Card>
-                    )}
-                  </>
-                ) : (
-                  <Card>
-                    <CardContent className="p-6 text-center">
-                      <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                      <h3 className="text-lg font-medium mb-2">Select a Court First</h3>
-                      <p className="text-muted-foreground">Choose a court from the Courts tab to check availability</p>
-                    </CardContent>
-                  </Card>
-                )}
-              </TabsContent>
-
-              {/* Amenities Tab */}
-              <TabsContent value="amenities" className="space-y-4">
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {facility.amenities?.map((amenity: string) => (
-                    <div key={amenity} className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
-                      <Check className="w-5 h-5 text-green-500" />
-                      <span className="capitalize">{amenity.replace("_", " ")}</span>
                     </div>
-                  ))}
-                </div>
-                {facility.description && (
-                  <div className="prose max-w-none">
-                    <h4 className="font-medium mb-2">About this facility</h4>
-                    <p className="text-muted-foreground">{facility.description}</p>
-                  </div>
-                )}
-              </TabsContent>
-
-              {/* Reviews Tab */}
-              <TabsContent value="reviews" className="space-y-4">
-                {facility.reviews?.length > 0 ? (
-                  facility.reviews.map((review: any) => (
-                    <Card key={review.id}>
-                      <CardContent className="p-4">
-                        <div className="flex items-start gap-4">
-                          <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                            <span className="font-medium text-primary">{getInitials(review.user?.name || "User")}</span>
-                          </div>
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <p className="font-medium">{review.user?.name || "Anonymous"}</p>
-                                <p className="text-sm text-muted-foreground">{formatDate(review.createdAt)}</p>
-                              </div>
-                              <div className="flex items-center gap-1 text-yellow-500">
-                                {Array.from({ length: 5 }).map((_, i) => (
-                                  <Star
-                                    key={i}
-                                    className={cn(
-                                      "w-4 h-4",
-                                      i < review.rating ? "fill-current" : "text-muted-foreground"
-                                    )}
-                                  />
-                                ))}
-                              </div>
-                            </div>
-                            {review.comment && <p className="mt-2">{review.comment}</p>}
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))
-                ) : (
-                  <div className="text-center py-8">
-                    <Star className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
-                    <p className="text-muted-foreground">No reviews yet. Be the first to review!</p>
-                  </div>
-                )}
-              </TabsContent>
-
-              {/* Location Tab */}
-              <TabsContent value="location" className="space-y-4">
-                <div className="h-[400px] rounded-lg overflow-hidden">
-                  <Map
-                    center={[facility.longitude, facility.latitude]}
-                    zoom={15}
-                    markers={mapMarkers}
-                  />
-                </div>
-                <div className="grid md:grid-cols-2 gap-4">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Address</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-muted-foreground">{facility.address}</p>
-                      <p className="text-muted-foreground">{facility.city}, {facility.state} {facility.postalCode}</p>
-                      <p className="text-muted-foreground">{facility.country}</p>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Coordinates</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-muted-foreground font-mono text-sm">
-                        {facility.latitude.toFixed(6)}, {facility.longitude.toFixed(6)}
-                      </p>
-                    </CardContent>
-                  </Card>
-                </div>
-              </TabsContent>
-            </Tabs>
-          </div>
-
-          {/* Sidebar - Booking Summary */}
-          <div className="lg:col-span-1">
-            <Card className="sticky top-24">
-              <CardHeader>
-                <CardTitle>Book Now</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {selectedCourt && selectedSlot ? (
-                  <>
-                    <div className="p-4 bg-muted/50 rounded-lg space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Date</span>
-                        <span className="font-medium">{formatDate(selectedDate)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Time</span>
-                        <span className="font-medium">{selectedSlot.start} - {selectedSlot.end}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Duration</span>
-                        <span className="font-medium">
-                          {(new Date(`2000-01-01T${selectedSlot.end}`).getTime() - new Date(`2000-01-01T${selectedSlot.start}`).getTime()) / (1000 * 60)} mins
-                        </span>
-                      </div>
-                      <div className="flex justify-between border-t pt-2">
-                        <span className="text-muted-foreground">Price per hour</span>
-                        <span className="font-medium">₹{selectedSlot.price}/hr</span>
-                      </div>
-                      <div className="flex justify-between text-lg font-semibold">
-                        <span>Total</span>
-                        <span>
-                          ₹{
-                            (selectedSlot.price *
-                              (new Date(`2000-01-01T${selectedSlot.end}`).getTime() - new Date(`2000-01-01T${selectedSlot.start}`).getTime()) /
-                              (1000 * 60 * 60)
-                          ).toFixed(0)
-                          }
-                        </span>
-                      </div>
-                    </div>
-                    <Button className="w-full" size="lg" onClick={handleBooking}>
-                      Proceed to Payment
-                    </Button>
-                    <Button variant="outline" className="w-full" onClick={() => setSelectedSlot(null)}>
-                      Change Selection
-                    </Button>
-                  </>
-                ) : (
-                  <div className="text-center py-8">
-                    <Calendar className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
-                    <p className="text-muted-foreground mb-4">
-                      {selectedCourt ? "Select a time slot" : "Select a court and date to see pricing"}
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                  </CardContent>
+                </Card>
+              </div>
+            </aside>
           </div>
         </div>
       </div>
 
-      {/* Booking Modal */}
-      {showBookingModal && (
+      {showBookingModal && selectedCourt && selectedSlot && (
         <BookingModal
           facility={facility}
-          courtId={selectedCourt!}
+          courtId={selectedCourt.id}
           date={selectedDate}
-          slot={selectedSlot!}
+          slot={selectedSlot}
           onClose={() => setShowBookingModal(false)}
         />
       )}
     </div>
+  )
+}
+
+export default function FacilityDetailPage() {
+  return (
+    <Suspense fallback={<FacilitySkeleton />}>
+      <FacilityDetailInner />
+    </Suspense>
   )
 }

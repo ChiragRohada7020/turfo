@@ -140,7 +140,7 @@ export function MobileHeader() {
                         <Calendar className="h-5 w-5" />
                         <span>My Bookings</span>
                       </Link>
-                      <Link href="/teams" className={cn("flex items-center gap-3 px-3 py-2 rounded-lg", pathname === "/teams" && "bg-primary text-primary-foreground")}>
+                      <Link href="/dashboard/teams" className={cn("flex items-center gap-3 px-3 py-2 rounded-lg", pathname === "/dashboard/teams" && "bg-primary text-primary-foreground")}>
                         <Users className="h-5 w-5" />
                         <span>My Teams</span>
                       </Link>
@@ -226,7 +226,7 @@ export function DesktopHeader() {
               Dashboard
             </Link>
           )}
-          <Link href="/teams" className="text-sm font-medium transition-colors hover:text-primary">
+          <Link href="/dashboard/teams" className="text-sm font-medium transition-colors hover:text-primary">
             Teams
           </Link>
         </nav>

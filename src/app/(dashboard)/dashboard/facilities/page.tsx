@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Plus, Building2, MapPin, Users, CalendarDays, Edit, Trash2, Eye } from "lucide-react"
 import { formatCurrency } from "@/lib/utils"
+import { Sidebar } from "@/components/layout/Sidebar"
 import { trpc } from "@/lib/trpc"
 
 export default function FacilitiesPage() {
@@ -32,7 +33,9 @@ export default function FacilitiesPage() {
 
   return (
     <div className="min-h-screen bg-[#070d12] text-white">
-      <div className="max-w-[1800px] mx-auto p-4 sm:p-6 xl:p-7">
+      <Sidebar session={session} />
+      <div className="pt-14 md:pt-0 md:pl-[262px]">
+        <div className="max-w-[1800px] mx-auto p-4 sm:p-6 xl:p-7">
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">My Facilities</h1>
@@ -113,6 +116,7 @@ export default function FacilitiesPage() {
             </Link>
           </div>
         )}
+      </div>
       </div>
     </div>
   )
