@@ -84,17 +84,20 @@ export default function VerifyBookingPage() {
     }
   }
 
-  const startScanner = async () => {
+  const startScanner = () => {
     setScanError(null)
     setScanning(true)
     setResult(null)
     setShowConfirm(false)
+  }
 
-    try {
-      const scanner = new Html5Qrcode("qr-reader")
-      scannerRef.current = scanner
-
-      await scanner.start(
+  useEffect(() => {
+    if (!scanning) return
+    let cancelled = false
+    const scanner = new Html5Qrcode("qr-reader")
+    scannerRef.current = scanner
+    scanner
+      .start(
         { facingMode: "environment" },
         { fps: 10, qrbox: { width: 250, height: 250 } },
         (decodedText) => {
@@ -106,24 +109,23 @@ export default function VerifyBookingPage() {
         },
         () => {}
       )
-    } catch (err: any) {
-      console.error("Scanner error:", err)
-      setScanError(err.message || "Failed to start camera")
-      setScanning(false)
-    }
-  }
-
-  const stopScanner = () => {
-    if (scannerRef.current) {
-      scannerRef.current.stop().then(() => {
-        scannerRef.current = null
-        setScanning(false)
-      }).catch(() => {
+      .catch((err: any) => {
+        if (cancelled) return
+        console.error("Scanner error:", err)
+        setScanError(err?.message || "Failed to start camera")
         setScanning(false)
       })
-    } else {
-      setScanning(false)
+    return () => {
+      cancelled = true
+      if (scannerRef.current) {
+        scannerRef.current.stop().catch(() => {})
+        scannerRef.current = null
+      }
     }
+  }, [scanning])
+
+  const stopScanner = () => {
+    setScanning(false)
   }
 
   useEffect(() => {

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useSession } from "next-auth/react"
 import {
@@ -106,13 +106,45 @@ const CHALLENGES = [
 export default function OffersPage() {
   const { data: session } = useSession()
   const [activeFilter, setActiveFilter] = useState("All Offers")
+  const [selectedOffer, setSelectedOffer] = useState<any>(null)
+  const utils = trpc.useUtils()
+  const createRedemption = trpc.offers.createRedemption.useMutation({
+    onSuccess: () => {
+      utils.offers.myRedemptions.invalidate()
+    },
+  })
+  const { data: myRedemptions } = trpc.offers.myRedemptions.useQuery()
+  const handleUseOffer = async (offer: any) => {
+    try {
+      const res = await createRedemption.mutateAsync({ offerId: offer.id })
+      setSelectedOffer({ ...offer, verificationCode: res.verificationCode })
+    } catch (e: any) {
+      alert(e?.message || "Failed to generate code")
+    }
+  }
 
-  const { data: personalizedOffers } = trpc.offers.getPersonalized.useQuery({})
+  const { data: personalizedOffers } = trpc.offers.received.useQuery()
 
   const displayOffers = personalizedOffers && personalizedOffers.length > 0 ? personalizedOffers : null
-  const { data: tasks } = trpc.offers.myTasks.useQuery()
-  const generateTasks = trpc.offers.generateTasks.useMutation({ onSuccess: () => window.location.reload() })
+  const generateTasks = trpc.offers.generateTasks.useMutation({ onSuccess: () => refetchTasks() })
+  const { data: tasks, refetch: refetchTasks } = trpc.offers.myTasks.useQuery()
+
+  useEffect(() => {
+    if (tasks && tasks.length === 0 && !generateTasks.isPending) {
+      generateTasks.mutate()
+    }
+  }, [tasks])
   const { data: rewardPoints } = trpc.offers.myRewardPoints.useQuery()
+  const trackImpression = trpc.promotions.trackOfferImpression.useMutation()
+  const trackClick = trpc.promotions.trackOfferClick.useMutation()
+
+  useEffect(() => {
+    if (personalizedOffers) {
+      personalizedOffers.forEach((o: any) => {
+        if (o.id) trackImpression.mutate({ offerId: o.id })
+      })
+    }
+  }, [personalizedOffers])
 
   if (!session) {
     return (
@@ -232,10 +264,15 @@ export default function OffersPage() {
                 View All Partners <ChevronRight className="ml-1 h-3.5 w-3.5" />
               </Link>
             </div>
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {(displayOffers ? displayOffers : PARTNER_OFFERS).map((offer: any) => (
-                <Card key={offer.id || offer.brand} className="overflow-hidden rounded-2xl border-white/[0.09] bg-[#0c1916] transition hover:border-lime-400/30">
+            <div className="flex gap-4 overflow-x-auto pb-2">
+              {(displayOffers ? displayOffers : PARTNER_OFFERS).map((offer: any) => {
+                const redemption = myRedemptions?.find((r: any) => r.offerId === offer.id || r.offer?.id === offer.id)
+                const isUsed = redemption?.status === "REDEEMED"
+                const isClaimed = !!redemption
+                return (
+                <Card key={offer.id || offer.brand} className={`shrink-0 w-64 overflow-hidden rounded-2xl border-white/[0.09] bg-[#0c1916] transition hover:border-lime-400/30 ${isUsed ? "opacity-70" : ""}`}>
                   <CardContent className="p-4">
+                    <div>
                     <div className="relative h-32 overflow-hidden rounded-xl border-white/[0.05] bg-[#17271e] flex items-center justify-center">
                       {offer.sponsorLogo ? (
                         <img src={offer.sponsorLogo} alt={offer.sponsorName} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
@@ -257,13 +294,15 @@ export default function OffersPage() {
                       </div>
                     </div>
                     <div className="mt-4">
-                      <Button asChild className="w-full bg-lime-400 font-bold text-black hover:bg-lime-300 text-sm py-2.5">
-                        <Link href="/offers">Get Offer</Link>
+                      <Button className="w-full bg-lime-400 font-bold text-black hover:bg-lime-300 text-sm py-2.5" onClick={() => handleUseOffer(offer)} disabled={createRedemption.isPending || isClaimed}>
+                        {isUsed ? "Used" : isClaimed ? "Claimed" : createRedemption.isPending ? "Generating..." : "Use Offer"}
                       </Button>
+                    </div>
                     </div>
                   </CardContent>
                 </Card>
-              ))}
+                )
+              })}
             </div>
           </div>
 
@@ -317,13 +356,6 @@ export default function OffersPage() {
                     <Clock className="h-5 w-5 text-lime-400" />
                     <h3 className="font-bold text-sm">Complete Tasks</h3>
                   </div>
-                  <button
-                    onClick={() => generateTasks.mutate()}
-                    disabled={generateTasks.isPending}
-                    className="text-xs font-semibold text-lime-400 hover:text-lime-300 disabled:opacity-50"
-                  >
-                    {generateTasks.isPending ? "Generating..." : "Generate AI Tasks"}
-                  </button>
                 </div>
                 <div className="space-y-3">
                   {(tasks || []).map((task: any) => (
@@ -401,6 +433,21 @@ export default function OffersPage() {
               </CardContent>
             </Card>
           </div>
+        {selectedOffer && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+            <div className="bg-[#111a22] border border-white/10 rounded-2xl p-6 max-w-sm w-full text-center">
+              <h2 className="text-xl font-bold mb-2">{selectedOffer.title}</h2>
+              <p className="text-sm text-slate-400 mb-4">Show this QR to the sponsor to redeem.</p>
+              <img
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(selectedOffer.verificationCode)}`}
+                alt="QR Code"
+                className="mx-auto mb-4"
+              />
+              <p className="text-lg font-bold text-lime-400 mb-4">{selectedOffer.verificationCode}</p>
+              <Button className="w-full bg-lime-400 text-black font-bold" onClick={() => setSelectedOffer(null)}>Close</Button>
+            </div>
+          </div>
+        )}
         </main>
       </div>
     </div>

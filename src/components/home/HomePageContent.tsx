@@ -45,53 +45,6 @@ const FEATURES = [
   { icon: CalendarDays, title: "Flexible Slots", desc: "30 min to 4 hour bookings" },
 ]
 
-const MOCK_TURFS = [
-  {
-    id: "1",
-    name: "Pachora Turf Arena",
-    city: "Pachora, Jalgaon",
-    distance: "1.2 km",
-    price: 1200,
-    rating: 4.8,
-    reviews: 126,
-    image: "/placeholder.svg",
-    sports: ["Football", "Cricket"],
-  },
-  {
-    id: "2",
-    name: "GreenField Turf",
-    city: "Pachora",
-    distance: "2.4 km",
-    price: 1000,
-    rating: 4.7,
-    reviews: 89,
-    image: "/placeholder.svg",
-    sports: ["Football", "Box Cricket"],
-  },
-  {
-    id: "3",
-    name: "Champion Turf",
-    city: "Pachora",
-    distance: "3.1 km",
-    price: 1500,
-    rating: 4.6,
-    reviews: 64,
-    image: "/placeholder.svg",
-    sports: ["Football", "Cricket", "Multi-Sport"],
-  },
-  {
-    id: "4",
-    name: "JM4D Turf",
-    city: "Pachora, Jalgaon",
-    distance: "3.8 km",
-    price: 1200,
-    rating: 4.5,
-    reviews: 208,
-    image: "/placeholder.svg",
-    sports: ["Football", "Cricket"],
-  },
-]
-
 function getSportIcon(sport: string): string {
   const icons: Record<string, string> = {
     FOOTBALL: "⚽", CRICKET: "🏏", TENNIS: "🎾", BADMINTON: "🏸",

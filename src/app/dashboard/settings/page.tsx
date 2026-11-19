@@ -77,15 +77,12 @@ export default function SettingsPage() {
     try {
       await updateProfile.mutateAsync({
         name: form.name,
-        phone: form.phone,
-        ...(isOwner && {
-          address: form.address,
-          city: form.city,
-          state: form.state,
-          postalCode: form.postalCode,
-          latitude: form.latitude ? parseFloat(form.latitude) : undefined,
-          longitude: form.longitude ? parseFloat(form.longitude) : undefined,
-        }),
+        address: form.address,
+        city: form.city,
+        state: form.state,
+        postalCode: form.postalCode,
+        latitude: form.latitude ? parseFloat(form.latitude) : undefined,
+        longitude: form.longitude ? parseFloat(form.longitude) : undefined,
       })
     } finally {
       setIsLoading(false)
@@ -161,7 +158,7 @@ export default function SettingsPage() {
                 </div>
                 <div className="space-y-2">
                   <Label className="text-slate-300">Phone</Label>
-                  <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="bg-[#121b24] border-white/10 text-white" />
+                  <Input value={form.phone} disabled className="bg-[#121b24] border-white/10 text-slate-400" />
                 </div>
               </CardContent>
             </Card>
@@ -183,7 +180,7 @@ export default function SettingsPage() {
                 </div>
                 <div className="space-y-2">
                   <Label className="text-slate-300">Phone</Label>
-                  <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="bg-[#121b24] border-white/10 text-white" />
+                  <Input value={form.phone} disabled className="bg-[#121b24] border-white/10 text-slate-400" />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-slate-300">Role</Label>
@@ -199,8 +196,7 @@ export default function SettingsPage() {
               </CardContent>
             </Card>
 
-            {isOwner && (
-              <Card className="bg-[#111a22] border-white/10 rounded-2xl">
+            <Card className="bg-[#111a22] border-white/10 rounded-2xl">
                 <CardHeader>
                   <CardTitle className="text-lg font-bold flex items-center gap-2">
                     <MapPin className="h-5 w-5 text-lime-400" /> Location
@@ -238,8 +234,6 @@ export default function SettingsPage() {
                   <p className="text-xs text-slate-500">This location will be used as default for new facilities you create.</p>
                 </CardContent>
               </Card>
-            )}
-
             <Card className="bg-[#111a22] border-white/10 rounded-2xl">
               <CardHeader>
                 <CardTitle className="text-lg font-bold flex items-center gap-2">

@@ -5,6 +5,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { useSession, signOut } from "next-auth/react"
+import SponsorDashboardPage from "@/modules/sponsor/components/SponsorDashboard"
 import {
   Activity,
   Bell,
@@ -17,6 +18,7 @@ import {
   DollarSign,
   Gift,
   Home,
+  LayoutGrid,
   LogOut,
   MapPin,
   Menu,
@@ -29,11 +31,14 @@ import {
   Wallet,
   X,
 } from "lucide-react"
+import { PLAYER_NAV, OWNER_NAV, SPONSOR_NAV } from "@/modules/shared/constants/navigation"
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -46,39 +51,6 @@ import { formatDate, formatTime } from "@/lib/utils"
 import { trpc } from "@/lib/trpc"
 import { QRCodeModal } from "@/components/booking/QRCodeModal"
 import { BookingStatus } from "@prisma/client"
-
-const PLAYER_NAV = [
-  { name: "Dashboard", href: "/dashboard", icon: Home },
-  { name: "Book a Turf", href: "/search", icon: CalendarDays },
-  { name: "My Bookings", href: "/dashboard/bookings", icon: Ticket },
-  { name: "Open Games", href: "/dashboard/open-games", icon: Users },
-  { name: "Find Players", href: "/find-players", icon: Users },
-  { name: "Teams", href: "/dashboard/teams", icon: ShieldCheck },
-  { name: "Tournaments", href: "/tournaments", icon: Trophy },
-  { name: "Offers & Rewards", href: "/offers", icon: Gift },
-  { name: "Wallet", href: "/wallet", icon: Wallet, badge: "Rs.2,500" },
-  { name: "Notifications", href: "/notifications", icon: Bell },
-  { name: "Support", href: "/help", icon: ShieldCheck },
-]
-
-const OWNER_NAV = [
-  { name: "Dashboard", href: "/dashboard", icon: Home },
-  { name: "My Facilities", href: "/dashboard/facilities", icon: Building2 },
-  { name: "Add Facility", href: "/dashboard/facilities/new", icon: CalendarDays },
-  { name: "Bookings", href: "/dashboard/bookings", icon: Ticket },
-  { name: "Payouts", href: "/dashboard/payouts", icon: Wallet },
-  { name: "Analytics", href: "/dashboard/analytics", icon: TrendingUp },
-  { name: "Offers", href: "/offers", icon: Gift },
-  { name: "Notifications", href: "/notifications", icon: Bell },
-  { name: "Support", href: "/help", icon: ShieldCheck },
-]
-
-const MOCK_TURFS = [
-  { id: "1", name: "Pachora Turf Arena", city: "Pachora, Jalgaon", distance: "1.2 km", price: 1200, rating: 4.8, reviews: 126, image: "/placeholder.svg", sports: ["Football", "Cricket"] },
-  { id: "2", name: "GreenField Turf", city: "Pachora", distance: "2.4 km", price: 1000, rating: 4.7, reviews: 89, image: "/placeholder.svg", sports: ["Football", "Box Cricket"] },
-  { id: "3", name: "Champion Turf", city: "Pachora", distance: "3.1 km", price: 1500, rating: 4.6, reviews: 64, image: "/placeholder.svg", sports: ["Football", "Cricket", "Multi-Sport"] },
-]
-
 
 function formatINR(value: number) {
   return "Rs." + value.toLocaleString("en-IN")
@@ -97,9 +69,19 @@ export default function DashboardPage() {
   const myBooking = upcoming[0] ?? null
 
   const { data: myFacilities } = trpc.facilities.myFacilities.useQuery(undefined, { keepPreviousData: true })
+  const { data: profile } = trpc.auth.getProfile.useQuery()
+  const { data: unreadNotifications } = trpc.notifications.list.useQuery({ isRead: false, limit: 1 })
 
   const active = (href: string) =>
-    pathname === href || (href !== "/dashboard" && pathname.startsWith(href + "/"))
+    pathname === href ||
+    (href !== "/dashboard" &&
+      pathname.startsWith(href + "/") &&
+      !navItems.some(
+        (item) =>
+          item.href !== href &&
+          item.href.length > href.length &&
+          (pathname === item.href || pathname.startsWith(item.href + "/"))
+      ))
 
   if (status === "loading") return <DashboardSkeleton />
 
@@ -124,9 +106,14 @@ export default function DashboardPage() {
   const firstName = playerName.split(" ")[0]
   const role = session.user?.role || "PLAYER"
   const isOwner = role === "OWNER" || role === "ADMIN"
+  const isSponsor = role === "SPONSOR"
   const isAdmin = role === "ADMIN"
 
-  const navItems = isOwner ? OWNER_NAV : PLAYER_NAV
+  const navItems = isSponsor ? SPONSOR_NAV : isOwner ? OWNER_NAV : PLAYER_NAV
+
+  if (isSponsor) {
+    return <SponsorDashboardPage />
+  }
 
   return (
     <div className="min-h-screen bg-[#070d12] text-white">
@@ -168,13 +155,13 @@ export default function DashboardPage() {
           </button>
           <div className="hidden shrink-0 items-center gap-2 rounded-xl border border-white/10 bg-[#121c25] px-3 py-2 text-sm text-slate-300 sm:flex">
             <MapPin className="h-4 w-4" />
-            Pachora, MH
+            {profile?.city ? `${profile.city}${profile?.state ? ", " + profile.state : ""}` : "Set location"}
             <ChevronDown className="h-4 w-4 text-slate-500" />
           </div>
           <div className="ml-auto" />
           <button aria-label="Notifications" className="relative rounded-full border border-white/10 bg-[#121b24] p-2.5 text-slate-300">
             <Bell className="h-4 w-4" />
-            <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500" />
+            {(unreadNotifications?.total ?? 0) > 0 && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500" />}
           </button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -248,6 +235,18 @@ function PlayerDashboard({ session, upcoming, myBooking, isLoading, setQrBooking
   const playerName = session.user?.name || "Player"
   const firstName = playerName.split(" ")[0]
 
+  const { data: facilitiesData, isLoading: isLoadingTurfs } = trpc.facilities.list.useQuery({ limit: 20 })
+  const allTurfs = facilitiesData?.facilities ?? []
+  const nearbyTurfs = []
+  const seenOwners = new Set()
+  for (const turf of allTurfs) {
+    if (seenOwners.has(turf.ownerId)) continue
+    seenOwners.add(turf.ownerId)
+    nearbyTurfs.push(turf)
+    if (nearbyTurfs.length >= 6) break
+  }
+  const turfsCount = nearbyTurfs.length
+
   return (
     <>
       <section className="relative mb-6 overflow-hidden rounded-3xl border border-white/10 bg-[#10251a]">
@@ -273,7 +272,7 @@ function PlayerDashboard({ session, upcoming, myBooking, isLoading, setQrBooking
             </div>
             <div className="min-w-[120px] rounded-2xl border border-white/10 bg-black/20 p-4 backdrop-blur-md">
               <Trophy className="mb-2 h-5 w-5 text-amber-400" />
-              <p className="text-xl font-black">{MOCK_TURFS.length}</p>
+              <p className="text-xl font-black">{turfsCount}</p>
               <p className="text-[10px] text-slate-400">Turfs Nearby</p>
             </div>
           </div>
@@ -307,8 +306,8 @@ function PlayerDashboard({ session, upcoming, myBooking, isLoading, setQrBooking
               </div>
               <div className="min-w-0">
                 <h3 className="text-lg font-bold">{myBooking.facility?.name || "Your booked turf"}</h3>
-                <p className="mt-1 flex items-center gap-1.5 text-sm text-slate-400"><MapPin className="h-4 w-4" />{myBooking.facility?.address || "Pachora, Maharashtra"}</p>
-                <Badge className="mt-3 border-white/10 bg-white/[0.06] text-slate-200 hover:bg-white/[0.06]">Football</Badge>
+                <p className="mt-1 flex items-center gap-1.5 text-sm text-slate-400"><MapPin className="h-4 w-4" />{myBooking.facility?.address || myBooking.facility?.city || "Location not available"}</p>
+                <Badge className="mt-3 border-white/10 bg-white/[0.06] text-slate-200 hover:bg-white/[0.06]">{myBooking.court?.sportType || myBooking.facility?.sportTypes?.[0] || "Sport"}</Badge>
                 <p className="mt-3 text-lg font-bold text-lime-300">{formatINR(Number(myBooking.totalPrice || 0))}</p>
                 <div className="mt-2 flex items-center gap-3">
                   <TimeRemaining startTime={myBooking.startTime} />
@@ -365,28 +364,38 @@ function PlayerDashboard({ session, upcoming, myBooking, isLoading, setQrBooking
           <Link href="/search" className="text-sm font-semibold text-lime-300">View All <ChevronRight className="inline h-4 w-4" /></Link>
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {MOCK_TURFS.map((turf) => (
+          {isLoadingTurfs ? (
+            [1, 2, 3].map((item) => (
+              <div key={item} className="h-48 animate-pulse rounded-2xl border border-white/5 bg-[#0c1916]" />
+            ))
+          ) : nearbyTurfs.length > 0 ? (
+            nearbyTurfs.map((turf: any) => (
             <Card key={turf.id} className="group overflow-hidden rounded-2xl border-white/[0.09] bg-[#0c1916] transition-all duration-300 hover:-translate-y-1 hover:border-lime-400/40 hover:shadow-xl hover:shadow-black/20">
               <div className="relative h-32 overflow-hidden bg-[#1a3027]">
-                <Image src={turf.image} alt={turf.name} fill sizes="(max-width: 640px) 100vw, 33vw" className="object-cover transition duration-500 group-hover:scale-105" />
+                <Image src={turf.images?.[0] || "/placeholder.svg"} alt={turf.name} fill sizes="(max-width: 640px) 100vw, 33vw" className="object-cover transition duration-500 group-hover:scale-105" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
               </div>
               <CardContent className="p-3.5">
                 <div className="flex items-start justify-between gap-2">
                   <h3 className="font-bold">{turf.name}</h3>
-                  <span className="shrink-0 text-xs font-semibold text-amber-300">★ {turf.rating} <span className="text-slate-500">({turf.reviews})</span></span>
+                  <span className="shrink-0 text-xs font-semibold text-amber-300">★ {turf.avgRating ? turf.avgRating.toFixed(1) : "New"} <span className="text-slate-500">({turf.reviewCount ?? 0})</span></span>
                 </div>
-                <p className="mt-1 flex items-center gap-1 text-xs text-slate-500"><MapPin className="h-3 w-3" />{turf.city} ({turf.distance})</p>
+                <p className="mt-1 flex items-center gap-1 text-xs text-slate-500"><MapPin className="h-3 w-3" />{turf.city}{turf.state ? `, ${turf.state}` : ""}</p>
                 <div className="mt-3 flex flex-wrap gap-1.5">
-                  {turf.sports.slice(0, 2).map((sport) => <Badge key={sport} className="bg-white/[0.07] text-[10px] text-slate-300 hover:bg-white/[0.07]">{sport}</Badge>)}
+                  {(turf.sportTypes || []).slice(0, 2).map((sport: string) => <Badge key={sport} className="bg-white/[0.07] text-[10px] text-slate-300 hover:bg-white/[0.07]">{sport}</Badge>)}
                 </div>
                 <div className="mt-4 flex items-center justify-between">
-                  <p className="font-bold text-lime-300">{formatINR(turf.price)}<span className="text-xs font-normal text-slate-500"> /hour</span></p>
-                  <Button asChild size="sm" className="rounded-lg bg-lime-400 font-bold text-black hover:bg-lime-300"><Link href="/search">Book Now <ChevronRight className="ml-1 h-3.5 w-3.5" /></Link></Button>
+                  {turf.minPrice ? <p className="font-bold text-lime-300">{formatINR(turf.minPrice)}<span className="text-xs font-normal text-slate-500"> /hour</span></p> : <span />}
+                  <Button asChild size="sm" className="rounded-lg bg-lime-400 font-bold text-black hover:bg-lime-300"><Link href={"/facility/" + turf.id}>Book Now <ChevronRight className="ml-1 h-3.5 w-3.5" /></Link></Button>
                 </div>
               </CardContent>
             </Card>
-          ))}
+            ))
+          ) : (
+            <div className="col-span-full rounded-2xl border border-white/10 bg-[#0c1916] p-6 text-center text-sm text-slate-400">
+              No turfs available yet. Check back soon.
+            </div>
+          )}
         </div>
       </section>
     </>
@@ -396,6 +405,11 @@ function PlayerDashboard({ session, upcoming, myBooking, isLoading, setQrBooking
 function OwnerDashboard({ session, myFacilities }: any) {
   const ownerName = session.user?.name || "Owner"
   const firstName = ownerName.split(" ")[0]
+
+  const { data: earnings } = trpc.cashfree.ownerEarnings.useQuery()
+  const today = new Date().toISOString().split("T")[0]
+  const { data: todayBookings } = trpc.bookings.ownerBookings.useQuery({ dateFrom: today, dateTo: today, limit: 100 })
+  const { data: analytics } = (trpc.bookings as any).ownerAnalytics.useQuery()
 
   return (
     <>
@@ -422,7 +436,7 @@ function OwnerDashboard({ session, myFacilities }: any) {
             </div>
             <div className="min-w-[120px] rounded-2xl border border-white/10 bg-black/20 p-4 backdrop-blur-md">
               <Trophy className="mb-2 h-5 w-5 text-amber-400" />
-              <p className="text-xl font-black">Rs.0</p>
+              <p className="text-xl font-black">{formatINR(earnings?.totalRevenue || 0)}</p>
               <p className="text-[10px] text-slate-400">Revenue</p>
             </div>
           </div>
@@ -431,7 +445,8 @@ function OwnerDashboard({ session, myFacilities }: any) {
 
       <section className="mb-6 grid grid-cols-2 gap-3 xl:grid-cols-4">
         <QuickAction href="/dashboard/facilities" title="My Facilities" subtitle={(myFacilities?.length || 0) + " listed"} icon={Building2} primary />
-        <QuickAction href="/dashboard/bookings" title="Today's Bookings" subtitle="View & manage" icon={Ticket} />
+        <QuickAction href="/dashboard/facilities" title="Book Offline" subtitle="Book your turf for offline players" icon={CalendarDays} />
+        <QuickAction href="/dashboard/bookings" title="Today's Bookings" subtitle={(todayBookings?.total || 0) + " today"} icon={Ticket} />
         <QuickAction href="/dashboard/payouts" title="Payouts" subtitle="Process & track" icon={Wallet} />
         <QuickAction href="/dashboard/analytics" title="Analytics" subtitle="Revenue & stats" icon={TrendingUp} />
       </section>
@@ -482,22 +497,63 @@ function OwnerDashboard({ session, myFacilities }: any) {
 
       <Card className="mb-6 overflow-hidden rounded-2xl border-white/10 bg-[#0c1916]">
         <CardHeader className="flex flex-row items-center justify-between px-5 pb-3 pt-4">
+          <CardTitle className="text-lg font-bold">Today\'s Bookings</CardTitle>
+          <Link href="/dashboard/bookings" className="text-xs font-semibold text-lime-300 hover:text-lime-200">View All</Link>
+        </CardHeader>
+        <CardContent className="px-5 pb-5">
+          {todayBookings?.bookings?.length ? (
+            <div className="space-y-3">
+              {todayBookings.bookings.slice(0, 5).map((b: any) => (
+                <div key={b.id} className="flex items-center justify-between rounded-xl border border-white/10 bg-[#17222d] p-3">
+                  <div>
+                    <p className="text-sm font-semibold text-white">{b.court?.name || "Court"} · {b.facility?.name}</p>
+                    <p className="text-xs text-slate-400">{new Date(b.startTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} - {new Date(b.endTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</p>
+                  </div>
+                  <Badge className="bg-lime-400/10 text-lime-300">{b.status}</Badge>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-slate-400">No bookings today.</p>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="mb-6 overflow-hidden rounded-2xl border-white/10 bg-[#0c1916]">
+        <CardHeader className="flex flex-row items-center justify-between px-5 pb-3 pt-4">
+          <CardTitle className="text-lg font-bold">Weekly Bookings</CardTitle>
+        </CardHeader>
+        <CardContent className="px-5 pb-5">
+          {analytics ? (
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={analytics} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                <XAxis type="number" tick={{ fill: "#64748b" }} />
+                <YAxis dataKey="date" type="category" tick={{ fill: "#64748b" }} />
+                <Tooltip />
+                <Bar dataKey="count" fill="#22c55e" radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <p className="text-sm text-slate-400">Loading chart...</p>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="mb-6 overflow-hidden rounded-2xl border-white/10 bg-[#0c1916]">
+        <CardHeader className="flex flex-row items-center justify-between px-5 pb-3 pt-4">
           <CardTitle className="text-lg font-bold">Revenue Overview</CardTitle>
           <Link href="/dashboard/analytics" className="text-xs font-semibold text-lime-300 hover:text-lime-200">View All</Link>
         </CardHeader>
         <CardContent className="px-5 pb-5">
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <div className="p-4 rounded-xl bg-[#17222d] border border-white/[0.08]">
               <p className="text-xs text-slate-400">Total Revenue</p>
-              <p className="text-xl font-bold text-lime-300 mt-1">Rs.0</p>
-            </div>
-            <div className="p-4 rounded-xl bg-[#17222d] border border-white/[0.08]">
-              <p className="text-xs text-slate-400">Platform Fee (10%)</p>
-              <p className="text-xl font-bold text-slate-300 mt-1">Rs.0</p>
+              <p className="text-xl font-bold text-lime-300 mt-1">{formatINR(earnings?.totalRevenue || 0)}</p>
             </div>
             <div className="p-4 rounded-xl bg-[#17222d] border border-white/[0.08]">
               <p className="text-xs text-slate-400">Your Payout</p>
-              <p className="text-xl font-bold text-green-400 mt-1">Rs.0</p>
+              <p className="text-xl font-bold text-green-400 mt-1">{formatINR(earnings?.totalEarnings || 0)}</p>
             </div>
           </div>
         </CardContent>
@@ -539,7 +595,7 @@ function InviteFriends() {
     <div className="mx-4 mb-5 rounded-2xl border border-green-500/20 bg-gradient-to-br from-[#10271d] to-[#0b1714] p-4 text-center">
       <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-white/10 text-3xl">⚽</div>
       <p className="text-base font-bold">Invite Friends</p>
-      <p className="mt-1 text-sm font-semibold text-amber-300">Get Rs.100 Credit</p>
+      <p className="mt-1 text-sm font-semibold text-amber-300">Earn rewards</p>
       <p className="mt-1 text-xs leading-5 text-slate-400">for each friend who books!</p>
       <Button asChild size="sm" className="mt-3 rounded-xl bg-lime-400 font-bold text-black hover:bg-lime-300"><Link href="/dashboard/teams">Invite Now <ChevronRight className="ml-1 h-3.5 w-3.5" /></Link></Button>
     </div>

@@ -20,12 +20,15 @@ export default function OffersPage() {
 
   const [redeemedCodes, setRedeemedCodes] = useState<Record<string, string>>({})
 
+  const utils = trpc.useUtils()
   const redeemOffer = trpc.offers.redeem.useMutation({
     onSuccess: (data) => {
       toast({ title: "Offer Redeemed!", description: `Discount of ₹${data.discount} applied` })
       if (data.redemption?.verificationCode) {
         setRedeemedCodes((prev) => ({ ...prev, [data.redemption.id]: data.redemption.verificationCode }))
       }
+      utils.offers.getPersonalized.invalidate()
+      utils.offers.myRedemptions.invalidate()
     },
     onError: (e) => {
       toast({ title: "Error", description: e.message, variant: "destructive" })
@@ -144,8 +147,10 @@ export default function OffersPage() {
             <div className="mt-8">
               <h2 className="text-lg font-bold mb-3">My Redeemed Coupons</h2>
               <div className="space-y-3">
-                {redemptions.map((r: any) => (
-                  <Card key={r.id} className="bg-[#111a22] border-white/10">
+                {redemptions.map((r: any) => {
+                  const isUsed = r.status === "REDEEMED"
+                  return (
+                  <Card key={r.id} className={`bg-[#111a22] border-white/10 ${isUsed ? "opacity-75" : ""}`}>
                     <CardContent className="p-4">
                       <div className="flex items-center gap-4">
                         {r.status === "ACTIVE" && r.verificationCode && (
@@ -153,11 +158,16 @@ export default function OffersPage() {
                             <QRCodeDisplay value={r.verificationCode} size={80} />
                           </div>
                         )}
+                        {isUsed && (
+                          <div className="shrink-0 w-20 h-20 rounded-lg bg-white/5 flex items-center justify-center text-xs font-bold text-slate-400">
+                            USED
+                          </div>
+                        )}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
                             <span className="font-mono font-bold text-lime-300">{r.offer?.code}</span>
                             <Badge className={r.status === "REDEEMED" ? "bg-green-500/15 text-green-300" : r.status === "EXPIRED" ? "bg-red-500/15 text-red-300" : "bg-amber-500/15 text-amber-300"}>
-                              {r.status}
+                              {isUsed ? "USED COUPON" : r.status}
                             </Badge>
                           </div>
                           <p className="text-sm text-white">{r.offer?.title}</p>
@@ -174,7 +184,8 @@ export default function OffersPage() {
                       </div>
                     </CardContent>
                   </Card>
-                ))}
+                  )
+                })}
               </div>
             </div>
           )}

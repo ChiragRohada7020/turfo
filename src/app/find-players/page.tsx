@@ -11,6 +11,7 @@ import {
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { trpc } from "@/lib/trpc"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -20,96 +21,6 @@ import { Sidebar } from "@/components/layout/Sidebar"
 
 const SPORT_FILTERS = [
   "All Sports", "Football", "Cricket", "Badminton", "Box Cricket"
-]
-
-const MOCK_PLAYERS = [
-  {
-    id: "1",
-    name: "Rohit Patil",
-    distance: "0.8 km",
-    availability: "Today",
-    sport: "Football",
-    skill: "Intermediate",
-    rating: 4.8,
-    matches: 60,
-    position: "Midfielder",
-    image: "https://images.unsplash.com/photo-1535713875002-d1d0cf390345?w=200&q=80"
-  },
-  {
-    id: "2",
-    name: "Sanket More",
-    distance: "1.2 km",
-    availability: "Today",
-    sport: "Football",
-    skill: "Advanced",
-    rating: 4.9,
-    matches: 120,
-    position: "Forward",
-    image: "https://images.unsplash.com/photo-1507003211169-0a1272c8774f?w=200&q=80"
-  },
-  {
-    id: "3",
-    name: "Tejas Wagh",
-    distance: "1.5 km",
-    availability: "Tomorrow",
-    sport: "Cricket",
-    skill: "Intermediate",
-    rating: 4.7,
-    matches: 45,
-    position: "All-rounder",
-    image: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=200&q=80"
-  },
-  {
-    id: "4",
-    name: "Aditya Mahajan",
-    distance: "2.1 km",
-    availability: "Today",
-    sport: "Football",
-    skill: "Beginner",
-    rating: 4.5,
-    matches: 18,
-    position: "Defender",
-    image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&q=80"
-  },
-  {
-    id: "5",
-    name: "Kunal Chaudhari",
-    distance: "3.4 km",
-    availability: "Weekend",
-    sport: "Badminton",
-    skill: "Intermediate",
-    rating: 4.8,
-    matches: 70,
-    position: "Singles / Doubles",
-    image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&q=80"
-  },
-  {
-    id: "6",
-    name: "Pranav Shinde",
-    distance: "4.2 km",
-    availability: "Today",
-    sport: "Box Cricket",
-    skill: "Advanced",
-    rating: 4.6,
-    matches: 56,
-    position: "Power Hitter",
-    image: "https://images.unsplash.com/photo-1500618736431-4d39cd66c496?w=200&q=80"
-  },
-]
-
-const UPCOMING_GAMES = [
-  {
-    sport: "Football 5v5",
-    date: "Sat, 22 Nov · 7:00 PM",
-    venue: "GreenField Turf",
-    players: "3/10",
-  },
-  {
-    sport: "Box Cricket",
-    date: "Sun, 23 Nov · 6:30 PM",
-    venue: "Champion Turf",
-    players: "6/12",
-  },
 ]
 
 const DISTANCES = [
@@ -135,7 +46,7 @@ function HeartButton() {
   )
 }
 
-function PlayerCard({ player }: { player: typeof MOCK_PLAYERS[number] }) {
+function PlayerCard({ player }: { player: any }) {
   return (
     <Card className="group overflow-hidden rounded-2xl border-white/[0.09] bg-[#0c1916] transition-all duration-300 hover:-translate-y-1 hover:border-lime-400/40 hover:shadow-xl hover:shadow-black/20">
       <CardContent className="p-4">
@@ -143,7 +54,7 @@ function PlayerCard({ player }: { player: typeof MOCK_PLAYERS[number] }) {
         {/* Player profile */}
         <div className="flex items-start gap-3">
           <Avatar className="h-14 w-14 shrink-0 border-2 border-lime-400/30">
-            <AvatarImage src={player.image} alt={player.name} />
+            <AvatarImage src={player.avatarUrl || ""} alt={player.name} />
             <AvatarFallback className="bg-lime-400/10 text-lime-400">
               {player.name[0]}
             </AvatarFallback>
@@ -155,34 +66,17 @@ function PlayerCard({ player }: { player: typeof MOCK_PLAYERS[number] }) {
             </h3>
             <p className="mt-1 flex items-center gap-1 text-xs text-slate-400">
               <MapPin className="h-3 w-3 text-lime-400" />
-              {player.distance} away
+              {player.city || "Unknown"} 
             </p>
             <Badge className="mt-2 border border-lime-400/20 bg-lime-400/10 text-[10px] text-lime-400">
               <span className="mr-1 h-1.5 w-1.5 rounded-full bg-lime-400" />
-              Available {player.availability}
+              {player.rewardPoints ?? 0} pts
             </Badge>
           </div>
 
           <HeartButton />
         </div>
 
-        {/* Sport and skill */}
-        <div className="mt-4 flex flex-wrap gap-2">
-          <Badge className="border-white/10 bg-white/[0.06] text-slate-300">
-            <Gamepad2 className="mr-1 h-3 w-3" />
-            {player.sport}
-          </Badge>
-
-          <Badge className={`border-0 ${
-            player.skill === "Advanced"
-              ? "bg-purple-500/15 text-purple-300"
-              : player.skill === "Intermediate"
-                ? "bg-blue-500/15 text-blue-300"
-                : "bg-emerald-500/15 text-emerald-300"
-          }`}>
-            {player.skill}
-          </Badge>
-        </div>
 
         {/* Player stats */}
         <div className="mt-4 grid grid-cols-2 gap-2">
@@ -190,10 +84,10 @@ function PlayerCard({ player }: { player: typeof MOCK_PLAYERS[number] }) {
             <div className="flex items-center gap-1.5">
               <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
               <span className="text-sm font-bold text-white">
-                {player.rating}
+                {player.rewardPoints ?? 0}
               </span>
             </div>
-            <p className="mt-1 text-[10px] text-slate-500">Player rating</p>
+            <p className="mt-1 text-[10px] text-slate-500">Reward points</p>
           </div>
 
           <div className="rounded-xl border border-white/[0.06] bg-white/[0.025] p-2.5">
@@ -207,13 +101,6 @@ function PlayerCard({ player }: { player: typeof MOCK_PLAYERS[number] }) {
           </div>
         </div>
 
-        {/* Position */}
-        <div className="mt-3 flex items-center justify-between text-xs">
-          <span className="text-slate-500">Playing position</span>
-          <span className="font-medium text-slate-300">
-            {player.position}
-          </span>
-        </div>
 
         {/* Actions */}
         <div className="mt-4 grid grid-cols-[1fr_auto] gap-2">
@@ -247,53 +134,28 @@ export default function FindPlayersPage() {
   const { data: session, status } = useSession()
 
   const [searchQuery, setSearchQuery] = useState("")
-  const [activeSport, setActiveSport] = useState("Football")
-  const [distance, setDistance] = useState("Within 10 km")
-  const [skillLevel, setSkillLevel] = useState("All Levels")
-  const [availability, setAvailability] = useState("Any Day")
+  const [activeSport, setActiveSport] = useState("All Sports")
   const [sortBy, setSortBy] = useState("Nearest")
 
+  const { data: players } = trpc.players.list.useQuery({})
+
   const filteredPlayers = useMemo(() => {
-    let result = MOCK_PLAYERS.filter(player => {
+    const list = players || []
+    let result = list.filter((player: any) => {
       const matchesSearch =
         player.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        player.sport.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        player.position.toLowerCase().includes(searchQuery.toLowerCase())
-
-      const matchesSport =
-        activeSport === "All Sports" || player.sport === activeSport
-
-      const matchesSkill =
-        skillLevel === "All Levels" || player.skill === skillLevel
-
-      const matchesAvailability =
-        availability === "Any Day" || player.availability === availability
-
-      const km = parseFloat(player.distance)
-      const maxDistance = distance === "Any Distance"
-        ? Infinity
-        : parseInt(distance.match(/\d+/)?.[0] || "10")
-
-      return matchesSearch && matchesSport && matchesSkill &&
-        matchesAvailability && km <= maxDistance
+        (player.city || "").toLowerCase().includes(searchQuery.toLowerCase())
+      const sport = (player.playerPreference?.preferredSport || "").toLowerCase()
+      const matchesSport = activeSport === "All Sports" || sport === activeSport.toLowerCase()
+      return matchesSearch && matchesSport
     })
-
-    result = [...result].sort((a, b) => {
-      if (sortBy === "Highest Rated") return b.rating - a.rating
-      if (sortBy === "Most Active") return b.matches - a.matches
-      return parseFloat(a.distance) - parseFloat(b.distance)
-    })
-
+    result = [...result].sort((a: any, b: any) => a.name.localeCompare(b.name))
     return result
-  }, [searchQuery, activeSport, distance, skillLevel, availability, sortBy])
+  }, [players, searchQuery, activeSport])
 
   const resetFilters = () => {
     setSearchQuery("")
-    setActiveSport("Football")
-    setDistance("Within 10 km")
-    setSkillLevel("All Levels")
-    setAvailability("Any Day")
-    setSortBy("Nearest")
+    setActiveSport("All Sports")
   }
 
   if (status === "loading") {
@@ -451,30 +313,6 @@ export default function FindPlayersPage() {
             </div>
 
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-4">
-              <FilterSelect
-                label="Distance"
-                icon={<MapPin className="h-4 w-4" />}
-                value={distance}
-                onChange={setDistance}
-                options={DISTANCES}
-              />
-
-              <FilterSelect
-                label="Skill level"
-                icon={<Gamepad2 className="h-4 w-4" />}
-                value={skillLevel}
-                onChange={setSkillLevel}
-                options={["All Levels", "Beginner", "Intermediate", "Advanced"]}
-              />
-
-              <FilterSelect
-                label="Availability"
-                icon={<CalendarDays className="h-4 w-4" />}
-                value={availability}
-                onChange={setAvailability}
-                options={["Any Day", "Today", "Tomorrow", "Weekend"]}
-              />
-
               <div className="col-span-2 flex items-center gap-2 rounded-xl border border-white/[0.07] bg-white/[0.025] px-3 py-2.5 text-xs text-slate-400 lg:col-span-1">
                 <ShieldCheck className="h-4 w-4 shrink-0 text-lime-400" />
                 Discover players and connect
@@ -579,32 +417,7 @@ export default function FindPlayersPage() {
                   </div>
 
                   <div className="space-y-4">
-                    {UPCOMING_GAMES.map((game, index) => (
-                      <div key={index} className="flex items-center gap-3">
-                        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-lime-400/10 bg-gradient-to-br from-lime-500/20 to-emerald-900/30">
-                          {index === 0
-                            ? <Gamepad2 className="h-6 w-6 text-lime-400" />
-                            : <Trophy className="h-6 w-6 text-lime-400" />
-                          }
-                        </div>
-
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-xs font-bold text-white">
-                            {game.sport}
-                          </p>
-                          <p className="mt-1 flex items-center gap-1 text-[10px] text-slate-400">
-                            <Clock className="h-3 w-3" /> {game.date}
-                          </p>
-                          <p className="mt-1 flex items-center gap-1 text-[10px] text-slate-500">
-                            <MapPin className="h-3 w-3" /> {game.venue}
-                          </p>
-                        </div>
-
-                        <Badge className="shrink-0 border-lime-400/20 bg-lime-400/10 text-[10px] text-lime-400">
-                          {game.players}
-                        </Badge>
-                      </div>
-                    ))}
+                    {/* no upcoming games */}
                   </div>
                 </CardContent>
               </Card>

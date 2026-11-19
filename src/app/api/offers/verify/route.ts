@@ -29,23 +29,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid verification code" }, { status: 404 })
     }
 
-    // Check if sponsor or admin
-    if (session.user.role !== "ADMIN" && redemption.offer.sponsor.userId !== session.user.id) {
-      return NextResponse.json({ error: "Access denied" }, { status: 403 })
+    if (!redemption.offer || !redemption.offer.isActive) {
+      return NextResponse.json({ error: "This coupon is not valid" }, { status: 400 })
     }
 
-    // Check if already used
-    if (redemption.status === "REDEEMED") {
-      return NextResponse.json({
-        error: "This coupon has already been redeemed",
-        redemption: {
-          id: redemption.id,
-          status: redemption.status,
-          usedAt: redemption.usedAt,
-          user: redemption.user,
-          offer: redemption.offer,
-        },
-      }, { status: 400 })
+    // Check if sponsor or admin
+    if (!redemption.offer.sponsor || (session.user.role !== "ADMIN" && redemption.offer.sponsor.userId !== session.user.id)) {
+      return NextResponse.json({ error: "Access denied" }, { status: 403 })
     }
 
     // Check if expired
@@ -57,14 +47,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "This offer has expired" }, { status: 400 })
     }
 
-    // Mark as redeemed
-    await prisma.offerRedemption.update({
-      where: { id: redemption.id },
-      data: {
-        status: "REDEEMED",
-        usedAt: new Date(),
-      },
+    // Atomically mark as redeemed to prevent double-use under concurrent scans
+    const updated = await prisma.offerRedemption.updateMany({
+      where: { id: redemption.id, status: { not: "REDEEMED" } },
+      data: { status: "REDEEMED", usedAt: new Date() },
     })
+
+    if (updated.count === 0) {
+      return NextResponse.json({
+        error: "This coupon has already been redeemed",
+        redemption: {
+          id: redemption.id,
+          status: "REDEEMED",
+          usedAt: redemption.usedAt,
+          user: redemption.user,
+          offer: redemption.offer,
+        },
+      }, { status: 400 })
+    }
 
     return NextResponse.json({
       success: true,

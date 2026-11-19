@@ -366,10 +366,7 @@ export function BookingModal({ facility, courtId, date, slot, onClose }: Booking
             </Button>
             <Button className="flex-1 bg-lime-400 font-bold text-black hover:bg-lime-300" onClick={handleConfirm} disabled={isLoading || !acknowledged}>
               {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Booking...
-                </>
+                <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 "Confirm Booking"
               )}

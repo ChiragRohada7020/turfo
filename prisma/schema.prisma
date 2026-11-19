@@ -41,6 +41,11 @@ model User {
   userTasks           UserTask[]
   tasks               Task[]
   rewardTransactions  RewardTransaction[]
+  playerPreference     PlayerPreference?
+  ownerPromoSettings  OwnerPromoSettings?
+  createdCampaigns    PromotionCampaign[] @relation("CampaignCreator")
+  campaignReceipts    CampaignRecipient[]
+  rewardRedemptions   RewardRedemption[]
   reviews         Review[]
   notifications   Notification[]
   cashfreeAccount CashfreeAccount?
@@ -54,9 +59,13 @@ model User {
 }
 
 model Facility {
-  id          String   @id @default(cuid())
-  name        String
-  description String?
+  id            String   @id @default(cuid())
+  name          String
+  description   String?
+  facilityType  String?  @default("OUTDOOR")
+  contactPhone  String?
+  whatsappNumber String?
+  landmark      String?
   address     String
   city        String
   state       String
@@ -81,6 +90,9 @@ model Facility {
   pricingRules PricingRule[]
   availability Availability[]
   tournaments  Tournament[]
+  demandForecasts DemandForecast[]
+  promotionCampaigns PromotionCampaign[]
+  ownerPromoSettings OwnerPromoSettings[]
 }
 
 model Court {
@@ -91,6 +103,7 @@ model Court {
   surfaceType  SurfaceType?
   capacity     Int
   dimensions   String?
+  images       String[] @default([])
   isActive     Boolean  @default(true)
 
   facility     Facility     @relation(fields: [facilityId], references: [id])
@@ -98,6 +111,8 @@ model Court {
   availability Availability[]
   bookings     Booking[]
   tournamentMatches TournamentMatch[]
+  demandForecasts DemandForecast[]
+  promotionCampaigns PromotionCampaign[]
 }
 
 model PricingRule {
@@ -245,6 +260,9 @@ model Offer {
   targetAudience   String     @default("ALL") // ALL, FREQUENT, NEW, HIGH_RELIABILITY, SPECIFIC_SPORT
   targetSport      SportType?
   targetCity       String?
+  imageUrl         String?
+  impressions      Int        @default(0)
+  clicks           Int        @default(0)
   isActive         Boolean    @default(true)
   createdAt        DateTime   @default(now())
   updatedAt        DateTime   @updatedAt
@@ -392,6 +410,7 @@ model Team {
   id          String   @id @default(cuid())
   name        String
   imageUrl    String?
+  boostedUntil DateTime?
   sportType   SportType @default(FOOTBALL)
   inviteCode  String?  @unique
   captainId   String
@@ -439,6 +458,158 @@ model CashfreeAccount {
   updatedAt       DateTime @updatedAt
 
   user            User     @relation(fields: [userId], references: [id])
+}
+
+// Promotion engine models
+model DemandForecast {
+  id                  String   @id @default(cuid())
+  facilityId          String
+  courtId             String?
+  date                DateTime
+  hour                Int
+  predictedOccupancy  Float    @default(0)
+  historicalOccupancy Float    @default(0)
+  demandLevel         String   @default("MEDIUM")
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  facility            Facility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  court               Court?   @relation(fields: [courtId], references: [id], onDelete: Cascade)
+
+  @@unique([facilityId, courtId, date, hour])
+  @@index([facilityId, date])
+}
+
+model PlayerPreference {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  preferredSport    SportType?
+  preferredTimes    Int[]    @default([])
+  preferredDays     Int[]    @default([])
+  lastBookingAt     DateTime?
+  bookingCount30d   Int      @default(0)
+  avgBookingValue   Float    @default(0)
+  couponResponseScore Float  @default(0)
+  engagementScore     Float  @default(0)
+  inactivityDays    Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model OwnerPromoSettings {
+  id               String   @id @default(cuid())
+  ownerId          String   @unique
+  facilityId       String?
+  enabled          Boolean  @default(true)
+  maxDiscountPct   Float    @default(20)
+  maxFlatDiscount  Float    @default(0)
+  minBookingPrice  Float    @default(0)
+  allowedDays      Int[]    @default([0,1,2,3,4,5,6])
+  allowedStartHour Int      @default(0)
+  allowedEndHour   Int      @default(23)
+  monthlyBudget    Float    @default(0)
+  spentBudget      Float    @default(0)
+  autoApprove      Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  owner            User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  facility         Facility? @relation(fields: [facilityId], references: [id], onDelete: SetNull)
+}
+
+model PromotionCampaign {
+  id               String   @id @default(cuid())
+  facilityId       String?
+  courtId          String?
+  name             String
+  type             String
+  fundingSource    String   @default("TURFPLAY")
+  discountType     String   @default("PERCENTAGE")
+  discountValue    Float    @default(0)
+  maxDiscount      Float?
+  minBookingAmount Float    @default(0)
+  applicableHours  Int[]    @default([])
+  applicableDays   Int[]    @default([])
+  startAt          DateTime
+  endAt            DateTime
+  budget           Float    @default(0)
+  spent            Float    @default(0)
+  status           String   @default("DRAFT")
+  createdBy        String?
+  aiGenerated      Boolean  @default(false)
+  description      String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  facility         Facility? @relation(fields: [facilityId], references: [id], onDelete: SetNull)
+  court            Court?    @relation(fields: [courtId], references: [id], onDelete: SetNull)
+  creator          User?     @relation("CampaignCreator", fields: [createdBy], references: [id], onDelete: SetNull)
+  recipients       CampaignRecipient[]
+  audits           PromotionAudit[]
+}
+
+model CampaignRecipient {
+  id          String   @id @default(cuid())
+  campaignId  String
+  userId      String
+  couponCode  String
+  isHoldout   Boolean  @default(false)
+  issuedAt    DateTime @default(now())
+  redeemedAt  DateTime?
+  bookingId   String?
+
+  campaign    PromotionCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, userId])
+}
+
+model PromotionAudit {
+  id          String   @id @default(cuid())
+  campaignId  String?
+  action      String
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  campaign    PromotionCampaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+}
+
+model RewardPerk {
+  id                    String   @id @default(cuid())
+  name                  String
+  description           String?
+  costPoints            Int
+  perkType              String
+  targetScope           String   @default("PLAYER")
+  isActive              Boolean  @default(true)
+  maxRedemptionsPerUser Int?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  redemptions           RewardRedemption[]
+}
+
+model RewardRedemption {
+  id          String   @id @default(cuid())
+  userId      String
+  perkId      String
+  pointsSpent Int
+  status      String   @default("COMPLETED")
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  perk        RewardPerk @relation(fields: [perkId], references: [id], onDelete: Cascade)
+}
+
+model PlatformPromoSettings {
+  id                    String   @id @default("global")
+  aiDistributionEnabled Boolean  @default(true)
+  globalMaxDiscountPct  Float    @default(30)
+  globalMonthlyBudget   Float    @default(0)
+  updatedAt             DateTime @updatedAt
 }
 
 // Enums

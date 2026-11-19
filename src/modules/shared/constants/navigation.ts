@@ -11,6 +11,7 @@ import {
   Bell,
   Settings,
   MapPin,
+  TrendingUp,
   QrCode,
 } from "lucide-react"
 
@@ -30,7 +31,6 @@ export const PLAYER_NAV: NavItem[] = [
   { name: "Find Players", href: "/find-players", icon: Users },
   { name: "Teams", href: "/dashboard/teams", icon: ShieldCheck },
   { name: "Tournaments", href: "/tournaments", icon: Trophy },
-  { name: "Wallet", href: "/wallet", icon: Wallet },
   { name: "Notifications", href: "/notifications", icon: Bell },
   { name: "Settings", href: "/dashboard/settings", icon: Settings },
   { name: "Support", href: "/help", icon: ShieldCheck },
@@ -44,6 +44,8 @@ export const OWNER_NAV: NavItem[] = [
   { name: "Verify Booking", href: "/dashboard/verify", icon: QrCode },
   { name: "Payouts", href: "/dashboard/payouts", icon: Wallet },
   { name: "Analytics", href: "/dashboard/analytics", icon: Trophy },
+  { name: "Promotions", href: "/dashboard/promotions", icon: TrendingUp },
+  { name: "Campaigns", href: "/dashboard/campaigns", icon: Gift },
   { name: "Offers & Rewards", href: "/offers", icon: Gift },
   { name: "Notifications", href: "/notifications", icon: Bell },
   { name: "Settings", href: "/dashboard/settings", icon: Settings },
@@ -52,7 +54,7 @@ export const OWNER_NAV: NavItem[] = [
 
 export const SPONSOR_NAV: NavItem[] = [
   { name: "Dashboard", href: "/dashboard", icon: Home },
-  { name: "My Offers", href: "/dashboard/sponsor", icon: Gift },
+  { name: "My Offers", href: "/dashboard/sponsor/offers", icon: Gift },
   { name: "Verify Coupon", href: "/dashboard/verify-offer", icon: QrCode },
   { name: "Notifications", href: "/notifications", icon: Bell },
   { name: "Settings", href: "/dashboard/settings", icon: Settings },

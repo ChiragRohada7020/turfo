@@ -1,7 +1,8 @@
 import { z } from "zod"
 import { sponsorsRouter } from "./sponsors.router"
 import { adminRouter } from "./admin.router"
-import { createTRPCRouter, publicProcedure, protectedProcedure, ownerProcedure, adminProcedure } from "@/server/trpc/init"
+import { promotionsRouter } from "./promotions.router"
+import { createTRPCRouter, publicProcedure, protectedProcedure, ownerProcedure, adminProcedure, sponsorProcedure } from "@/server/trpc/init"
 import { TRPCError } from "@trpc/server"
 import prisma from "@/lib/prisma"
 import { Role, SportType, SurfaceType, BookingStatus, PaymentStatus, PayoutStatus, TeamRole, NotificationType, Prisma } from "@prisma/client"
@@ -9,6 +10,7 @@ import { randomBytes } from "crypto"
 import bcrypt from "bcryptjs"
 import { msg91 } from "@/lib/msg91/service"
 import { createCashfreeOrder, generateOrderId, createCashfreeRefund, initiateCashfreePayout, createCashfreeContact } from "@/lib/cashfree"
+import { trackTaskProgress } from "@/lib/rewards/taskProgress"
 
 export const appRouter = createTRPCRouter({
   auth: createTRPCRouter({
@@ -114,7 +116,6 @@ export const appRouter = createTRPCRouter({
       .input(
         z.object({
           name: z.string().min(2).optional(),
-          phone: z.string().optional(),
           avatarUrl: z.string().url().optional(),
           address: z.string().optional(),
           city: z.string().optional(),
@@ -300,6 +301,10 @@ export const appRouter = createTRPCRouter({
         z.object({
           name: z.string().min(3),
           description: z.string().optional(),
+          facilityType: z.string().optional(),
+          contactPhone: z.string().optional(),
+          whatsappNumber: z.string().optional(),
+          landmark: z.string().optional(),
           address: z.string().optional(),
           city: z.string().optional(),
           state: z.string().optional(),
@@ -312,6 +317,23 @@ export const appRouter = createTRPCRouter({
           images: z.array(z.string().url()).default([]),
           openTime: z.string().optional(),
           closeTime: z.string().optional(),
+          courts: z.array(z.object({
+            name: z.string(),
+            sportType: z.nativeEnum(SportType),
+            surfaceType: z.string(),
+            capacity: z.number(),
+            pricePerHour: z.number(),
+          })).optional(),
+          pricingRules: z.array(z.object({
+            name: z.string(),
+            courtId: z.string().optional(),
+            dayOfWeek: z.array(z.number()),
+            startTime: z.string(),
+            endTime: z.string(),
+            pricePerHour: z.number(),
+            minDuration: z.number().optional(),
+            maxDuration: z.number().optional(),
+          })).optional(),
         })
       )
       .mutation(async ({ ctx, input }) => {
@@ -329,6 +351,10 @@ export const appRouter = createTRPCRouter({
           data: {
             name: input.name,
             description: input.description,
+            facilityType: input.facilityType,
+            contactPhone: input.contactPhone,
+            whatsappNumber: input.whatsappNumber,
+            landmark: input.landmark,
             address: input.address || owner?.address || "",
             city: input.city || owner?.city || "",
             state: input.state || owner?.state || "",
@@ -344,6 +370,60 @@ export const appRouter = createTRPCRouter({
             ownerId: ctx.session.user.id,
           },
         })
+
+        if (input.courts && input.courts.length > 0) {
+          const courtMap: Record<string, string> = {}
+          for (const court of input.courts) {
+            const createdCourt = await prisma.court.create({
+              data: {
+                name: court.name,
+                facilityId: facility.id,
+                sportType: court.sportType,
+                surfaceType: court.surfaceType as any,
+                capacity: court.capacity,
+                isActive: true,
+              },
+            })
+            courtMap[court.name] = createdCourt.id
+            // Create default standard rate pricing rule
+            await prisma.pricingRule.create({
+              data: {
+                facilityId: facility.id,
+                courtId: createdCourt.id,
+                name: "Standard Rate",
+                dayOfWeek: [0,1,2,3,4,5,6],
+                startTime: "06:00",
+                endTime: "22:00",
+                pricePerHour: court.pricePerHour,
+                minDuration: 30,
+                maxDuration: 60,
+                isActive: true,
+              },
+            })
+          }
+
+          // Create custom pricing rules if provided
+          if (input.pricingRules && input.pricingRules.length > 0) {
+            for (const rule of input.pricingRules) {
+              const courtId = rule.courtId ? courtMap[rule.courtId] : null
+              await prisma.pricingRule.create({
+                data: {
+                  facilityId: facility.id,
+                  courtId: courtId || undefined,
+                  name: rule.name,
+                  dayOfWeek: rule.dayOfWeek,
+                  startTime: rule.startTime,
+                  endTime: rule.endTime,
+                  pricePerHour: rule.pricePerHour,
+                  minDuration: rule.minDuration || 30,
+                  maxDuration: rule.maxDuration || 60,
+                  isActive: true,
+                },
+              })
+            }
+          }
+        }
+
         return facility
       }),
 
@@ -353,6 +433,10 @@ export const appRouter = createTRPCRouter({
           id: z.string(),
           name: z.string().min(3).optional(),
           description: z.string().optional(),
+          facilityType: z.string().optional(),
+          contactPhone: z.string().optional(),
+          whatsappNumber: z.string().optional(),
+          landmark: z.string().optional(),
           address: z.string().optional(),
           city: z.string().optional(),
           state: z.string().optional(),
@@ -487,6 +571,8 @@ export const appRouter = createTRPCRouter({
           surfaceType: z.nativeEnum(SurfaceType).optional(),
           capacity: z.number().min(1).default(10),
           dimensions: z.string().optional(),
+          images: z.array(z.string()).default([]),
+          pricePerHour: z.number().positive().optional(),
         })
       )
       .mutation(async ({ ctx, input }) => {
@@ -495,7 +581,34 @@ export const appRouter = createTRPCRouter({
         })
         if (!facility) throw new Error("Facility not found or access denied")
 
-        return prisma.court.create({ data: input })
+        const court = await prisma.court.create({ data: {
+          facilityId: input.facilityId,
+          name: input.name,
+          sportType: input.sportType,
+          surfaceType: input.surfaceType,
+          capacity: input.capacity,
+          dimensions: input.dimensions,
+          images: input.images,
+        } })
+
+        if (input.pricePerHour) {
+          await prisma.pricingRule.create({
+            data: {
+              facilityId: input.facilityId,
+              courtId: court.id,
+              name: "Standard Rate",
+              dayOfWeek: [0,1,2,3,4,5,6],
+              startTime: facility.openTime || "06:00",
+              endTime: facility.closeTime || "22:00",
+              pricePerHour: input.pricePerHour,
+              minDuration: 30,
+              maxDuration: 60,
+              isActive: true,
+            },
+          })
+        }
+
+        return court
       }),
 
     update: ownerProcedure
@@ -507,6 +620,7 @@ export const appRouter = createTRPCRouter({
           surfaceType: z.nativeEnum(SurfaceType).optional(),
           capacity: z.number().optional(),
           dimensions: z.string().optional(),
+          images: z.array(z.string()).optional(),
           isActive: z.boolean().optional(),
         })
       )
@@ -555,16 +669,44 @@ export const appRouter = createTRPCRouter({
           data: { status: "FAILED" },
         })
 
-        const availability = await prisma.availability.findFirst({
+        let availability: any = await prisma.availability.findFirst({
           where: { courtId: input.courtId, date },
         })
 
-        if (!availability || availability.isBlocked) {
-          return { slots: [], isBlocked: true, note: availability?.note }
+        if (!availability) {
+          const court = await prisma.court.findUnique({
+            where: { id: input.courtId },
+            include: { facility: { select: { openTime: true, closeTime: true } } },
+          })
+          availability = {
+            id: "default",
+            courtId: input.courtId,
+            date,
+            startTime: court?.facility?.openTime || "06:00",
+            endTime: court?.facility?.closeTime || "22:00",
+            isBlocked: false,
+            note: null,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          } as any
         }
 
+        if (availability.isBlocked) {
+          return { slots: [], isBlocked: true, note: availability.note }
+        }
+
+        const court = await prisma.court.findUnique({
+          where: { id: input.courtId },
+          select: { facilityId: true },
+        })
         const pricingRules = await prisma.pricingRule.findMany({
-          where: { courtId: input.courtId, isActive: true },
+          where: {
+            isActive: true,
+            OR: [
+              { courtId: input.courtId },
+              { facilityId: court?.facilityId, courtId: null },
+            ],
+          },
         })
 
         const bookings = await prisma.booking.findMany({
@@ -698,12 +840,17 @@ export const appRouter = createTRPCRouter({
         const courtId = input.courtId
         const facilityId = input.facilityId
 
+        const facilityRecord = await prisma.facility.findUnique({ where: { id: facilityId }, select: { ownerId: true } })
+        const isOwnerBooking = facilityRecord?.ownerId === ctx.session.user.id
+
         const startTime = new Date(input.startTime)
         const endTime = new Date(input.endTime)
         const duration = Math.round((endTime.getTime() - startTime.getTime()) / (1000 * 60))
 
-        if (duration < 30) throw new Error("Minimum booking duration is 30 minutes")
-        if (duration > 60) throw new Error("Maximum booking duration is 1 hour")
+        if (!isOwnerBooking) {
+          if (duration < 30) throw new Error("Minimum booking duration is 30 minutes")
+          if (duration > 60) throw new Error("Maximum booking duration is 1 hour")
+        }
 
         // Prevent booking in the past
         if (startTime < new Date()) {
@@ -722,15 +869,57 @@ export const appRouter = createTRPCRouter({
         const user = await prisma.user.findUnique({ where: { id: ctx.session.user.id } })
         if (!user) throw new TRPCError({ code: "UNAUTHORIZED", message: "Session expired. Please log in again." })
 
-        // Check CIBIL score - minimum 600 to book
-        if (user.cibilScore < 600) {
+        // Check CIBIL score - minimum 600 to book (skip for owner)
+        if (!isOwnerBooking && user.cibilScore < 600) {
           throw new TRPCError({
             code: "FORBIDDEN",
             message: `Your CIBIL score (${user.cibilScore}) is too low to book. Minimum required: 600. Join other players' games to improve your score.`,
           })
         }
 
-        // Check booking limit - max 2 active (pending/confirmed) bookings
+        // If player cancelled a booking in last 24h, block booking
+        if (!isOwnerBooking) {
+          const recentCancel = await prisma.booking.findFirst({
+            where: {
+              userId: ctx.session.user.id,
+              status: BookingStatus.CANCELLED,
+              updatedAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+            },
+          })
+          if (recentCancel) {
+            throw new TRPCError({ code: "FORBIDDEN", message: "You cannot book for 24 hours after cancelling a booking." })
+          }
+        }
+
+        // Expire stale confirmed bookings and penalize
+        if (!isOwnerBooking) {
+          const expired = await prisma.booking.findMany({
+            where: {
+              userId: ctx.session.user.id,
+              status: BookingStatus.CONFIRMED,
+              endTime: { lt: new Date() },
+            },
+          })
+          for (const b of expired) {
+            await prisma.booking.update({ where: { id: b.id }, data: { status: BookingStatus.NO_SHOW } })
+            await prisma.user.update({ where: { id: ctx.session.user.id }, data: { cibilScore: { decrement: 30 }, noShowCount: { increment: 1 } } })
+            await prisma.notification.create({
+              data: {
+                userId: ctx.session.user.id,
+                type: "BOOKING_CANCELLED",
+                title: "Booking Expired",
+                message: "Your booking expired without verification. CIBIL score decreased.",
+                data: { bookingId: b.id },
+              },
+            })
+          }
+          if (expired.length > 0) {
+            throw new TRPCError({ code: "FORBIDDEN", message: "You have an expired unverified booking. You cannot book for 24 hours." })
+          }
+        }
+
+        // Check booking limit - max 2 active (pending/confirmed) bookings (skip for owner)
+        if (!isOwnerBooking) {
         const activeBookings = await prisma.booking.count({
           where: {
             userId: ctx.session.user.id,
@@ -742,6 +931,7 @@ export const appRouter = createTRPCRouter({
             code: "FORBIDDEN",
             message: "You already have 2 active bookings. Please complete or cancel an existing booking before creating a new one.",
           })
+        }
         }
 
         // Check for conflicts (atomic with booking creation to prevent race conditions)
@@ -775,19 +965,23 @@ export const appRouter = createTRPCRouter({
         const dayOfWeek = istTime.getUTCDay()
         const timeStr = `${istTime.getUTCHours().toString().padStart(2, "0")}:${istTime.getUTCMinutes().toString().padStart(2, "0")}`
 
-        const applicableRule = pricingRules.find(
+        const matchingRules = pricingRules.filter(
           (r) =>
             r.dayOfWeek.includes(dayOfWeek) &&
             r.startTime <= timeStr &&
             r.endTime > timeStr &&
-            duration >= r.minDuration &&
             (!r.maxDuration || duration <= r.maxDuration)
         )
+        const applicableRule = matchingRules.sort((a: any, b: any) => {
+          const aDur = (parseInt(a.endTime.split(":")[0]) * 60 + parseInt(a.endTime.split(":")[1])) - (parseInt(a.startTime.split(":")[0]) * 60 + parseInt(a.startTime.split(":")[1]))
+          const bDur = (parseInt(b.endTime.split(":")[0]) * 60 + parseInt(b.endTime.split(":")[1])) - (parseInt(b.startTime.split(":")[0]) * 60 + parseInt(b.startTime.split(":")[1]))
+          return aDur - bDur
+        })[0]
 
         if (!applicableRule) {
           throw new TRPCError({
             code: "BAD_REQUEST",
-            message: "This time slot is outside operating hours (6:00 AM - 10:00 PM). Please select a slot between 06:00 and 22:00.",
+            message: "This time slot is not available. Please select an available slot.",
           })
         }
 
@@ -826,8 +1020,8 @@ export const appRouter = createTRPCRouter({
               startTime,
               endTime,
               duration,
-              totalPrice,
-              status: BookingStatus.CONFIRMED,
+              totalPrice: isOwnerBooking ? 0 : totalPrice,
+              status: isOwnerBooking ? BookingStatus.COMPLETED : BookingStatus.CONFIRMED,
               verificationCode,
               maxPlayers: input.maxPlayers || 1,
               isPublic: input.isPublic || false,
@@ -836,8 +1030,10 @@ export const appRouter = createTRPCRouter({
           })
         }, { isolationLevel: "Serializable" })
 
-        // Create payment record (offline payment - no gateway)
-        const paymentRecord = await prisma.payment.create({
+        // Create payment record (offline payment - no gateway) - skip for owner bookings
+        let paymentRecord = null
+        if (!isOwnerBooking) {
+        const paymentRecordTmp = await prisma.payment.create({
           data: {
             bookingId: booking.id,
             amount: totalPrice,
@@ -849,6 +1045,8 @@ export const appRouter = createTRPCRouter({
             paidAt: new Date(),
           },
         })
+        paymentRecord = paymentRecordTmp
+        }
 
         // Create notification for booking confirmation
         await prisma.notification.create({
@@ -1016,6 +1214,56 @@ export const appRouter = createTRPCRouter({
         return { ...updated, refundPercent: 0, refundAmount: 0 }
       }),
 
+    // Owner offline booking (no payment, multiple slots)
+    ownerCreateOffline: ownerProcedure
+      .input(z.object({
+        facilityId: z.string(),
+        courtId: z.string().optional(),
+        slots: z.array(z.object({ startTime: z.string().datetime(), endTime: z.string().datetime() })).min(1),
+        notes: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const facility = await prisma.facility.findFirst({ where: { id: input.facilityId, ownerId: ctx.session.user.id } })
+        if (!facility) throw new TRPCError({ code: "FORBIDDEN", message: "Facility not found or access denied" })
+
+        const created = []
+        for (const slot of input.slots) {
+          const startTime = new Date(slot.startTime)
+          const endTime = new Date(slot.endTime)
+          const duration = Math.round((endTime.getTime() - startTime.getTime()) / (1000 * 60))
+          if (duration < 30) throw new TRPCError({ code: "BAD_REQUEST", message: "Minimum booking duration is 30 minutes" })
+
+          const conflict = await prisma.booking.findFirst({
+            where: {
+              courtId: input.courtId || undefined,
+              facilityId: input.facilityId,
+              status: { in: [BookingStatus.PENDING, BookingStatus.CONFIRMED] },
+              OR: [{ startTime: { lt: endTime }, endTime: { gt: startTime } }],
+            },
+          })
+          if (conflict) throw new TRPCError({ code: "CONFLICT", message: "Time slot not available" })
+
+          const booking = await prisma.booking.create({
+            data: {
+              userId: ctx.session.user.id,
+              facilityId: input.facilityId,
+              courtId: input.courtId,
+              startTime,
+              endTime,
+              duration,
+              totalPrice: 0,
+              status: BookingStatus.CONFIRMED,
+              verificationCode: randomBytes(16).toString("hex"),
+              maxPlayers: 1,
+              isPublic: false,
+              notes: input.notes || "Offline booking by owner",
+            },
+          })
+          created.push(booking)
+        }
+        return { bookings: created, count: created.length }
+      }),
+
     // Get public/open bookings (available to join)
     publicBookings: publicProcedure
       .input(z.object({ page: z.number().default(1), limit: z.number().default(20) }))
@@ -1103,6 +1351,8 @@ export const appRouter = createTRPCRouter({
           where: { id: ctx.session.user.id },
           data: { cibilScore: { increment: 5 } },
         })
+
+        try { await trackTaskProgress(ctx.session.user.id, "JOIN_OPEN_GAMES", 1) } catch (e) { console.error(e) }
 
         // Notify host
         await prisma.notification.create({
@@ -1409,6 +1659,66 @@ export const appRouter = createTRPCRouter({
 
         return { bookings, total, page: input.page, totalPages: Math.ceil(total / input.limit) }
       }),
+
+    ownerAnalytics: ownerProcedure.query(async ({ ctx }) => {
+      const days = 7
+      const now = new Date()
+      const result = []
+      for (let i = days - 1; i >= 0; i--) {
+        const d = new Date(now)
+        d.setDate(d.getDate() - i)
+        const start = new Date(d)
+        start.setHours(0, 0, 0, 0)
+        const end = new Date(d)
+        end.setHours(23, 59, 59, 999)
+        const count = await prisma.booking.count({
+          where: {
+            facility: { ownerId: ctx.session.user.id },
+            createdAt: { gte: start, lte: end },
+          },
+        })
+        result.push({ date: start.toISOString().split("T")[0], count })
+      }
+      return result
+    }),
+
+    verify: ownerProcedure
+      .input(z.object({ bookingId: z.string(), code: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        const booking = await prisma.booking.findFirst({
+          where: { id: input.bookingId, facility: { ownerId: ctx.session.user.id } },
+          include: { facility: true, user: { select: { name: true, email: true } } },
+        })
+        if (!booking) throw new Error("Booking not found or access denied")
+        if (booking.status === BookingStatus.CANCELLED) throw new Error("Booking is cancelled")
+        if (booking.status === BookingStatus.COMPLETED) throw new Error("Booking already verified")
+        if (booking.verificationCode !== input.code) throw new Error("Invalid verification code")
+        if (new Date(booking.endTime) < new Date()) throw new Error("Booking expired")
+
+        await prisma.booking.update({ where: { id: booking.id }, data: { status: BookingStatus.COMPLETED } })
+
+        try { await trackTaskProgress(booking.userId, "BOOK_TURFS", 1) } catch (e) { console.error(e) }
+
+        await prisma.notification.create({
+          data: {
+            userId: booking.userId,
+            type: "BOOKING_CONFIRMED",
+            title: "Booking Completed",
+            message: `Your booking has been verified and completed.`,
+            data: { bookingId: booking.id },
+          },
+        })
+
+        return {
+          success: true,
+          bookingId: booking.id,
+          facility: booking.facility?.name,
+          player: booking.user?.name,
+          startTime: booking.startTime,
+          endTime: booking.endTime,
+          status: "COMPLETED",
+        }
+      }),
   }),
 
 payments: createTRPCRouter({
@@ -1627,9 +1937,9 @@ payments: createTRPCRouter({
 
   offers: createTRPCRouter({
     // Create offer (sponsor)
-    create: protectedProcedure
+    create: sponsorProcedure
       .input(z.object({
-        sponsorId: z.string(),
+        sponsorId: z.string().optional(),
         code: z.string().min(3).max(20),
         title: z.string().min(1),
         description: z.string().optional(),
@@ -1644,9 +1954,21 @@ payments: createTRPCRouter({
         targetAudience: z.enum(["ALL", "FREQUENT", "NEW", "HIGH_RELIABILITY", "SPECIFIC_SPORT"]).default("ALL"),
         targetSport: z.nativeEnum(SportType).optional(),
         targetCity: z.string().optional(),
+        imageUrl: z.string().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
-        const sponsor = await prisma.sponsor.findUnique({ where: { id: input.sponsorId } })
+        let sponsorId = input.sponsorId
+        if (!sponsorId) {
+          let systemSponsor = await prisma.sponsor.findFirst({ where: { name: "TurfPlay System" } })
+          if (!systemSponsor) {
+            // need a user for sponsor; use first admin or create? fallback to ctx user
+            systemSponsor = await prisma.sponsor.create({
+              data: { name: "TurfPlay System", contactEmail: "system@turfplay.local", userId: ctx.session.user.id, isApproved: true, isActive: true },
+            })
+          }
+          sponsorId = systemSponsor.id
+        }
+        const sponsor = await prisma.sponsor.findUnique({ where: { id: sponsorId } })
         if (!sponsor) throw new Error("Sponsor not found")
         if (sponsor.userId !== ctx.session.user.id && ctx.session.user.role !== "ADMIN") {
           throw new Error("Access denied")
@@ -1655,7 +1977,7 @@ payments: createTRPCRouter({
 
         const offer = await prisma.offer.create({
           data: {
-            sponsorId: input.sponsorId,
+            sponsorId: sponsorId,
             code: input.code.toUpperCase(),
             title: input.title,
             description: input.description,
@@ -1670,6 +1992,7 @@ payments: createTRPCRouter({
             targetAudience: input.targetAudience,
             targetSport: input.targetSport,
             targetCity: input.targetCity,
+            imageUrl: input.imageUrl,
             isActive: false, // Requires admin approval
           },
         })
@@ -1677,7 +2000,7 @@ payments: createTRPCRouter({
       }),
 
     // Update offer (sponsor)
-    update: protectedProcedure
+    update: sponsorProcedure
       .input(z.object({
         offerId: z.string(),
         title: z.string().optional(),
@@ -1690,6 +2013,7 @@ payments: createTRPCRouter({
         maxUses: z.number().optional(),
         maxUsesPerUser: z.number().optional(),
         isActive: z.boolean().optional(),
+        imageUrl: z.string().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         const offer = await prisma.offer.findUnique({ where: { id: input.offerId }, include: { sponsor: true } })
@@ -1711,18 +2035,74 @@ payments: createTRPCRouter({
             ...(input.maxUses !== undefined && { maxUses: input.maxUses }),
             ...(input.maxUsesPerUser !== undefined && { maxUsesPerUser: input.maxUsesPerUser }),
             ...(input.isActive !== undefined && { isActive: input.isActive }),
+            ...(input.imageUrl !== undefined && { imageUrl: input.imageUrl }),
           },
         })
       }),
 
     // List sponsor's offers
-    myOffers: protectedProcedure
+    myOffers: sponsorProcedure
       .query(async ({ ctx }) => {
         const sponsor = await prisma.sponsor.findUnique({ where: { userId: ctx.session.user.id } })
         if (!sponsor) return []
-        return prisma.offer.findMany({
+        const offers = await prisma.offer.findMany({
           where: { sponsorId: sponsor.id },
           orderBy: { createdAt: "desc" },
+        })
+        const offerIds = offers.map((o) => o.id)
+        const offerCodes = offers.map((o) => o.code)
+        
+        // Batch queries
+        const [distributedCounts, redemptions] = await Promise.all([
+          prisma.campaignRecipient.groupBy({
+            by: ["couponCode"],
+            where: { couponCode: { in: offerCodes } },
+            _count: { couponCode: true },
+          }),
+          prisma.offerRedemption.findMany({
+            where: { offerId: { in: offerIds } },
+            select: { offerId: true, userId: true },
+          }),
+        ])
+        
+        const distributedMap = new Map(distributedCounts.map((d) => [d.couponCode, d._count.couponCode]))
+        const redemptionsByOffer = new Map<string, { userIds: Set<string>; count: number }>()
+        for (const r of redemptions) {
+          if (!redemptionsByOffer.has(r.offerId)) {
+            redemptionsByOffer.set(r.offerId, { userIds: new Set(), count: 0 })
+          }
+          const entry = redemptionsByOffer.get(r.offerId)!
+          entry.userIds.add(r.userId)
+          entry.count++
+        }
+        
+        return offers.map((offer: any) => ({
+          ...offer,
+          distributedCount: distributedMap.get(offer.code) || 0,
+          redeemedCount: redemptionsByOffer.get(offer.id)?.count || 0,
+          customersGained: redemptionsByOffer.get(offer.id)?.userIds.size || 0,
+        }))
+      }),
+
+    // Recent redemptions for sponsor's offers
+    recentRedemptions: sponsorProcedure
+      .input(z.object({ limit: z.number().default(10) }))
+      .query(async ({ ctx, input }) => {
+        const sponsor = await prisma.sponsor.findUnique({ where: { userId: ctx.session.user.id } })
+        if (!sponsor) return []
+        const offers = await prisma.offer.findMany({
+          where: { sponsorId: sponsor.id },
+          select: { id: true },
+        })
+        const offerIds = offers.map((o) => o.id)
+        return prisma.offerRedemption.findMany({
+          where: { offerId: { in: offerIds } },
+          include: {
+            user: { select: { id: true, name: true, email: true } },
+            offer: { select: { id: true, code: true, title: true } },
+          },
+          orderBy: { redeemedAt: "desc" },
+          take: input.limit,
         })
       }),
 
@@ -1753,6 +2133,35 @@ payments: createTRPCRouter({
       }),
 
     // Get personalized offers for a user (algorithm)
+  received: protectedProcedure
+    .query(async ({ ctx }) => {
+      const recipients = await prisma.campaignRecipient.findMany({
+        where: { userId: ctx.session.user.id },
+        select: { couponCode: true, isHoldout: true },
+      })
+      const codes = recipients.filter((r) => !r.isHoldout).map((r) => r.couponCode)
+      if (codes.length === 0) return []
+      const now = new Date()
+      const offers = await prisma.offer.findMany({
+        where: {
+          code: { in: codes },
+          isActive: true,
+          validFrom: { lte: now },
+          validTo: { gte: now },
+          sponsor: { isApproved: true, isActive: true },
+        },
+        include: { sponsor: { select: { name: true, logoUrl: true, budget: true, spentBudget: true } } },
+      })
+      const offerIds = offers.map((o) => o.id)
+      const userRedemptions = await prisma.offerRedemption.groupBy({
+        by: ["offerId"],
+        where: { userId: ctx.session.user.id, offerId: { in: offerIds } },
+        _count: { offerId: true },
+      })
+      const redemptionMap = new Map(userRedemptions.map((r) => [r.offerId, r._count.offerId]))
+      return offers.filter((o: any) => o.usedCount < o.maxUses && o.sponsor.spentBudget < o.sponsor.budget && (redemptionMap.get(o.id) || 0) < o.maxUsesPerUser)
+    }),
+
     getPersonalized: protectedProcedure
       .input(z.object({ bookingAmount: z.number().optional(), sport: z.string().optional(), city: z.string().optional() }))
       .query(async ({ ctx, input }) => {
@@ -2135,6 +2544,17 @@ payments: createTRPCRouter({
       }),
 
     // Redeem an offer
+    createRedemption: protectedProcedure
+      .input(z.object({ offerId: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        const offer = await prisma.offer.findUnique({ where: { id: input.offerId } })
+        if (!offer || !offer.isActive) throw new Error("Offer not available")
+        const redemption = await prisma.offerRedemption.create({
+          data: { offerId: input.offerId, userId: ctx.session.user.id, discountApplied: 0 },
+        })
+        return { verificationCode: redemption.verificationCode }
+      }),
+
     redeem: protectedProcedure
       .input(z.object({ offerId: z.string(), bookingId: z.string().optional() }))
       .mutation(async ({ ctx, input }) => {
@@ -2765,6 +3185,7 @@ payments: createTRPCRouter({
             members: { create: { userId: ctx.session.user.id, role: TeamRole.CAPTAIN } },
           },
         })
+        try { await trackTaskProgress(ctx.session.user.id, "CREATE_TEAM", 1) } catch (e) { console.error(e) }
         return team
       }),
 
@@ -3050,6 +3471,39 @@ payments: createTRPCRouter({
     }),
   }),
 
+  promotions: promotionsRouter,
+
+  players: createTRPCRouter({
+    list: publicProcedure
+      .input(z.object({ city: z.string().optional(), limit: z.number().default(50) }).optional())
+      .query(async ({ input }) => {
+        const where: any = { role: "PLAYER" }
+        if (input?.city) where.city = { equals: input.city, mode: "insensitive" }
+        return prisma.user.findMany({
+          where,
+          select: { id: true, name: true, phone: true, address: true, city: true, state: true, postalCode: true, avatarUrl: true, rewardPoints: true, playerPreference: { select: { preferredSport: true, preferredTimes: true, preferredDays: true, engagementScore: true } }, _count: { select: { bookings: true } } },
+          take: input?.limit || 50,
+          orderBy: { createdAt: "desc" },
+        })
+      }),
+
+    invite: protectedProcedure
+      .input(z.object({ userId: z.string(), message: z.string().optional() }))
+      .mutation(async ({ ctx, input }) => {
+        if (input.userId === ctx.session.user.id) throw new Error("Cannot invite yourself")
+        await prisma.notification.create({
+          data: {
+            userId: input.userId,
+            type: "SYSTEM",
+            title: "Player Invitation",
+            message: input.message || "A player invited you to join their game.",
+            data: { fromUserId: ctx.session.user.id },
+          },
+        })
+        return { success: true }
+      }),
+  }),
+
   upload: createTRPCRouter({
     presign: protectedProcedure
       .input(z.object({ fileName: z.string(), fileType: z.string(), bucket: z.string() }))
@@ -3115,12 +3569,18 @@ const istDate = new Date(date.getTime() + istOffset)
     const dayOfWeek = istDate.getUTCDay()
     const timeStr = `${String(Math.floor(slotStart / 60)).padStart(2, "0")}:${String(slotStart % 60).padStart(2, "0")}`
 
-    const rule = pricingRules.find(
+    const matchingRules = pricingRules.filter(
       (r) =>
         r.dayOfWeek.includes(dayOfWeek) &&
         r.startTime <= timeStr &&
         r.endTime > timeStr
     )
+    // Prefer the most specific (narrowest time window) rule
+    const rule = matchingRules.sort((a: any, b: any) => {
+      const aDur = (parseInt(a.endTime.split(":")[0]) * 60 + parseInt(a.endTime.split(":")[1])) - (parseInt(a.startTime.split(":")[0]) * 60 + parseInt(a.startTime.split(":")[1]))
+      const bDur = (parseInt(b.endTime.split(":")[0]) * 60 + parseInt(b.endTime.split(":")[1])) - (parseInt(b.startTime.split(":")[0]) * 60 + parseInt(b.startTime.split(":")[1]))
+      return aDur - bDur
+    })[0]
 
     if (rule) {
       slots.push({

@@ -75,6 +75,14 @@ export const authOptions: NextAuthOptions = {
         token.id = user.id
         token.role = (user as any).role
       }
+      if (token.id) {
+        const dbUser = await authPrisma.user.findUnique({ where: { id: token.id as string }, select: { role: true, name: true, avatarUrl: true } })
+        if (dbUser) {
+          token.role = dbUser.role
+          token.name = dbUser.name
+          token.picture = dbUser.avatarUrl
+        }
+      }
       if (trigger === "update" && session) {
         token.name = session.name
         token.image = session.image

@@ -38,7 +38,6 @@ import { OpenGameModal } from "@/components/booking/OpenGameModal"
 
 const filters = [
   { label: "All bookings", value: "all" },
-  { label: "Pending", value: "PENDING" },
   { label: "Confirmed", value: "CONFIRMED" },
   { label: "Completed", value: "COMPLETED" },
   { label: "Cancelled", value: "CANCELLED" },
@@ -57,7 +56,8 @@ export default function BookingsPage() {
   const [qrModalOpen, setQrModalOpen] = useState(false)
   const [qrBooking, setQrBooking] = useState<any>(null)
 
-  const { data, isLoading, refetch } = trpc.bookings.myBookings.useQuery({
+  const isOwner = session?.user?.role === "OWNER"
+  const { data: myData, isLoading: myLoading, refetch: refetchMy } = trpc.bookings.myBookings.useQuery({
     status:
       statusFilter !== "all"
         ? (statusFilter as BookingStatus)
@@ -65,7 +65,22 @@ export default function BookingsPage() {
     limit: 20,
   }, {
     keepPreviousData: true,
+    enabled: !isOwner,
   })
+  const { data: ownerData, isLoading: ownerLoading, refetch: refetchOwner } = trpc.bookings.ownerBookings.useQuery({
+    status:
+      statusFilter !== "all"
+        ? (statusFilter as BookingStatus)
+        : undefined,
+    limit: 20,
+  }, {
+    keepPreviousData: true,
+    enabled: isOwner,
+  })
+
+  const data: any = isOwner ? ownerData : myData
+  const isLoading: any = isOwner ? ownerLoading : myLoading
+  const refetch: any = isOwner ? refetchOwner : refetchMy
 
   const cancelBooking = trpc.bookings.cancel.useMutation()
 
@@ -257,17 +272,26 @@ export default function BookingsPage() {
                 </p>
               </div>
 
-              <Link href="/search">
-                <Button className="h-12 rounded-xl bg-lime-400 px-5 font-bold text-black shadow-lg shadow-lime-400/10 hover:bg-lime-300">
-                  <Plus className="mr-2 h-5 w-5" />
-                  Book a Turf
-                </Button>
-              </Link>
+              <Link href={isOwner ? "/dashboard/facilities" : "/search"}>
+                 <Button className="h-12 rounded-xl bg-lime-400 px-5 font-bold text-black shadow-lg shadow-lime-400/10 hover:bg-lime-300">
+                   <Plus className="mr-2 h-5 w-5" />
+                   {isOwner ? "Book Offline" : "Book a Turf"}
+                 </Button>
+               </Link>
             </div>
           </div>
+           {isOwner && (
+             <div className="mb-7 grid grid-cols-2 gap-3 lg:grid-cols-4">
+               <OverviewCard label="Total" value={bookings.length} icon={<CalendarDays />} color="text-lime-400" />
+               <OverviewCard label="Confirmed" value={bookings.filter((b: any) => b.status === "CONFIRMED").length} icon={<ShieldCheck />} color="text-emerald-400" />
+               <OverviewCard label="Pending" value={bookings.filter((b: any) => b.status === "PENDING").length} icon={<AlertCircle />} color="text-amber-400" />
+               <OverviewCard label="Cancelled" value={bookings.filter((b: any) => b.status === "CANCELLED").length} icon={<XCircle />} color="text-red-400" />
+             </div>
+           )}
 
-          {/* Booking overview */}
-          <div className="mb-7 grid grid-cols-2 gap-3 lg:grid-cols-4">
+           {/* Booking overview */}
+           {!isOwner && (
+           <div className="mb-7 grid grid-cols-2 gap-3 lg:grid-cols-4">
             <OverviewCard
               label="Bookings shown"
               value={isLoading ? "—" : bookings.length}
@@ -293,15 +317,16 @@ export default function BookingsPage() {
               color="text-blue-400"
             />
           </div>
+           )}
 
-          {/* Filters */}
+           {/* Filters */}
           <div className="mb-6">
             <div className="mb-3 flex items-center justify-between gap-3">
               <div>
-                <h2 className="text-lg font-bold">Your reservations</h2>
-                <p className="text-xs text-slate-500">
-                  Only bookings made by your account are shown here.
-                </p>
+                <h2 className="text-lg font-bold">{isOwner ? "Facility bookings" : "Your reservations"}</h2>
+                 <p className="text-xs text-slate-500">
+                   {isOwner ? "Bookings for your facilities are shown here." : "Only bookings made by your account are shown here."}
+                 </p>
               </div>
               <span className="hidden rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs text-slate-400 sm:inline-flex">
                 {bookings.length} shown

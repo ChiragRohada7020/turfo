@@ -16,83 +16,6 @@ import { trpc } from "@/lib/trpc"
 import { Sidebar } from "@/components/layout/Sidebar"
 
 
-const SPORT_FILTERS = ["All Sports", "Football", "Cricket", "Badminton", "Tennis", "Pickleball", "Basketball", "Swimming", "Box Cricket", "Multi-Sport"]
-
-const MOCK_TURFS = [
-  {
-    id: "1",
-    name: "Pachora Turf Arena",
-    city: "Pachora, Jalgaon",
-    distance: "1.2 km",
-    price: 1200,
-    rating: 4.8,
-    reviews: 126,
-    image: "/placeholder.svg",
-    sports: ["Football", "Cricket"],
-    tags: ["Available Today"],
-  },
-  {
-    id: "2",
-    name: "GreenField Turf",
-    city: "Pachora",
-    distance: "2.4 km",
-    price: 1000,
-    rating: 4.7,
-    reviews: 89,
-    image: "/placeholder.svg",
-    sports: ["Football", "Box Cricket"],
-    tags: ["Available Today"],
-  },
-  {
-    id: "3",
-    name: "Champion Turf",
-    city: "Pachora",
-    distance: "3.1 km",
-    price: 1500,
-    rating: 4.6,
-    reviews: 64,
-    image: "/placeholder.svg",
-    sports: ["Football", "Cricket", "Multi-Sport"],
-    tags: ["Few Slots Left"],
-  },
-  {
-    id: "4",
-    name: "JM4D Turf",
-    city: "Pachora, Jalgaon",
-    distance: "3.8 km",
-    price: 1200,
-    rating: 4.5,
-    reviews: 208,
-    image: "/placeholder.svg",
-    sports: ["Football", "Cricket"],
-    tags: ["Available Today"],
-  },
-  {
-    id: "5",
-    name: "Sports Arena Turf",
-    city: "Pachora, Jalgaon",
-    distance: "4.2 km",
-    price: 1000,
-    rating: 4.6,
-    reviews: 388,
-    image: "/placeholder.svg",
-    sports: ["Football", "Cricket"],
-    tags: ["Available Today"],
-  },
-  {
-    id: "6",
-    name: "Skyline Turf",
-    city: "Pachora, Jalgaon",
-    distance: "4.5 km",
-    price: 1400,
-    rating: 4.7,
-    reviews: 196,
-    image: "/placeholder.svg",
-    sports: ["Football", "Box Cricket"],
-    tags: ["Few Slots Left"],
-  },
-]
-
 function getSportCards(facility: any): { sport: string; price: number; courtName: string }[] {
   const cards: { sport: string; price: number; courtName: string }[] = []
   const seen = new Set<string>()
@@ -122,8 +45,15 @@ export default function SearchPageContent() {
   const [searchQuery, setSearchQuery] = useState("")
   const [activeFilter, setActiveFilter] = useState(sportParam ? sportParam.charAt(0).toUpperCase() + sportParam.slice(1) : "All Sports")
 
+  const { data: profile } = trpc.auth.getProfile.useQuery()
+  const { data: sportTypesData } = trpc.facilities.sportTypes.useQuery()
+  const { data: unreadNotifications } = trpc.notifications.list.useQuery({ isRead: false, limit: 1 })
+
+  const city = profile?.city || ""
+  const sportFilters = ["All Sports", ...(sportTypesData?.map((s: any) => String(s.sport).replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c: string) => c.toUpperCase())) ?? [])]
+
   const { data: facilitiesData } = trpc.facilities.list.useQuery({
-    city: "Pachora",
+    ...(city ? { city } : {}),
     sportTypes: [],
     page: 1,
     limit: 12,
@@ -173,13 +103,11 @@ export default function SearchPageContent() {
     <div className="min-h-screen bg-[#070d12] text-white">
       <Sidebar session={session} />
 
-      <Sidebar session={session} />
-
       <div className="min-h-screen pt-14 md:pt-0 md:pl-[262px]">
         <header className="sticky top-0 z-20 flex h-[64px] items-center gap-3 border-b border-white/[0.08] bg-[#080f15]/95 px-4 backdrop-blur-xl sm:px-6">
           <div className="hidden shrink-0 items-center gap-2 rounded-xl border border-white/10 bg-[#121c25] px-3 py-2 text-sm text-slate-300 sm:flex">
             <MapPin className="h-4 w-4" />
-            Pachora, MH
+ {profile?.city ? `${profile.city}${profile?.state ? ", " + profile.state : ""}` : "Set location"}
             <ChevronDown className="h-4 w-4 text-slate-500" />
           </div>
           <div className="relative mx-auto w-full max-w-[590px]">
@@ -188,7 +116,7 @@ export default function SearchPageContent() {
           </div>
           <button aria-label="Notifications" className="relative rounded-full border border-white/10 bg-[#121b24] p-2.5 text-slate-300">
             <Bell className="h-4 w-4" />
-            <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500" />
+            {(unreadNotifications?.total ?? 0) > 0 && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500" />}
           </button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -229,7 +157,7 @@ export default function SearchPageContent() {
               <div className="hidden gap-3 sm:flex">
                 <div className="min-w-[120px] rounded-2xl border border-white/10 bg-black/20 p-4 backdrop-blur-md">
                   <MapPin className="mb-2 h-5 w-5 text-lime-400" />
-                  <p className="text-xl font-black">Pachora</p>
+                  <p className="text-xl font-black">{city || "Your location"}</p>
                   <p className="text-[10px] text-slate-400">Your location</p>
                 </div>
               </div>
@@ -282,7 +210,7 @@ export default function SearchPageContent() {
 
           <div className="mb-4 flex items-center justify-between gap-3">
             <div className="flex gap-2 flex-wrap">
-              {SPORT_FILTERS.map((sport) => (
+              {sportFilters.map((sport) => (
                 <button
                   key={sport}
                   onClick={() => setActiveFilter(sport)}
@@ -300,7 +228,7 @@ export default function SearchPageContent() {
 
           <div className="mb-4 flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-bold">{filteredTurfs.length} Games Found in Pachora</h2>
+              <h2 className="text-lg font-bold">{filteredTurfs.length} Games Found{city ? " in " + city : ""}</h2>
               <p className="mt-1 text-xs text-slate-500">Showing 1-{Math.min(filteredTurfs.length, 12)}</p>
             </div>
           </div>
@@ -313,24 +241,24 @@ export default function SearchPageContent() {
             return (
               <div key={facility.id} className="mb-6">
                 <div className="flex items-center gap-2 mb-3">
-                  <h3 className="text-lg font-bold text-white">{facility.name}</h3>
+                  <h3 className="text-xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-lime-300 via-emerald-300 to-cyan-300">{facility.name}</h3>
                   <span className="text-xs text-slate-500">{facility.city}, {facility.state}</span>
                   {facility.avgRating > 0 && (
                     <span className="text-xs text-amber-300 ml-auto">★ {facility.avgRating.toFixed(1)} ({facility.reviewCount})</span>
                   )}
                 </div>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="flex gap-3 overflow-x-auto pb-2 sm:grid sm:grid-cols-2 lg:grid-cols-3">
                   {sportCards.map((card, idx) => (
-                    <div key={idx} className="group overflow-hidden rounded-xl border-white/10 bg-[#111a22] transition hover:-translate-y-1 hover:border-lime-400/30">
+                    <div key={idx} className="min-w-[220px] shrink-0 group overflow-hidden rounded-xl border-white/10 bg-[#111a22] transition hover:-translate-y-1 hover:border-lime-400/30 sm:min-w-0">
                       <div className="relative h-24 overflow-hidden bg-[#1a3027]">
-                        <Image src={facility.images?.[0] || "/placeholder.svg"} alt={facility.name} fill sizes="200px" className="object-cover transition duration-500 group-hover:scale-105" />
+                        {facility.images?.[0] ? <Image src={facility.images[0]} alt={facility.name} fill sizes="200px" className="object-cover transition duration-500 group-hover:scale-105" /> : null}
                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                         <div className="absolute top-2 left-2 px-2 py-1 rounded bg-lime-400 text-black text-xs font-bold">{card.sport.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()).toLowerCase().replace(/\b\w/g, (c: string) => c.toUpperCase())}</div>
                       </div>
                       <div className="p-3">
                         <p className="text-xs text-slate-400">{card.courtName}</p>
                         <div className="mt-2 flex items-center justify-between">
-                          <p className="font-bold text-lime-300">{card.price ? formatCurrency(card.price) : "Contact"}<span className="text-xs font-normal text-slate-500"> /hr</span></p>
+                          {card.price ? <p className="font-bold text-lime-300">{formatCurrency(card.price)}<span className="text-xs font-normal text-slate-500"> /hr</span></p> : null}
                           <Button asChild size="sm" className="rounded-lg bg-lime-400 font-bold text-black hover:bg-lime-300">
                             <Link href={"/facility/" + facility.id + "?sport=" + encodeURIComponent(card.sport)} replace>
                               Book Now

@@ -7,7 +7,7 @@ import { useSession } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Building2, MapPin, Users, CalendarDays, Edit, Trash2, Eye } from "lucide-react"
+import { Plus, Building2, MapPin, Users, CalendarDays, Edit, Trash2, Eye, DollarSign } from "lucide-react"
 import { formatCurrency } from "@/lib/utils"
 import { Sidebar } from "@/components/layout/Sidebar"
 import { trpc } from "@/lib/trpc"
@@ -15,6 +15,9 @@ import { trpc } from "@/lib/trpc"
 export default function FacilitiesPage() {
   const { data: session, status } = useSession()
   const { data: facilities, isLoading } = trpc.facilities.myFacilities.useQuery()
+
+  const totalRevenue = (facilities || []).reduce((sum: number, f: any) => sum + (f.revenue || 0), 0)
+  const totalBookings = (facilities || []).reduce((sum: number, f: any) => sum + (f._count?.bookings || 0), 0)
 
   if (status === "loading") {
     return (
@@ -56,6 +59,28 @@ export default function FacilitiesPage() {
           </Link>
         </div>
 
+        {/* Revenue summary */}
+        {!isLoading && facilities && facilities.length > 0 && (
+          <div className="mb-6 grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="rounded-2xl border border-white/[0.08] bg-[#0c1916] p-4">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">Total Facilities</p>
+              <p className="mt-1 text-2xl font-black text-white">{facilities.length}</p>
+            </div>
+            <div className="rounded-2xl border border-white/[0.08] bg-[#0c1916] p-4">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">Total Bookings</p>
+              <p className="mt-1 text-2xl font-black text-white">{totalBookings}</p>
+            </div>
+            <div className="rounded-2xl border border-white/[0.08] bg-[#0c1916] p-4">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">Total Revenue</p>
+              <p className="mt-1 text-2xl font-black text-lime-400">₹{totalRevenue.toLocaleString()}</p>
+            </div>
+            <div className="rounded-2xl border border-white/[0.08] bg-[#0c1916] p-4">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">Total Courts</p>
+              <p className="mt-1 text-2xl font-black text-white">{facilities.reduce((s: number, f: any) => s + (f._count?.courts || 0), 0)}</p>
+            </div>
+          </div>
+        )}
+
         {isLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {[...Array(3)].map((_, i) => (
@@ -95,19 +120,52 @@ export default function FacilitiesPage() {
                       <CalendarDays className="h-3 w-3" />
                       {facility._count?.bookings || 0} bookings
                     </span>
+                    <span className="flex items-center gap-1 text-lime-400 font-semibold">
+                      <DollarSign className="h-3 w-3" />
+                      ₹{(facility.revenue || 0).toLocaleString()}
+                    </span>
                   </div>
-                  <div className="flex gap-2 mt-4">
-                    <Link href={`/facility/${facility.id}`} className="flex-1">
-                      <Button size="sm" variant="outline" className="w-full border-white/10 text-white hover:bg-white/5">
-                        <Eye className="h-3 w-3 mr-1" /> View
-                      </Button>
-                    </Link>
+                                     <div className="flex gap-2 mt-4">
+                     <Link href={`/facility/${facility.id}`} className="flex-1">
+                       <Button size="sm" className="w-full bg-lime-400 font-bold text-black hover:bg-lime-300">
+                         <CalendarDays className="h-3 w-3 mr-1" /> Book
+                       </Button>
+                     </Link>
+                     <Link href={`/facility/${facility.id}`} className="flex-1">
+                       <Button size="sm" variant="outline" className="w-full border-white/10 text-white hover:bg-white/5">
+                         <Eye className="h-3 w-3 mr-1" /> View
+                       </Button>
+                     </Link>
                     <Link href={`/dashboard/facilities/${facility.id}/edit`} className="flex-1">
                       <Button size="sm" className="w-full bg-lime-400 font-bold text-black hover:bg-lime-300">
                         <Edit className="h-3 w-3 mr-1" /> Edit
                       </Button>
                     </Link>
                   </div>
+
+                  {/* Recent bookings */}
+                  {facility.bookings && facility.bookings.length > 0 && (
+                    <div className="mt-4 border-t border-white/[0.06] pt-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500 mb-2">Recent Bookings</p>
+                      <div className="space-y-1.5">
+                        {facility.bookings.slice(0, 3).map((b: any) => (
+                          <div key={b.id} className="flex items-center justify-between text-xs">
+                            <span className="text-slate-300 truncate max-w-[120px]">{b.user?.name || "Player"}</span>
+                            <span className="text-slate-500">{new Date(b.startTime).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+                            <span className="text-lime-400 font-semibold">₹{Number(b.totalPrice).toLocaleString()}</span>
+                            <span className={`text-[10px] ${b.status === "CONFIRMED" ? "text-green-400" : b.status === "PENDING" ? "text-amber-400" : "text-red-400"}`}>
+                              {b.status}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                      {facility._count?.bookings > 3 && (
+                        <Link href="/dashboard/bookings" className="mt-2 block text-[10px] font-semibold text-lime-400 hover:text-lime-300">
+                          View all {facility._count.bookings} bookings →
+                        </Link>
+                      )}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             ))}

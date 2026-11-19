@@ -290,6 +290,9 @@ export default function OpenGamesPage() {
                     const isJoined = game.participants?.some(
                       (p: any) => p.userId === session.user.id
                     )
+                    const isPendingRequest = game.joinRequests?.some(
+                      (r: any) => r.userId === session.user.id && r.status === "PENDING"
+                    )
                     const isHost = game.userId === session.user.id
 
                     const spotsLeft = game.spotsLeft
@@ -469,6 +472,11 @@ export default function OpenGamesPage() {
                                   ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                   : null}
                                 Leave Game
+                              </Button>
+                            ) : isPendingRequest ? (
+                              <Button disabled className="h-10 w-full bg-amber-400/10 text-amber-300">
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Reviewing
                               </Button>
                             ) : spotsLeft > 0 ? (
                               <Button

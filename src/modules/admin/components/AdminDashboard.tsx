@@ -3,485 +3,276 @@
 import { useState } from "react"
 import Link from "next/link"
 import { useSession } from "next-auth/react"
+import {
+  Shield,
+  Users,
+  Building2,
+  CalendarDays,
+  DollarSign,
+  Clock,
+  ChevronRight,
+  Plus,
+  AlertCircle,
+  Eye,
+  Search as SearchIcon,
+  Bell,
+  MapPin,
+  ChevronDown,
+  LogOut,
+  Gift,
+  Trophy,
+  Activity,
+  LayoutDashboard,
+  Menu,
+  X,
+} from "lucide-react"
+
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import { Users, Building, Calendar, DollarSign, Settings, Shield, TrendingUp, AlertTriangle } from "lucide-react"
-import { formatCurrency, cn } from "@/lib/utils"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Sidebar } from "@/components/layout/Sidebar"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { trpc } from "@/lib/trpc"
-import { Role, BookingStatus, PaymentStatus, PayoutStatus } from "@prisma/client"
+import { formatCurrency } from "@/lib/utils"
 
-export default function AdminDashboardPage() {
-  const { data: session, status } = useSession()
-  const [activeTab, setActiveTab] = useState("overview")
+export default function AdminPage() {
+  const { data: session } = useSession()
   const isAdmin = session?.user?.role === "ADMIN"
 
-  if (status === "loading") {
-    return <AdminSkeleton />
-  }
+  const { data: analytics } = trpc.admin.analytics.useQuery()
+  const { data: usersData } = trpc.admin.users.useQuery({ limit: 10 })
+  const { data: facilitiesData } = trpc.admin.facilities.useQuery({ limit: 10 })
+  const { data: pendingOwnersData } = trpc.admin.pendingOwners.useQuery({ limit: 20 })
 
-  if (!isAdmin) {
+  if (!session) {
     return (
-      <div className="min-h-screen bg-muted/30 flex items-center justify-center">
-        <Card className="max-w-md w-full mx-auto">
-          <CardContent className="p-8 text-center">
-            <Shield className="w-16 h-16 text-destructive mx-auto mb-4" />
-            <h2 className="text-xl font-bold mb-2">Access Denied</h2>
-            <p className="text-muted-foreground mb-6">Admin access required</p>
-            <Link href="/dashboard">
-              <Button>Go to Dashboard</Button>
-            </Link>
-          </CardContent>
-        </Card>
+      <div className="flex min-h-screen items-center justify-center bg-[#070d12] px-4 text-white">
+        <div className="max-w-md w-full bg-[#111a22] border border-white/10 rounded-2xl p-8 text-center">
+          <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-lime-400 text-black flex items-center justify-center">
+            <Shield className="w-5 h-5" />
+          </div>
+          <h1 className="text-2xl font-bold">Admin Access Required</h1>
+          <p className="mt-2 text-sm text-slate-400">Please sign in as an admin to access this page.</p>
+          <Link href="/auth/login?callbackUrl=/admin" className="mt-6 w-full">
+            <Button className="w-full bg-lime-400 font-bold text-black hover:bg-lime-300">Sign In</Button>
+          </Link>
+        </div>
       </div>
     )
   }
 
-  const { data: usersData, isLoading: usersLoading } = trpc.admin.users.useQuery({ limit: 10 })
-  const { data: facilitiesData, isLoading: facilitiesLoading } = trpc.admin.facilities.useQuery({ limit: 10 })
-  const { data: analytics } = trpc.admin.analytics.useQuery()
-  const { data: payoutsData, isLoading: payoutsLoading } = trpc.admin.payouts.useQuery({ limit: 10 })
-  const { data: pendingOwnersData, isLoading: pendingOwnersLoading } = trpc.admin.pendingOwners.useQuery({ limit: 20 })
-  const utils = trpc.useUtils()
-  const verifyOwner = trpc.admin.verifyOwner.useMutation({
-    onSuccess: () => {
-      void utils.admin.pendingOwners.invalidate()
-    },
-  })
+  if (!isAdmin) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#070d12] px-4 text-white">
+        <div className="max-w-md w-full bg-[#111a22] border border-white/10 rounded-2xl p-8 text-center">
+          <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-red-500/10 text-red-400 flex items-center justify-center">
+            <Shield className="w-5 h-5" />
+          </div>
+          <h1 className="text-2xl font-bold">Admin Access Required</h1>
+          <p className="mt-2 text-sm text-slate-400">You don't have admin permissions to access this page.</p>
+          <Link href="/dashboard" className="mt-6 w-full">
+            <Button className="w-full bg-lime-400 font-bold text-black hover:bg-lime-300">Go to Dashboard</Button>
+          </Link>
+        </div>
+      </div>
+    )
+  }
 
   const users = usersData?.users || []
-  const pendingOwners = pendingOwnersData?.users || []
   const facilities = facilitiesData?.facilities || []
-  const payouts = payoutsData?.payouts || []
+  const pendingOwners = pendingOwnersData?.users || []
 
   return (
-    <div className="min-h-screen bg-muted/30">
-      <header className="sticky top-0 z-40 bg-background border-b">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Link href="/admin" className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-destructive/10 rounded-lg flex items-center justify-center">
-                  <Shield className="w-5 h-5 text-destructive" />
-                </div>
-                <span className="font-bold text-xl">Admin Panel</span>
-              </Link>
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="hidden md:flex">
-                <TabsList className="bg-transparent p-0">
-                  <TabsTrigger value="overview" className="px-4">Overview</TabsTrigger>
-                  <TabsTrigger value="users" className="px-4">Users</TabsTrigger>
-                  <TabsTrigger value="facilities" className="px-4">Facilities</TabsTrigger>
-                  <TabsTrigger value="bookings" className="px-4">Bookings</TabsTrigger>
-                  <TabsTrigger value="payouts" className="px-4">Payouts</TabsTrigger>
-                  <TabsTrigger value="analytics" className="px-4">Analytics</TabsTrigger>
-                  <TabsTrigger value="owner-approvals" className="px-4">Owner Approvals</TabsTrigger>
-                </TabsList>
-              </Tabs>
+    <div className="min-h-screen bg-[#070d12] text-white">
+      <Sidebar session={session} />
+
+      <div className="ml-[280px] min-h-screen bg-[#070d12] text-white">
+        <header className="sticky top-0 z-30 flex items-center justify-between gap-4 border-b border-white/10 bg-[#080f15]/95 px-6 py-4 backdrop-blur-xl">
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-[#121c25] px-3 py-2 text-sm text-slate-300 sm:flex">
+              <Shield className="h-4 w-4 text-lime-400" />
+              <span className="text-xs font-medium">Admin Panel</span>
             </div>
           </div>
-        </div>
-      </header>
+          <div className="relative mx-auto w-full max-w-[590px]">
+            <SearchIcon className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+            <input
+              placeholder="Search users, facilities, bookings..."
+              className="h-10 w-full rounded-xl border border-white/10 bg-[#121b24] pl-10 pr-4 text-sm text-white outline-none placeholder:text-slate-500 focus:border-lime-400/50"
+            />
+          </div>
+          <button aria-label="Notifications" className="relative rounded-full border border-white/10 bg-[#121b24] p-2.5 text-slate-300">
+            <Bell className="h-4 w-4" />
+            <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500" />
+          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="flex shrink-0 items-center gap-2 rounded-xl p-1.5 hover:bg-white/5">
+                <Avatar className="h-9 w-9 border border-white/10">
+                  <AvatarImage src={session.user?.image || ""} alt={session.user?.name || "User"} />
+                  <AvatarFallback className="bg-lime-400 font-bold text-black">
+                    {(session.user?.name || "U")[0]?.toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="hidden text-left xl:block">
+                  <span className="block max-w-[130px] truncate text-sm font-semibold">{session.user?.name}</span>
+                  <span className="block text-xs text-slate-500">{session.user?.role}</span>
+                </span>
+                <ChevronDown className="hidden h-4 w-4 text-slate-500 xl:block" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="border-white/10 bg-[#111a22] text-white">
+              <DropdownMenuItem>{session.user?.email || "Account"}</DropdownMenuItem>
+              <DropdownMenuSeparator className="bg-white/10" />
+              <DropdownMenuItem onClick={() => {}}>
+                <LogOut className="mr-2 h-4 w-4" /> Sign Out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </header>
 
-      <main className="container mx-auto px-4 py-6">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <StatCard title="Total Users" value={analytics?.totalUsers || 0} icon={<Users className="w-5 h-5" />} color="text-blue-500" />
-          <StatCard title="Facilities" value={analytics?.totalFacilities || 0} icon={<Building className="w-5 h-5" />} color="text-green-500" />
-          <StatCard title="Total Bookings" value={analytics?.totalBookings || 0} icon={<Calendar className="w-5 h-5" />} color="text-purple-500" />
-          <StatCard title="Revenue" value={formatCurrency(analytics?.totalRevenue || 0)} icon={<DollarSign className="w-5 h-5" />} color="text-orange-500" />
-        </div>
+        <main className="mx-auto max-w-[1800px] p-4 sm:p-6 xl:p-8 space-y-6">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h1 className="text-3xl font-black tracking-tight text-white">Admin Panel</h1>
+              <p className="mt-1 text-sm text-slate-400">Platform management and oversight.</p>
+            </div>
+          </div>
 
-        {/* Tab Content */}
-        {activeTab === "overview" && (
-          <div className="space-y-6">
-            <div className="grid md:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Quick Stats</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <StatRow label="Platform Fees" value={formatCurrency(analytics?.totalPlatformFees || 0)} />
-                  <StatRow label="Active Facilities" value={facilities?.filter(f => f.isActive).length || 0} />
-                  <StatRow label="Verified Owners" value={users?.filter(u => u.role === "OWNER" && u.isPhoneVerified).length || 0} />
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader>
-                  <CardTitle>Recent Activity</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {analytics?.recentBookings?.slice(0, 5).map((booking: any) => (
-                      <div key={booking.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                        <div>
-                          <p className="font-medium">{booking.facility?.name}</p>
-                          <p className="text-sm text-muted-foreground">{booking.user?.name} • {booking.user?.email}</p>
-                        </div>
-                        <Badge variant={getBookingStatusColor(booking.status)}>{booking.status}</Badge>
-                      </div>
-                    ))}
+          {/* Stats Cards */}
+          <div className="grid gap-6 grid-cols-1 md:grid-cols-4">
+            <div className="p-4 sm:p-5 rounded-2xl border-white/10 bg-[#0c1916]">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-tight">Total Users</p>
+                  <p className="text-2xl font-black text-white">{analytics?.totalUsers || 0}</p>
+                </div>
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-400/10 text-blue-400">
+                  <Users className="w-5 h-5" />
+                </div>
+              </div>
+            </div>
+            <div className="p-4 sm:p-5 rounded-2xl border-white/10 bg-[#0c1916]">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-tight">Total Facilities</p>
+                  <p className="text-2xl font-black text-white">{analytics?.totalFacilities || 0}</p>
+                </div>
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-green-400/10 text-green-400">
+                  <Building2 className="w-5 h-5" />
+                </div>
+              </div>
+            </div>
+            <div className="p-4 sm:p-5 rounded-2xl border-white/10 bg-[#0c1916]">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-tight">Total Bookings</p>
+                  <p className="text-2xl font-black text-white">{analytics?.totalBookings || 0}</p>
+                </div>
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-lime-400/10 text-lime-400">
+                  <CalendarDays className="w-5 h-5" />
+                </div>
+              </div>
+            </div>
+            <div className="p-4 sm:p-5 rounded-2xl border-white/10 bg-[#0c1916]">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-tight">Revenue</p>
+                  <p className="text-2xl font-black text-white">{formatCurrency(analytics?.totalRevenue || 0)}</p>
+                </div>
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-purple-400/10 text-purple-400">
+                  <DollarSign className="w-5 h-5" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Pending Owners */}
+          {pendingOwners.length > 0 && (
+            <div className="rounded-2xl border border-white/10 bg-[#0c1916] p-6">
+              <h3 className="text-lg font-bold mb-4">Pending Owner Approvals ({pendingOwners.length})</h3>
+              <div className="space-y-3">
+                {pendingOwners.map((owner: any) => (
+                  <div key={owner.id} className="flex items-center justify-between p-3 rounded-xl border border-white/[0.06] bg-white/[0.02]">
+                    <div>
+                      <p className="font-medium text-white">{owner.name || "N/A"}</p>
+                      <p className="text-xs text-slate-400">{owner.email}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button size="sm" className="bg-lime-400 font-bold text-black hover:bg-lime-300">Approve</Button>
+                      <Button size="sm" variant="outline" className="border-red-500/25 text-red-400 hover:bg-red-500/10">Reject</Button>
+                    </div>
                   </div>
-                </CardContent>
-              </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Users Table */}
+          <div className="rounded-2xl border border-white/10 bg-[#0c1916] p-6">
+            <h3 className="text-lg font-bold mb-4">Recent Users</h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-white">
+                <thead className="border-b border-white/10">
+                  <tr>
+                    <th className="pb-3 text-left text-[10px] font-semibold text-slate-400 uppercase">User</th>
+                    <th className="pb-3 text-left text-[10px] font-semibold text-slate-400">Role</th>
+                    <th className="pb-3 text-left text-[10px] font-semibold text-slate-400">Created</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y border-white/[0.05]">
+                  {users.map((user: any) => (
+                    <tr key={user.id} className="hover:bg-white/[0.02]">
+                      <td className="py-3">
+                        <div className="font-medium text-white">{user.name || "N/A"}</div>
+                        <div className="text-xs text-slate-400">{user.email}</div>
+                      </td>
+                      <td className="py-3">
+                        <Badge className="bg-white/10 text-slate-300 border-white/10">{user.role}</Badge>
+                      </td>
+                      <td className="py-3 text-xs text-slate-400">{new Date(user.createdAt).toLocaleDateString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
-        )}
 
-        {activeTab === "users" && (
-          <Card>
-            <CardHeader>
-              <CardTitle>User Management</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {usersLoading ? (
-                <div className="space-y-3">{[...Array(5)].map((_, i) => (
-                  <div key={i} className="animate-pulse h-12 bg-muted rounded" />
-                ))}</div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="text-left text-sm text-muted-foreground border-b">
-                        <th className="pb-3">User</th>
-                        <th className="pb-3">Role</th>
-                        <th className="pb-3">Phone Verified</th>
-                        <th className="pb-3">Created</th>
-                        <th className="pb-3">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {users?.map((user: any) => (
-                        <tr key={user.id} className="border-t">
-                          <td className="py-3">
-                            <div className="font-medium">{user.name || "N/A"}</div>
-                            <div className="text-sm text-muted-foreground">{user.email}</div>
-                          </td>
-                          <td className="py-3">
-                            <Badge className={getRoleBadgeColor(user.role)}>{user.role}</Badge>
-                          </td>
-                          <td className="py-3">
-                            {user.isPhoneVerified ? (
-                              <Badge variant="success">Verified</Badge>
-                            ) : (
-                              <Badge variant="warning">Pending</Badge>
-                            )}
-                          </td>
-                          <td className="py-3 text-sm text-muted-foreground">
-                            {new Date(user.createdAt).toLocaleDateString()}
-                          </td>
-                          <td className="py-3">
-                            <Button variant="ghost" size="sm">View</Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {activeTab === "facilities" && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Facility Management</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {facilitiesLoading ? (
-                <div className="space-y-3">{[...Array(5)].map((_, i) => (
-                  <div key={i} className="animate-pulse h-12 bg-muted rounded" />
-                ))}</div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="text-left text-sm text-muted-foreground border-b">
-                        <th className="pb-3">Facility</th>
-                        <th className="pb-3">Owner</th>
-                        <th className="pb-3">City</th>
-                        <th className="pb-3">Status</th>
-                        <th className="pb-3">Courts</th>
-                        <th className="pb-3">Bookings</th>
-                        <th className="pb-3">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {facilities?.map((facility: any) => (
-                        <tr key={facility.id} className="border-t">
-                          <td className="py-3 font-medium">{facility.name}</td>
-                          <td className="py-3">{facility.owner?.name}</td>
-                          <td className="py-3">{facility.city}</td>
-                          <td className="py-3">
-                            <Badge variant={facility.isActive ? "success" : "warning"}>
-                              {facility.isActive ? "Active" : "Inactive"}
-                            </Badge>
-                          </td>
-                          <td className="py-3">{facility._count?.courts || 0}</td>
-                          <td className="py-3">{facility._count?.bookings || 0}</td>
-                          <td className="py-3">
-                            <Button variant="ghost" size="sm">View</Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {activeTab === "payouts" && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Payout Management</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {payoutsLoading ? (
-                <div className="space-y-3">{[...Array(5)].map((_, i) => (
-                  <div key={i} className="animate-pulse h-12 bg-muted rounded" />
-                ))}</div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="text-left text-sm text-muted-foreground border-b">
-                        <th className="pb-3">Booking</th>
-                        <th className="pb-3">Facility</th>
-                        <th className="pb-3">Owner</th>
-                        <th className="pb-3">Amount</th>
-                        <th className="pb-3">Platform Fee</th>
-                        <th className="pb-3">Owner Payout</th>
-                        <th className="pb-3">Status</th>
-                        <th className="pb-3">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {payouts?.map((payout: any) => (
-                        <tr key={payout.id} className="border-t">
-                          <td className="py-3">#{payout.booking?.id?.slice(-8)}</td>
-                          <td className="py-3">{payout.booking?.facility?.name}</td>
-                          <td className="py-3">{payout.booking?.facility?.owner?.name}</td>
-                          <td className="py-3 font-medium">{formatCurrency(payout.amount)}</td>
-                          <td className="py-3">{formatCurrency(payout.platformFee)}</td>
-                          <td className="py-3 font-medium text-green-600">{formatCurrency(payout.ownerPayout)}</td>
-                          <td className="py-3">
-                            <Badge variant={getPayoutStatusColor(payout.payoutStatus)}>
-                              {payout.payoutStatus}
-                            </Badge>
-                          </td>
-                          <td className="py-3">
-                            {payout.payoutStatus === "PENDING" && (
-                              <Button variant="outline" size="sm">Process</Button>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {activeTab === "analytics" && (
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Revenue Analytics</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid md:grid-cols-3 gap-6">
-                  <StatCardDetail title="Total Revenue" value={formatCurrency(analytics?.totalRevenue || 0)} />
-                  <StatCardDetail title="Platform Fees" value={formatCurrency(analytics?.totalPlatformFees || 0)} />
-                  <StatCardDetail title="Owner Payouts" value={formatCurrency((analytics?.totalRevenue || 0) - (analytics?.totalPlatformFees || 0))} />
-                </div>
-              </CardContent>
-            </Card>
-            <div className="grid md:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>User Distribution</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <StatRow label="Players" value={users?.filter(u => u.role === "PLAYER").length || 0} />
-                  <StatRow label="Owners" value={users?.filter(u => u.role === "OWNER").length || 0} />
-                  <StatRow label="Admins" value={users?.filter(u => u.role === "ADMIN").length || 0} />
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader>
-                  <CardTitle>Facility Status</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <StatRow label="Active" value={facilities?.filter(f => f.isActive).length || 0} />
-                  <StatRow label="Inactive" value={facilities?.filter(f => !f.isActive).length || 0} />
-                  <StatRow label="Total Courts" value={facilities?.reduce((sum, f) => sum + (f._count?.courts || 0), 0) || 0} />
-                </CardContent>
-              </Card>
+          {/* Facilities Table */}
+          <div className="rounded-2xl border border-white/10 bg-[#0c1916] p-6">
+            <h3 className="text-lg font-bold mb-4">Recent Facilities</h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-white">
+                <thead className="border-b border-white/10">
+                  <tr>
+                    <th className="pb-3 text-left text-[10px] font-semibold text-slate-400 uppercase">Facility</th>
+                    <th className="pb-3 text-left text-[10px] font-semibold text-slate-400">Owner</th>
+                    <th className="pb-3 text-left text-[10px] font-semibold text-slate-400">City</th>
+                    <th className="pb-3 text-left text-[10px] font-semibold text-slate-400">Status</th>
+                    <th className="pb-3 text-left text-[10px] font-semibold text-slate-400">Bookings</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y border-white/[0.05]">
+                  {facilities.map((facility: any) => (
+                    <tr key={facility.id} className="hover:bg-white/[0.02]">
+                      <td className="py-3 font-medium text-white">{facility.name}</td>
+                      <td className="py-3 text-xs text-slate-400">{facility.owner?.name || "N/A"}</td>
+                      <td className="py-3 text-xs text-slate-400">{facility.city}</td>
+                      <td className="py-3">
+                        <Badge className={facility.isActive ? "bg-green-500/15 text-green-300 border-green-500/30" : "bg-red-500/15 text-red-300 border-red-500/30"}>
+                          {facility.isActive ? "Active" : "Inactive"}
+                        </Badge>
+                      </td>
+                      <td className="py-3 text-xs text-slate-400">{facility._count?.bookings || 0}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
-        )}
-
-        {activeTab === "owner-approvals" && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Pending Owner Approvals</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Review and approve new owner accounts before they can log in and manage facilities.
-              </p>
-            </CardHeader>
-            <CardContent>
-              {pendingOwnersLoading ? (
-                <div className="space-y-3">{[...Array(5)].map((_, i) => (
-                  <div key={i} className="animate-pulse h-12 bg-muted rounded" />
-                ))}</div>
-              ) : pendingOwners.length === 0 ? (
-                <div className="text-center py-8">
-                  <AlertTriangle className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
-                  <p className="text-muted-foreground">No pending owner approvals.</p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="text-left text-sm text-muted-foreground border-b">
-                        <th className="pb-3">Owner</th>
-                        <th className="pb-3">Email</th>
-                        <th className="pb-3">Phone</th>
-                        <th className="pb-3">Signed Up</th>
-                        <th className="pb-3">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {pendingOwners.map((owner: any) => (
-                        <tr key={owner.id} className="border-t">
-                          <td className="py-3">
-                            <div className="font-medium">{owner.name || "N/A"}</div>
-                          </td>
-                          <td className="py-3 text-sm text-muted-foreground">{owner.email}</td>
-                          <td className="py-3 text-sm text-muted-foreground">{owner.phone || "—"}</td>
-                          <td className="py-3 text-sm text-muted-foreground">
-                            {new Date(owner.createdAt).toLocaleDateString()}
-                          </td>
-                          <td className="py-3">
-                            <div className="flex items-center gap-2">
-                              <Button
-                                variant="default"
-                                size="sm"
-                                onClick={() => verifyOwner.mutate({ userId: owner.id, action: "VERIFY" })}
-                                disabled={verifyOwner.isPending}
-                              >
-                                Approve
-                              </Button>
-                              <Button
-                                variant="destructive"
-                                size="sm"
-                                onClick={() => verifyOwner.mutate({ userId: owner.id, action: "REJECT" })}
-                                disabled={verifyOwner.isPending}
-                              >
-                                Reject
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-      </main>
-    </div>
-  )
-}
-
-function StatCard({ title, value, icon, color }: { title: string; value: string | number; icon: React.ReactNode; color: string }) {
-  return (
-    <Card>
-      <CardContent className="p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm text-muted-foreground">{title}</p>
-            <p className="text-2xl font-bold mt-1">{value}</p>
-          </div>
-          <div className={cn("p-3 rounded-full bg-muted/50", color)}>{icon}</div>
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
-function StatCardDetail({ title, value }: { title: string; value: string }) {
-  return (
-    <div className="p-4 bg-muted/50 rounded-lg">
-      <p className="text-sm text-muted-foreground">{title}</p>
-      <p className="text-2xl font-bold mt-1">{value}</p>
-    </div>
-  )
-}
-
-function StatRow({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="font-semibold">{value}</span>
-    </div>
-  )
-}
-
-function getRoleBadgeColor(role: string) {
-  switch (role) {
-    case "ADMIN": return "bg-purple-100 text-purple-800"
-    case "OWNER": return "bg-blue-100 text-blue-800"
-    case "PLAYER": return "bg-green-100 text-green-800"
-    default: return "bg-gray-100 text-gray-800"
-  }
-}
-
-function getBookingStatusColor(status: string) {
-  switch (status) {
-    case "CONFIRMED": return "success"
-    case "PENDING": return "warning"
-    case "CANCELLED": return "destructive"
-    case "COMPLETED": return "default"
-    default: return "outline"
-  }
-}
-
-function getPayoutStatusColor(status: string) {
-  switch (status) {
-    case "SUCCESS": return "success"
-    case "PENDING": return "warning"
-    case "FAILED": return "destructive"
-    default: return "outline"
-  }
-}
-
-function AdminSkeleton() {
-  return (
-    <div className="min-h-screen bg-muted/30 animate-pulse">
-      <header className="sticky top-0 z-40 bg-background border-b">
-        <div className="container mx-auto px-4 py-4 h-16" />
-      </header>
-      <main className="container mx-auto px-4 py-6">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          {[...Array(4)].map((_, i) => (
-            <Card key={i}><CardContent className="p-6 h-24" /></Card>
-          ))}
-        </div>
-        <div className="space-y-6">
-          {[...Array(3)].map((_, i) => (
-            <Card key={i}><CardContent className="p-6 h-48" /></Card>
-          ))}
-        </div>
-      </main>
+        </main>
+      </div>
     </div>
   )
 }

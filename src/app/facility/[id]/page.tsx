@@ -31,6 +31,7 @@ import {
   Wifi,
   Coffee,
   PlusCircle,
+  Loader2,
 } from "lucide-react"
 import { formatDate, cn, formatCurrency } from "@/lib/utils"
 import { trpc } from "@/lib/trpc"
@@ -62,6 +63,7 @@ function FacilityDetailInner() {
   const [showBookingModal, setShowBookingModal] = useState(false)
 
   const { data: facility, isLoading: facilityLoading } = trpc.facilities.get.useQuery({ id: facilityId })
+  const isOwner = !!session?.user?.id && facility?.ownerId === session.user.id
   const courtForQuery = selectedCourtId || ""
 const { data: availability, isLoading: availabilityLoading, refetch: refetchAvailability } = trpc.courts.availability.useQuery(
     { courtId: selectedCourtId || "", date: selectedDate.toISOString().split("T")[0] },
@@ -94,7 +96,34 @@ const { data: availability, isLoading: availabilityLoading, refetch: refetchAvai
   const images = facility?.images || []
 
   const selectedCourt = courts.find((c: any) => c.id === selectedCourtId) || courts[0]
-  const slotPrice = selectedSlot?.price ?? selectedCourt?.pricingRules?.[0]?.pricePerHour ?? facility?.minPrice ?? 0
+  // Calculate price based on selected time (dynamic pricing)
+  const getPriceForTime = (timeStr: string) => {
+    const rules = [
+      ...(selectedCourt?.pricingRules || []),
+      ...(facility?.pricingRules || []),
+    ]
+    if (rules.length === 0) {
+      return facility?.minPrice ?? 0
+    }
+    const [h, m] = timeStr.split(":").map(Number)
+    const mins = h * 60 + m
+    const dayOfWeek = selectedDate.getDay()
+    const matchingRules = rules.filter((r: any) => {
+      const [sh, sm] = r.startTime.split(":").map(Number)
+      const [eh, em] = r.endTime.split(":").map(Number)
+      const startMins = sh * 60 + sm
+      const endMins = eh * 60 + em
+      return r.dayOfWeek.includes(dayOfWeek) && mins >= startMins && mins < endMins
+    })
+    const applicable = matchingRules.sort((a: any, b: any) => {
+      const aDur = (parseInt(a.endTime.split(":")[0]) * 60 + parseInt(a.endTime.split(":")[1])) - (parseInt(a.startTime.split(":")[0]) * 60 + parseInt(a.startTime.split(":")[1]))
+      const bDur = (parseInt(b.endTime.split(":")[0]) * 60 + parseInt(b.endTime.split(":")[1])) - (parseInt(b.startTime.split(":")[0]) * 60 + parseInt(b.startTime.split(":")[1]))
+      return aDur - bDur
+    })[0]
+    return applicable?.pricePerHour ?? rules[0]?.pricePerHour ?? facility?.minPrice ?? 0
+  }
+
+  const slotPrice = selectedSlot?.price ?? getPriceForTime(selectedSlot?.start || "06:00")
 
   const availableSlotKeys = new Set<string>()
   if (availability?.slots) {
@@ -155,11 +184,11 @@ const { data: availability, isLoading: availabilityLoading, refetch: refetchAvai
               <Button variant="outline" size="sm" asChild className="border-white/10 text-white px-2 shrink-0">
                 <Link href="/search"><span>←</span></Link>
               </Button>
-              <span className="text-xs text-slate-400 truncate">{facility.name}</span>
+              <span className="text-xs text-lime-400 font-semibold truncate">{facility.name}</span>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <div className="hidden sm:flex items-center gap-2 rounded-lg border border-white/10 bg-[#080f15] px-3 py-1.5 text-xs text-slate-300">
-                <MapPin className="h-3 w-3" /> Pachora, MH
+                <MapPin className="h-3 w-3" /> {facility?.city || "Location"}
               </div>
               <Button variant="outline" size="icon" className="border-white/10 text-slate-300 hover:text-white h-8 w-8">
                 <Bell className="h-4 w-4" />
@@ -232,7 +261,15 @@ const { data: availability, isLoading: availabilityLoading, refetch: refetchAvai
               <h1 className="text-3xl font-bold tracking-tight">{facility.name}</h1>
 
               <div className="flex items-center gap-4 text-sm text-slate-400">
-                <span className="flex items-center gap-1"><MapPin className="w-4 h-4" /> {facility.address}, {facility.city}</span>
+                <a
+                  href={facility.latitude && facility.longitude ? `https://www.google.com/maps/dir/?api=1&destination=${facility.latitude},${facility.longitude}` : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(facility.address + ", " + facility.city)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 hover:text-lime-400 transition-colors"
+                >
+                  <MapPin className="w-4 h-4" /> {facility.address}, {facility.city}
+                  <span className="ml-1 text-xs text-lime-400">(Directions)</span>
+                </a>
                 <span className="w-px h-4 bg-white/20"></span>
                 <span className="flex items-center gap-1"><Clock className="w-4 h-4" /> Open: 6:00 AM – 12:00 AM</span>
                 <span className="w-px h-4 bg-white/20"></span>
@@ -335,7 +372,7 @@ const { data: availability, isLoading: availabilityLoading, refetch: refetchAvai
                           <p className="text-xs text-slate-500">{court.sportType.replace(/_/g, " ")}</p>
                         </div>
                         <span className="ml-auto text-xs font-bold text-lime-400">
-                          {formatCurrency(court.pricingRules?.[0]?.pricePerHour ?? facility.minPrice ?? 0)}/hr
+                          from {formatCurrency(Math.min(...(court.pricingRules?.map((r: any) => r.pricePerHour) || [facility.minPrice ?? 0])))}/hr
                         </span>
                       </button>
                     )
@@ -354,7 +391,7 @@ const { data: availability, isLoading: availabilityLoading, refetch: refetchAvai
                           <span className="w-6 h-6 rounded-full bg-lime-400 text-[#070d12] flex items-center justify-center text-xs font-bold">🏓</span>
                           Book {sportLabel}
                         </h2>
-                        <p className="text-xs text-slate-500">{facility.name}</p>
+                        <p className="text-xs text-lime-400 font-semibold">{facility.name}</p>
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-slate-400">{sportLabel}</span>
@@ -415,7 +452,7 @@ const { data: availability, isLoading: availabilityLoading, refetch: refetchAvai
                         </div>
                       </div>
 {availabilityLoading ? (
-  <p className="text-slate-400 text-sm">Loading slots...</p>
+  <div className="flex items-center gap-2 text-slate-400 text-sm"><Loader2 className="h-4 w-4 animate-spin" /></div>
 ) : availability?.isBlocked ? (
   <p className="text-slate-400 text-sm">{availability.note || "No slots available on this date."}</p>
 ) : (
@@ -455,7 +492,7 @@ const { data: availability, isLoading: availabilityLoading, refetch: refetchAvai
           const startMins = parseInt(selectedSlot.start.split(":")[0]) * 60 + parseInt(selectedSlot.start.split(":")[1])
           const endMins = parseInt(time.split(":")[0]) * 60 + parseInt(time.split(":")[1])
           // Check all 30-min intervals between start and end
-          for (let m = startMins + 30; m <= endMins; m += 30) {
+          for (let m = startMins + 30; m < endMins; m += 30) {
             const hh = String(Math.floor(m / 60)).padStart(2, "0")
             const mm = String(m % 60).padStart(2, "0")
             const t = `${hh}:${mm}`
@@ -474,13 +511,13 @@ const { data: availability, isLoading: availabilityLoading, refetch: refetchAvai
           bgClass = "bg-lime-400 border-lime-400 text-[#070d12] font-bold"
         } else if (isInRange) {
           bgClass = "bg-lime-400/20 border-lime-400/30 text-lime-300"
-        } else if (selectedSlot?.start && (isInBookedRange || wouldOverlapBooked)) {
+        } else if (selectedSlot?.start && wouldOverlapBooked) {
           bgClass = "border-red-500/50 text-red-400 bg-red-500/10 cursor-not-allowed"
         } else if (!isAvailableTime && !selectedSlot?.start) {
           bgClass = "border-red-500/50 text-red-400 bg-red-500/10 cursor-not-allowed"
         } else if (selectedSlot?.start && time <= selectedSlot.start) {
           bgClass = "border-white/5 text-slate-600 cursor-not-allowed opacity-40"
-        } else if (selectedSlot?.start && (() => {
+        } else if (!isOwner && selectedSlot?.start && (() => {
           const startMins = parseInt(selectedSlot.start.split(":")[0]) * 60 + parseInt(selectedSlot.start.split(":")[1])
           const endMins = parseInt(time.split(":")[0]) * 60 + parseInt(time.split(":")[1])
           return (endMins - startMins) > 60
@@ -489,11 +526,11 @@ const { data: availability, isLoading: availabilityLoading, refetch: refetchAvai
         }
 
         const isDisabled = selectedSlot?.start
-          ? (time <= selectedSlot.start || isInBookedRange || wouldOverlapBooked || (() => {
+          ? (time <= selectedSlot.start || wouldOverlapBooked || (!isOwner && (() => {
               const startMins = parseInt(selectedSlot.start.split(":")[0]) * 60 + parseInt(selectedSlot.start.split(":")[1])
               const endMins = parseInt(time.split(":")[0]) * 60 + parseInt(time.split(":")[1])
               return (endMins - startMins) > 60
-            })())
+            })()))
           : !isAvailableTime
 
         return (
@@ -503,8 +540,8 @@ const { data: availability, isLoading: availabilityLoading, refetch: refetchAvai
               if (!selectedSlot?.start) {
                 // Selecting start time
                 if (!isAvailableTime) return
-                setSelectedSlot({ start: time, end: "", price: slotPrice })
-              } else if (time > selectedSlot.start && !isInBookedRange && !wouldOverlapBooked) {
+                setSelectedSlot({ start: time, end: "", price: getPriceForTime(time) })
+              } else if (time > selectedSlot.start && !wouldOverlapBooked) {
                 // Selecting end time
                 setSelectedSlot({ ...selectedSlot, end: time })
               }
@@ -531,8 +568,19 @@ const { data: availability, isLoading: availabilityLoading, refetch: refetchAvai
           </span>
         </div>
         <div className="flex items-center justify-between mt-1">
-          <span className="text-sm text-slate-400">Price</span>
+          <span className="text-sm text-slate-400">Price (per hour)</span>
           <span className="text-sm font-bold text-lime-400">{formatCurrency(slotPrice)}/hr</span>
+        </div>
+        <div className="flex items-center justify-between mt-1">
+          <span className="text-sm text-slate-400">Est. Total</span>
+          <span className="text-sm font-bold text-lime-400">
+            {formatCurrency((() => {
+              const [sh, sm] = selectedSlot.start.split(":").map(Number)
+              const [eh, em] = selectedSlot.end.split(":").map(Number)
+              const mins = (eh * 60 + em) - (sh * 60 + sm)
+              return (slotPrice * mins) / 60
+            })())}
+          </span>
         </div>
         <button
           onClick={() => setSelectedSlot(null)}

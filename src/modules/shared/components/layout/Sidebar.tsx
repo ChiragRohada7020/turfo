@@ -38,7 +38,15 @@ export function Sidebar({ session, extra }: SidebarProps) {
   const navItems = getNavForRole(session?.user?.role)
 
   const active = (href: string) =>
-    pathname === href || (href !== "/dashboard" && pathname.startsWith(href + "/"))
+    pathname === href ||
+    (href !== "/dashboard" &&
+      pathname.startsWith(href + "/") &&
+      !navItems.some(
+        (item) =>
+          item.href !== href &&
+          item.href.length > href.length &&
+          (pathname === item.href || pathname.startsWith(item.href + "/"))
+      ))
 
   return (
     <>

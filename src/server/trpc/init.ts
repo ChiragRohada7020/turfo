@@ -27,6 +27,7 @@ const t = initTRPC.context<Context>().create({
 
 export const createTRPCRouter = t.router
 export const publicProcedure = t.procedure
+export const createCallerFactory = t.createCallerFactory
 
 export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
   if (!ctx.session?.user) {
@@ -49,4 +50,9 @@ export const ownerProcedure = protectedProcedure.use(async ({ ctx, next }) => {
   return next({ ctx })
 })
 
-export const middleware = t.middleware
+export const sponsorProcedure = protectedProcedure.use(async ({ ctx, next }) => {
+  if (ctx.session.user.role !== "SPONSOR" && ctx.session.user.role !== "ADMIN") {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Sponsor access required" })
+  }
+  return next({ ctx })
+})
