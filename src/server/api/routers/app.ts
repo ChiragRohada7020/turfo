@@ -500,7 +500,7 @@ export const appRouter = createTRPCRouter({
         where: { ownerId: ctx.session.user.id },
         include: {
           courts: true,
-          _count: { select: { bookings: true, reviews: true } },
+          _count: { select: { bookings: true, reviews: true, courts: true } },
         },
         orderBy: { createdAt: "desc" },
       })
@@ -735,7 +735,7 @@ export const appRouter = createTRPCRouter({
           where: {
             courtId: input.courtId,
             startTime: { gte: date, lt: new Date(date.getTime() + 24 * 60 * 60 * 1000) },
-            status: { in: [BookingStatus.PENDING, BookingStatus.CONFIRMED] },
+            status: { in: [BookingStatus.PENDING, BookingStatus.CONFIRMED, BookingStatus.COMPLETED] },
           },
         })
 
@@ -856,6 +856,7 @@ export const appRouter = createTRPCRouter({
           notes: z.string().optional(),
           maxPlayers: z.number().min(1).max(20).optional(),
           isPublic: z.boolean().optional(),
+          players: z.number().min(1).max(50).optional(),
         })
       )
       .mutation(async ({ ctx, input }) => {
@@ -864,6 +865,11 @@ export const appRouter = createTRPCRouter({
 
         const facilityRecord = await prisma.facility.findUnique({ where: { id: facilityId }, select: { ownerId: true } })
         const isOwnerBooking = facilityRecord?.ownerId === ctx.session.user.id
+
+        // Owners can only book their own facilities
+        if (ctx.session.user.role === "OWNER" && !isOwnerBooking) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Owners cannot book other owners' facilities" })
+        }
 
         const startTime = new Date(input.startTime)
         const endTime = new Date(input.endTime)
@@ -880,11 +886,13 @@ export const appRouter = createTRPCRouter({
         }
 
         // Verify court belongs to facility (prevents tampering)
+        let courtSportType: string | null = null
         if (courtId) {
           const court = await prisma.court.findFirst({
             where: { id: courtId, facilityId },
           })
           if (!court) throw new TRPCError({ code: "BAD_REQUEST", message: "Court does not belong to this facility" })
+          courtSportType = court.sportType
         }
 
         // Verify user exists (prevents FK constraint errors from stale sessions)
@@ -945,7 +953,7 @@ export const appRouter = createTRPCRouter({
         const activeBookings = await prisma.booking.count({
           where: {
             userId: ctx.session.user.id,
-            status: { in: [BookingStatus.PENDING, BookingStatus.CONFIRMED] },
+            status: { in: [BookingStatus.PENDING, BookingStatus.CONFIRMED, BookingStatus.COMPLETED] },
           },
         })
         if (activeBookings >= 2) {
@@ -961,7 +969,7 @@ export const appRouter = createTRPCRouter({
           where: {
             courtId: courtId || undefined,
             facilityId,
-            status: { in: [BookingStatus.PENDING, BookingStatus.CONFIRMED] },
+            status: { in: [BookingStatus.PENDING, BookingStatus.CONFIRMED, BookingStatus.COMPLETED] },
             OR: [
               { startTime: { lt: endTime }, endTime: { gt: startTime } },
             ],
@@ -1007,7 +1015,8 @@ export const appRouter = createTRPCRouter({
           })
         }
 
-        const totalPrice = (applicableRule.pricePerHour * duration) / 60
+        const playerCount = courtSportType === "PS_GAMES" ? (input.players || 1) : 1
+        const totalPrice = (applicableRule.pricePerHour * duration * playerCount) / 60
         const platformFeePercent = Number(process.env.PLATFORM_FEE_PERCENT) || 10
         const platformFee = (totalPrice * platformFeePercent) / 100
         const ownerPayout = totalPrice - platformFee
@@ -1023,7 +1032,7 @@ export const appRouter = createTRPCRouter({
             where: {
               courtId: courtId || undefined,
               facilityId,
-              status: { in: [BookingStatus.PENDING, BookingStatus.CONFIRMED] },
+              status: { in: [BookingStatus.PENDING, BookingStatus.CONFIRMED, BookingStatus.COMPLETED] },
               OR: [
                 { startTime: { lt: endTime }, endTime: { gt: startTime } },
               ],
@@ -1042,10 +1051,10 @@ export const appRouter = createTRPCRouter({
               startTime,
               endTime,
               duration,
-              totalPrice: isOwnerBooking ? 0 : totalPrice,
-              status: isOwnerBooking ? BookingStatus.COMPLETED : BookingStatus.CONFIRMED,
+              totalPrice: totalPrice,
+              status: BookingStatus.CONFIRMED,
               verificationCode,
-              maxPlayers: input.maxPlayers || 1,
+              maxPlayers: input.maxPlayers || (courtSportType === "PS_GAMES" ? (input.players || 1) : 1),
               isPublic: input.isPublic || false,
               notes: input.notes,
             },
@@ -1130,13 +1139,13 @@ export const appRouter = createTRPCRouter({
           prisma.booking.findMany({
             where,
             include: {
-              facility: { select: { id: true, name: true, address: true, city: true, images: true } },
+              facility: { select: { id: true, name: true, address: true, city: true, images: true, ownerId: true } },
               court: { select: { id: true, name: true } },
               payment: { select: { status: true, amount: true } },
             },
             skip: (input.page - 1) * input.limit,
             take: input.limit,
-            orderBy: { createdAt: "desc" },
+            orderBy: { startTime: "asc" },
           }),
           prisma.booking.count({ where }),
         ])
@@ -1150,7 +1159,7 @@ export const appRouter = createTRPCRouter({
         where: {
           userId: ctx.session.user.id,
           startTime: { gte: now },
-          status: { in: [BookingStatus.PENDING, BookingStatus.CONFIRMED] },
+          status: { in: [BookingStatus.PENDING, BookingStatus.CONFIRMED, BookingStatus.COMPLETED] },
         },
         include: {
           facility: { select: { id: true, name: true, address: true, city: true, images: true } },
@@ -1171,14 +1180,16 @@ export const appRouter = createTRPCRouter({
         })
 
         if (!booking) throw new Error("Booking not found")
-        if (booking.userId !== ctx.session.user.id && ctx.session.user.role !== "ADMIN" && booking.facility.ownerId !== ctx.session.user.id) {
+        const isSelf = booking.userId === ctx.session.user.id
+        const isAdmin = ctx.session.user.role === "ADMIN"
+        if (!isSelf && !isAdmin) {
           throw new Error("Access denied")
         }
         if (booking.status === BookingStatus.CANCELLED) throw new Error("Already cancelled")
         if (booking.status === BookingStatus.COMPLETED) throw new Error("Cannot cancel completed booking")
         if (booking.payment?.status === PaymentStatus.REFUNDED) throw new Error("Payment already refunded")
 
-        const isOwner = booking.facility.ownerId === ctx.session.user.id || ctx.session.user.role === "ADMIN"
+        const isOwnerOrAdmin = isAdmin && !isSelf
 
         // Require reason for confirmed bookings
         if (booking.status === BookingStatus.CONFIRMED && !input.reason) {
@@ -1189,7 +1200,7 @@ export const appRouter = createTRPCRouter({
           where: { id: input.id },
           data: {
             status: BookingStatus.CANCELLED,
-            notes: input.reason ? `Cancelled: ${input.reason}` : `Cancelled by ${isOwner ? "owner" : "player"}`,
+            notes: input.reason ? `Cancelled: ${input.reason}` : `Cancelled by ${isOwnerOrAdmin ? "owner" : "player"}`,
           },
         })
 
@@ -1209,7 +1220,7 @@ export const appRouter = createTRPCRouter({
         })
 
         // Create notification for the other party
-        if (isOwner) {
+        if (isOwnerOrAdmin) {
           // Notify player
           await prisma.notification.create({
             data: {
@@ -1259,11 +1270,27 @@ export const appRouter = createTRPCRouter({
             where: {
               courtId: input.courtId || undefined,
               facilityId: input.facilityId,
-              status: { in: [BookingStatus.PENDING, BookingStatus.CONFIRMED] },
+              status: { in: [BookingStatus.PENDING, BookingStatus.CONFIRMED, BookingStatus.COMPLETED] },
               OR: [{ startTime: { lt: endTime }, endTime: { gt: startTime } }],
             },
           })
           if (conflict) throw new TRPCError({ code: "CONFLICT", message: "Time slot not available" })
+
+          // Calculate price from pricing rules (if any)
+          const pricingRules = await prisma.pricingRule.findMany({
+            where: {
+              isActive: true,
+              ...(input.courtId ? { courtId: input.courtId } : { facilityId: input.facilityId, courtId: null }),
+            },
+          })
+          const istOffset = 5.5 * 60 * 60 * 1000
+          const istTime = new Date(startTime.getTime() + istOffset)
+          const dayOfWeek = istTime.getUTCDay()
+          const timeStr = `${istTime.getUTCHours().toString().padStart(2, "0")}:${istTime.getUTCMinutes().toString().padStart(2, "0")}`
+          const applicableRule = pricingRules
+            .filter((r: any) => r.dayOfWeek.includes(dayOfWeek) && r.startTime <= timeStr && r.endTime > timeStr)
+            .sort((a: any, b: any) => a.pricePerHour - b.pricePerHour)[0]
+          const totalPrice = applicableRule ? (applicableRule.pricePerHour * duration) / 60 : 0
 
           const booking = await prisma.booking.create({
             data: {
@@ -1273,7 +1300,7 @@ export const appRouter = createTRPCRouter({
               startTime,
               endTime,
               duration,
-              totalPrice: 0,
+              totalPrice,
               status: BookingStatus.CONFIRMED,
               verificationCode: randomBytes(16).toString("hex"),
               maxPlayers: 1,
@@ -1669,12 +1696,13 @@ export const appRouter = createTRPCRouter({
             where,
             include: {
               user: { select: { id: true, name: true, email: true, phone: true } },
+              facility: { select: { id: true, name: true, address: true, city: true, images: true, ownerId: true } },
               court: { select: { id: true, name: true } },
               payment: { select: { status: true, amount: true, platformFee: true, ownerPayout: true } },
             },
             skip: (input.page - 1) * input.limit,
             take: input.limit,
-            orderBy: { startTime: "desc" },
+            orderBy: { startTime: "asc" },
           }),
           prisma.booking.count({ where }),
         ])
@@ -1696,7 +1724,8 @@ export const appRouter = createTRPCRouter({
         const count = await prisma.booking.count({
           where: {
             facility: { ownerId: ctx.session.user.id },
-            createdAt: { gte: start, lte: end },
+            startTime: { gte: start, lte: end },
+            status: { in: [BookingStatus.CONFIRMED, BookingStatus.COMPLETED] },
           },
         })
         result.push({ date: start.toISOString().split("T")[0], count })
@@ -2468,7 +2497,7 @@ payments: createTRPCRouter({
         }
 
         // Task 3: Try a different sport
-        const sports = ["FOOTBALL", "CRICKET", "BADMINTON", "TENNIS", "BASKETBALL", "VOLLEYBALL"]
+        const sports = ["FOOTBALL", "CRICKET", "BADMINTON", "TENNIS", "BASKETBALL", "VOLLEYBALL", "PS_GAMES"]
         const untriedSport = sports.find((s) => !sportCounts[s]) || sports[Math.floor(Math.random() * sports.length)]
         tasksToCreate.push({
           title: `Try ${untriedSport.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c: string) => c.toUpperCase())}`,
@@ -3105,19 +3134,21 @@ payments: createTRPCRouter({
 
     // Owner earnings summary
     ownerEarnings: ownerProcedure.query(async ({ ctx }) => {
-      const payments = await prisma.payment.findMany({
+      const bookings = await prisma.booking.findMany({
         where: {
-          booking: { facility: { ownerId: ctx.session.user.id } },
-          status: PaymentStatus.SUCCEEDED,
+          facility: { ownerId: ctx.session.user.id },
+          status: { in: [BookingStatus.CONFIRMED, BookingStatus.COMPLETED] },
         },
-        select: { amount: true, platformFee: true, ownerPayout: true, payoutStatus: true, createdAt: true },
+        select: { totalPrice: true, userId: true },
       })
 
-      const totalEarnings = payments.reduce((sum, p) => sum + p.ownerPayout, 0)
-      const totalRevenue = payments.reduce((sum, p) => sum + p.amount, 0)
-      const totalPlatformFees = payments.reduce((sum, p) => sum + p.platformFee, 0)
-      const pendingPayouts = payments.filter((p) => p.payoutStatus === PayoutStatus.PENDING).reduce((sum, p) => sum + p.ownerPayout, 0)
-      const completedPayouts = payments.filter((p) => p.payoutStatus === PayoutStatus.SUCCESS || p.payoutStatus === PayoutStatus.PROCESSING).reduce((sum, p) => sum + p.ownerPayout, 0)
+      const totalRevenue = bookings.reduce((sum, b) => sum + Number(b.totalPrice || 0), 0)
+      const totalEarnings = totalRevenue
+      const totalPlatformFees = 0
+      const pendingPayouts = 0
+      const completedPayouts = totalRevenue
+      const bookingCount = bookings.length
+      const playerCount = new Set(bookings.map((b) => b.userId)).size
 
       return {
         totalRevenue,
@@ -3125,7 +3156,9 @@ payments: createTRPCRouter({
         totalEarnings,
         pendingPayouts,
         completedPayouts,
-        paymentCount: payments.length,
+        paymentCount: bookings.length,
+        bookingCount,
+        playerCount,
       }
     }),
 

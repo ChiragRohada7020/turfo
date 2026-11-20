@@ -19,8 +19,22 @@ export default withAuth(
       }
 
       // Owner-only routes
-      if (path.startsWith("/dashboard/facilities") || path.startsWith("/dashboard/payouts")) {
+      if (
+        path.startsWith("/dashboard/facilities") ||
+        path.startsWith("/dashboard/payouts") ||
+        path.startsWith("/dashboard/analytics") ||
+        path.startsWith("/dashboard/promotions") ||
+        path.startsWith("/dashboard/campaigns") ||
+        path.startsWith("/dashboard/verify")
+      ) {
         if (token.role !== "OWNER" && token.role !== "ADMIN") {
+          return NextResponse.redirect(new URL("/dashboard?error=unauthorized", req.url))
+        }
+      }
+
+      // Player-only routes (owners/admins should not access player-only areas)
+      if (path.startsWith("/dashboard/open-games") || path.startsWith("/find-players")) {
+        if (token.role !== "PLAYER" && token.role !== "ADMIN") {
           return NextResponse.redirect(new URL("/dashboard?error=unauthorized", req.url))
         }
       }

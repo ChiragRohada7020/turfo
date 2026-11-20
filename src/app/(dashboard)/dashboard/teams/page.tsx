@@ -37,6 +37,7 @@ const SPORT_OPTIONS = [
   { value: "GYM", label: "Gym" },
   { value: "MULTI_SPORT", label: "Multi Sport" },
   { value: "PICKLEBALL", label: "Pickleball" },
+  { value: "PS_GAMES", label: "PS Games" },
   { value: "TABLE_TENNIS", label: "Table Tennis" },
   { value: "OTHER", label: "Other" },
 ]

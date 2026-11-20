@@ -633,6 +633,7 @@ enum SportType {
   GYM
   MULTI_SPORT
   PICKLEBALL
+  PS_GAMES
   TABLE_TENNIS
   OTHER
 }
@@ -645,6 +646,7 @@ enum SurfaceType {
   WOOD
   SYNTHETIC
   WATER
+  WARM_LIGHTNING_ROOM
 }
 
 enum BookingStatus {

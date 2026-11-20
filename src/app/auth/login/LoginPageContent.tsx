@@ -73,7 +73,7 @@ export default function LoginPageContent() {
               S
             </span>
             <span className="text-2xl font-black tracking-[-0.06em] text-[#171A2B]">
-              strikora<span className="text-orange-500">.</span>
+              strikora<span className="text-green-500">.</span>
             </span>
           </Link>
           <p className="text-slate-500 mt-2 text-sm">Book · Play · Compete</p>
@@ -98,7 +98,7 @@ export default function LoginPageContent() {
                     id="email"
                     type="text"
                     placeholder="you@example.com"
-                    className="pl-10 bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-orange-500 focus:ring-orange-500"
+                    className="pl-10 bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-green-500 focus:ring-green-500"
                     {...register("email")}
                     disabled={isLoading}
                   />
@@ -114,7 +114,7 @@ export default function LoginPageContent() {
                     id="password"
                     type={showPassword ? "text" : "password"}
                     placeholder="••••••••"
-                    className="pl-10 pr-10 bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-orange-500 focus:ring-orange-500"
+                    className="pl-10 pr-10 bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-green-500 focus:ring-green-500"
                     {...register("password")}
                     disabled={isLoading}
                   />
@@ -131,15 +131,15 @@ export default function LoginPageContent() {
 
               <div className="flex items-center justify-between">
                 <label className="flex items-center gap-2 cursor-pointer text-sm text-slate-500">
-                  <input type="checkbox" className="rounded border-slate-300 text-orange-500 focus:ring-orange-500" />
+                  <input type="checkbox" className="rounded border-slate-300 text-green-500 focus:ring-green-500" />
                   Remember me
                 </label>
-                <Link href="/auth/forgot-password" className="text-sm text-orange-600 hover:underline font-medium">
+                <Link href="/auth/forgot-password" className="text-sm text-green-600 hover:underline font-medium">
                   Forgot password?
                 </Link>
               </div>
 
-              <Button type="submit" className="w-full h-12 bg-orange-500 font-bold text-white hover:bg-orange-600 rounded-xl shadow-lg shadow-orange-500/20" disabled={isLoading}>
+              <Button type="submit" className="w-full h-12 bg-green-500 font-bold text-white hover:bg-green-600 rounded-xl shadow-lg shadow-green-500/20" disabled={isLoading}>
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -154,7 +154,7 @@ export default function LoginPageContent() {
             <div className="mt-6 text-center">
               <p className="text-sm text-slate-500">
                 Don't have an account?{" "}
-                <Link href="/auth/register" className="text-orange-600 hover:underline font-bold">
+                <Link href="/auth/register" className="text-green-600 hover:underline font-bold">
                   Sign up
                 </Link>
               </p>
@@ -172,9 +172,9 @@ export default function LoginPageContent() {
         </Card>
 
         <div className="mt-6 flex items-center justify-center gap-6 text-xs text-slate-400">
-          <span className="flex items-center gap-1.5"><Zap className="h-3.5 w-3.5 text-orange-500" /> Instant booking</span>
-          <span className="flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5 text-orange-500" /> Secure login</span>
-          <span className="flex items-center gap-1.5"><Trophy className="h-3.5 w-3.5 text-orange-500" /> Tournaments</span>
+          <span className="flex items-center gap-1.5"><Zap className="h-3.5 w-3.5 text-green-500" /> Instant booking</span>
+          <span className="flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5 text-green-500" /> Secure login</span>
+          <span className="flex items-center gap-1.5"><Trophy className="h-3.5 w-3.5 text-green-500" /> Tournaments</span>
         </div>
       </div>
     </div>

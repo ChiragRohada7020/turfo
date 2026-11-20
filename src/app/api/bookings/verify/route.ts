@@ -54,40 +54,42 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // Check if booking time is valid (within 30 min before start to end)
     const now = new Date()
     const startTime = new Date(booking.startTime)
     const endTime = new Date(booking.endTime)
-    const thirtyMinBefore = new Date(startTime.getTime() - 30 * 60 * 1000)
 
-    if (now < thirtyMinBefore) {
-      return NextResponse.json({
-        error: "Booking not yet active. Please wait until 30 minutes before the start time.",
-        booking: {
-          id: booking.id,
-          status: booking.status,
-          user: booking.user,
-          facility: booking.facility,
-          court: booking.court,
-          startTime: booking.startTime,
-          endTime: booking.endTime,
-        },
-      }, { status: 400 })
-    }
-
-    if (now > endTime) {
-      return NextResponse.json({
-        error: "Booking has expired",
-        booking: {
-          id: booking.id,
-          status: booking.status,
-          user: booking.user,
-          facility: booking.facility,
-          court: booking.court,
-          startTime: booking.startTime,
-          endTime: booking.endTime,
-        },
-      }, { status: 400 })
+    // Owners completing their own bookings can do so at any time
+    const isOwnerSelfBooking = booking.userId === booking.facility.ownerId
+    if (!isOwnerSelfBooking) {
+      const thirtyMinBefore = new Date(startTime.getTime() - 30 * 60 * 1000)
+      if (now < thirtyMinBefore) {
+        return NextResponse.json({
+          error: "Booking not yet active. Please wait until 30 minutes before the start time.",
+          booking: {
+            id: booking.id,
+            status: booking.status,
+            user: booking.user,
+            facility: booking.facility,
+            court: booking.court,
+            startTime: booking.startTime,
+            endTime: booking.endTime,
+          },
+        }, { status: 400 })
+      }
+      if (now > endTime) {
+        return NextResponse.json({
+          error: "Booking has expired",
+          booking: {
+            id: booking.id,
+            status: booking.status,
+            user: booking.user,
+            facility: booking.facility,
+            court: booking.court,
+            startTime: booking.startTime,
+            endTime: booking.endTime,
+          },
+        }, { status: 400 })
+      }
     }
 
     // If action is "confirm", mark as completed and update CIBIL

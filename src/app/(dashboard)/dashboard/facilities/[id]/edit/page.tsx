@@ -50,6 +50,7 @@ const SPORT_OPTIONS = [
   { value: "SWIMMING", label: "Swimming" },
   { value: "GYM", label: "Gym" },
   { value: "PICKLEBALL", label: "Pickleball" },
+  { value: "PS_GAMES", label: "PS Games" },
   { value: "TABLE_TENNIS", label: "Table Tennis" },
   { value: "MULTI_SPORT", label: "Multi-Sport" },
 ]
@@ -66,6 +67,7 @@ const SURFACE_OPTIONS = [
   { value: "WOOD", label: "Wooden" },
   { value: "HARD_COURT", label: "Hard Court" },
   { value: "CLAY", label: "Clay" },
+  { value: "WARM_LIGHTNING_ROOM", label: "Warm Lightning Room" },
 ]
 
 const COURT_FORMATS = ["5v5", "7v7", "9v9", "11v11", "Singles", "Doubles", "4v4"]
@@ -108,7 +110,7 @@ export default function AddFacilityPage() {
   const [isUploading, setIsUploading] = useState(false)
   const [courts, setCourts] = useState<Court[]>([])
   const [pricingRules, setPricingRules] = useState<any[]>([])
-  const [newRule, setNewRule] = useState({ name: "Peak Hours", courtId: "", dayOfWeek: [0,1,2,3,4,5,6], startTime: "17:00", endTime: "22:00", pricePerHour: 800 })
+  const [newRule, setNewRule] = useState({ name: "Peak Hours", courtId: "", dayOfWeek: [0,1,2,3,4,5,6], startTime: "17:00", endTime: "22:00", pricePerHour: "800" })
   const [newCourt, setNewCourt] = useState<Court>({
     name: "",
     sportType: "FOOTBALL",
@@ -234,8 +236,8 @@ export default function AddFacilityPage() {
       <div className="md:pt-0 md:pl-[262px]">
         <div className="max-w-4xl mx-auto p-4 sm:p-6 xl:p-8">
         {/* Hero */}
-        <section className="relative mb-6 overflow-hidden rounded-3xl border border-white/10 bg-[#10251a]">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_75%_50%,rgba(34,197,94,0.2),transparent_55%),linear-gradient(110deg,#07150f,#12351d_60%,#07120f)]" />
+        <section className="relative mb-6 overflow-hidden rounded-3xl border border-white/10 bg-[#17233A]">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_75%_50%,rgba(249,115,22,0.22),transparent_55%),linear-gradient(110deg,rgba(11,16,32,0.92),rgba(32,37,65,0.72),rgba(11,16,32,0.88))]" />
           <div className="absolute inset-0 opacity-20 bg-[linear-gradient(90deg,transparent_49%,rgba(255,255,255,0.08)_50%,transparent_51%)]" />
           <div className="relative flex flex-wrap items-center justify-between gap-6 p-6 sm:p-9">
             <div>
@@ -515,11 +517,11 @@ export default function AddFacilityPage() {
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-slate-300 text-xs">Price per Hour (₹)</Label>
+                    <Label className="text-slate-300 text-xs">{newCourt?.sportType === "PS_GAMES" ? "Price per Person per Hour (₹)" : "Price per Hour (₹)"}</Label>
                     <Input
                       type="number"
                       value={newCourt.pricePerHour}
-                      onChange={(e) => setNewCourt({ ...newCourt, pricePerHour: parseInt(e.target.value) || 500 })}
+                      onChange={(e) => setNewCourt({ ...newCourt, pricePerHour: e.target.value })}
                       className="bg-[#121b24] border-white/10 text-white focus:border-lime-400/50"
                     />
                   </div>
@@ -659,11 +661,11 @@ export default function AddFacilityPage() {
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-slate-300 text-xs">Price per Hour (₹)</Label>
+                    <Label className="text-slate-300 text-xs">{newCourt?.sportType === "PS_GAMES" ? "Price per Person per Hour (₹)" : "Price per Hour (₹)"}</Label>
                     <Input
                       type="number"
                       value={newRule.pricePerHour}
-                      onChange={(e) => setNewRule({ ...newRule, pricePerHour: parseInt(e.target.value) || 500 })}
+                      onChange={(e) => setNewRule({ ...newRule, pricePerHour: e.target.value })}
                       className="h-10 rounded-xl border border-white/10 bg-[#121b24] text-white focus:border-lime-400/50"
                     />
                   </div>
@@ -699,8 +701,8 @@ export default function AddFacilityPage() {
                       alert("Please enter a rule name")
                       return
                     }
-                    setPricingRules([...pricingRules, { ...newRule }])
-                    setNewRule({ name: "Peak Hours", courtId: "", dayOfWeek: [0,1,2,3,4,5,6], startTime: "17:00", endTime: "22:00", pricePerHour: 800 })
+                    setPricingRules([...pricingRules, { ...newRule, pricePerHour: Number(newRule.pricePerHour) || 0 }])
+                    setNewRule({ name: "Peak Hours", courtId: "", dayOfWeek: [0,1,2,3,4,5,6], startTime: "17:00", endTime: "22:00", pricePerHour: "800" })
                   }}
                   className="w-full bg-lime-400/10 text-lime-400 hover:bg-lime-400/20 border border-lime-400/20"
                 >

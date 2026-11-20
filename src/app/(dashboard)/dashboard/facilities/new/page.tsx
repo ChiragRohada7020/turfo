@@ -51,6 +51,7 @@ const SPORT_OPTIONS = [
   { value: "SWIMMING", label: "Swimming" },
   { value: "GYM", label: "Gym" },
   { value: "PICKLEBALL", label: "Pickleball" },
+  { value: "PS_GAMES", label: "PS Games" },
   { value: "TABLE_TENNIS", label: "Table Tennis" },
   { value: "MULTI_SPORT", label: "Multi-Sport" },
 ]
@@ -67,6 +68,7 @@ const SURFACE_OPTIONS = [
   { value: "WOOD", label: "Wooden" },
   { value: "HARD_COURT", label: "Hard Court" },
   { value: "CLAY", label: "Clay" },
+  { value: "WARM_LIGHTNING_ROOM", label: "Warm Lightning Room" },
 ]
 
 const COURT_FORMATS = ["5v5", "7v7", "9v9", "11v11", "Singles", "Doubles", "4v4"]
@@ -91,7 +93,7 @@ export default function AddFacilityPage() {
   const [isUploading, setIsUploading] = useState(false)
   const [courts, setCourts] = useState<Court[]>([])
   const [pricingRules, setPricingRules] = useState<any[]>([])
-  const [newRule, setNewRule] = useState({ name: "Peak Hours", courtId: "", dayOfWeek: [0,1,2,3,4,5,6], startTime: "17:00", endTime: "22:00", pricePerHour: 800 })
+  const [newRule, setNewRule] = useState({ name: "Peak Hours", courtId: "", dayOfWeek: [0,1,2,3,4,5,6], startTime: "17:00", endTime: "22:00", pricePerHour: "800" })
   const [newCourt, setNewCourt] = useState<Court>({
     name: "",
     sportType: "FOOTBALL",
@@ -180,22 +182,22 @@ export default function AddFacilityPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#070d12] text-white">
+    <div className="min-h-screen bg-[#0B1020] text-white">
       <Sidebar session={session} mobileOpen={sidebarOpen} onMobileOpenChange={setSidebarOpen} />
       <div className="min-h-screen md:pl-[262px]">
         <TopNavbar onMenuClick={() => setSidebarOpen(true)} />
         <div className="max-w-4xl mx-auto p-4 sm:p-6 xl:p-8">
         {/* Hero */}
-        <section className="relative mb-6 overflow-hidden rounded-3xl border border-white/10 bg-[#10251a]">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_75%_50%,rgba(34,197,94,0.2),transparent_55%),linear-gradient(110deg,#07150f,#12351d_60%,#07120f)]" />
+        <section className="relative mb-6 overflow-hidden rounded-3xl border border-white/10 bg-[#17233A]">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_75%_50%,rgba(249,115,22,0.22),transparent_55%),linear-gradient(110deg,rgba(11,16,32,0.92),rgba(32,37,65,0.72),rgba(11,16,32,0.88))]" />
           <div className="absolute inset-0 opacity-20 bg-[linear-gradient(90deg,transparent_49%,rgba(255,255,255,0.08)_50%,transparent_51%)]" />
           <div className="relative flex flex-wrap items-center justify-between gap-6 p-6 sm:p-9">
             <div>
-              <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-lime-400">
+              <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-orange-400">
                 <Building2 className="h-4 w-4" /> Add Facility
               </div>
               <h1 className="text-3xl font-black tracking-tight sm:text-4xl">
-                List Your <span className="text-lime-400">Turf</span>
+                List Your <span className="text-orange-400">Turf</span>
               </h1>
               <p className="mt-2 text-sm text-slate-300 sm:text-base">
                 Add your sports facility to Strikora and start accepting bookings.
@@ -211,10 +213,10 @@ export default function AddFacilityPage() {
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           {/* Step 1: Basic Information */}
-          <Card className="overflow-hidden rounded-2xl border-white/[0.09] bg-[#0c1916]">
+          <Card className="overflow-hidden rounded-2xl border-white/[0.09] bg-[#131C2E]">
             <CardHeader className="border-b border-white/[0.06] px-5 py-4">
               <CardTitle className="flex items-center gap-2 text-lg font-bold">
-                <Building2 className="h-5 w-5 text-lime-400" /> Step 1: Basic Information
+                <Building2 className="h-5 w-5 text-orange-400" /> Step 1: Basic Information
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 p-5">
@@ -223,7 +225,7 @@ export default function AddFacilityPage() {
                 <Input
                   id="name"
                   placeholder="e.g. Green Field Sports Complex"
-                  className="h-10 rounded-xl border border-white/10 bg-[#121b24] text-white placeholder:text-slate-500 focus:border-lime-400/50"
+                  className="h-10 rounded-xl border border-white/10 bg-[#182238] text-white placeholder:text-slate-500 focus:border-orange-400/50"
                   {...register("name")}
                 />
                 {errors.name && <p className="text-sm text-red-400">{errors.name.message}</p>}
@@ -234,7 +236,7 @@ export default function AddFacilityPage() {
                 <Textarea
                   id="description"
                   placeholder="Describe your facility..."
-                  className="min-h-[80px] rounded-xl border border-white/10 bg-[#121b24] text-white placeholder:text-slate-500 focus:border-lime-400/50"
+                  className="min-h-[80px] rounded-xl border border-white/10 bg-[#182238] text-white placeholder:text-slate-500 focus:border-orange-400/50"
                   {...register("description")}
                 />
               </div>
@@ -243,7 +245,7 @@ export default function AddFacilityPage() {
                 <div className="space-y-2">
                   <Label className="text-slate-300">Facility Type</Label>
                   <Select onValueChange={(v) => setValue("facilityType", v)} defaultValue="OUTDOOR">
-                    <SelectTrigger className="h-10 rounded-xl border border-white/10 bg-[#121b24] text-white focus:border-lime-400/50">
+                    <SelectTrigger className="h-10 rounded-xl border border-white/10 bg-[#182238] text-white focus:border-orange-400/50">
                       <SelectValue placeholder="Select type" />
                     </SelectTrigger>
                     <SelectContent>
@@ -257,7 +259,7 @@ export default function AddFacilityPage() {
                   <Label className="text-slate-300">Contact Phone</Label>
                   <Input
                     placeholder="+91 98765 43210"
-                    className="h-10 rounded-xl border border-white/10 bg-[#121b24] text-white placeholder:text-slate-500 focus:border-lime-400/50"
+                    className="h-10 rounded-xl border border-white/10 bg-[#182238] text-white placeholder:text-slate-500 focus:border-orange-400/50"
                     {...register("contactPhone")}
                   />
                 </div>
@@ -265,7 +267,7 @@ export default function AddFacilityPage() {
                   <Label className="text-slate-300">WhatsApp Number</Label>
                   <Input
                     placeholder="+91 98765 43210"
-                    className="h-10 rounded-xl border border-white/10 bg-[#121b24] text-white placeholder:text-slate-500 focus:border-lime-400/50"
+                    className="h-10 rounded-xl border border-white/10 bg-[#182238] text-white placeholder:text-slate-500 focus:border-orange-400/50"
                     {...register("whatsappNumber")}
                   />
                 </div>
@@ -274,10 +276,10 @@ export default function AddFacilityPage() {
           </Card>
 
           {/* Step 2: Location (Auto-filled from Profile) */}
-          <Card className="overflow-hidden rounded-2xl border-white/[0.09] bg-[#0c1916]">
+          <Card className="overflow-hidden rounded-2xl border-white/[0.09] bg-[#131C2E]">
             <CardHeader className="border-b border-white/[0.06] px-5 py-4">
               <CardTitle className="flex items-center gap-2 text-lg font-bold">
-                <MapPin className="h-5 w-5 text-lime-400" /> Step 2: Location (Auto-filled from Profile)
+                <MapPin className="h-5 w-5 text-orange-400" /> Step 2: Location (Auto-filled from Profile)
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 p-5">
@@ -286,7 +288,7 @@ export default function AddFacilityPage() {
                 <Input
                   id="address"
                   placeholder="Street address, building name"
-                  className="h-10 rounded-xl border border-white/10 bg-[#121b24] text-white placeholder:text-slate-500 focus:border-lime-400/50"
+                  className="h-10 rounded-xl border border-white/10 bg-[#182238] text-white placeholder:text-slate-500 focus:border-orange-400/50"
                   {...register("address")}
                 />
                 {errors.address && <p className="text-sm text-red-400">{errors.address.message}</p>}
@@ -298,7 +300,7 @@ export default function AddFacilityPage() {
                   <Input
                     id="city"
                     placeholder="e.g. Pachora"
-                    className="h-10 rounded-xl border border-white/10 bg-[#121b24] text-white placeholder:text-slate-500 focus:border-lime-400/50"
+                    className="h-10 rounded-xl border border-white/10 bg-[#182238] text-white placeholder:text-slate-500 focus:border-orange-400/50"
                     {...register("city")}
                   />
                   {errors.city && <p className="text-sm text-red-400">{errors.city.message}</p>}
@@ -308,7 +310,7 @@ export default function AddFacilityPage() {
                   <Input
                     id="state"
                     placeholder="e.g. Maharashtra"
-                    className="h-10 rounded-xl border border-white/10 bg-[#121b24] text-white placeholder:text-slate-500 focus:border-lime-400/50"
+                    className="h-10 rounded-xl border border-white/10 bg-[#182238] text-white placeholder:text-slate-500 focus:border-orange-400/50"
                     {...register("state")}
                   />
                   {errors.state && <p className="text-sm text-red-400">{errors.state.message}</p>}
@@ -321,7 +323,7 @@ export default function AddFacilityPage() {
                   <Input
                     id="country"
                     placeholder="India"
-                    className="h-10 rounded-xl border border-white/10 bg-[#121b24] text-white placeholder:text-slate-500 focus:border-lime-400/50"
+                    className="h-10 rounded-xl border border-white/10 bg-[#182238] text-white placeholder:text-slate-500 focus:border-orange-400/50"
                     {...register("country")}
                   />
                 </div>
@@ -330,7 +332,7 @@ export default function AddFacilityPage() {
                   <Input
                     id="postalCode"
                     placeholder="e.g. 424201"
-                    className="h-10 rounded-xl border border-white/10 bg-[#121b24] text-white placeholder:text-slate-500 focus:border-lime-400/50"
+                    className="h-10 rounded-xl border border-white/10 bg-[#182238] text-white placeholder:text-slate-500 focus:border-orange-400/50"
                     {...register("postalCode")}
                   />
                 </div>
@@ -341,7 +343,7 @@ export default function AddFacilityPage() {
                 <Input
                   id="landmark"
                   placeholder="e.g. Near bus stand, opposite school"
-                  className="h-10 rounded-xl border border-white/10 bg-[#121b24] text-white placeholder:text-slate-500 focus:border-lime-400/50"
+                  className="h-10 rounded-xl border border-white/10 bg-[#182238] text-white placeholder:text-slate-500 focus:border-orange-400/50"
                   {...register("landmark")}
                 />
               </div>
@@ -349,10 +351,10 @@ export default function AddFacilityPage() {
           </Card>
 
           {/* Step 3: Sports */}
-          <Card className="overflow-hidden rounded-2xl border-white/[0.09] bg-[#0c1916]">
+          <Card className="overflow-hidden rounded-2xl border-white/[0.09] bg-[#131C2E]">
             <CardHeader className="border-b border-white/[0.06] px-5 py-4">
               <CardTitle className="flex items-center gap-2 text-lg font-bold">
-                <Plus className="h-5 w-5 text-lime-400" /> Step 3: Sports
+                <Plus className="h-5 w-5 text-orange-400" /> Step 3: Sports
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 p-5">
@@ -372,8 +374,8 @@ export default function AddFacilityPage() {
                       }}
                       className={
                         selectedSports.includes(sport.value)
-                          ? "px-3 py-1.5 rounded-full text-xs font-semibold bg-lime-400 text-black border border-lime-400"
-                          : "px-3 py-1.5 rounded-full text-xs font-semibold bg-[#121b24] text-slate-300 border border-white/10 hover:border-white/20"
+                          ? "px-3 py-1.5 rounded-full text-xs font-semibold bg-orange-400 text-black border border-orange-400"
+                          : "px-3 py-1.5 rounded-full text-xs font-semibold bg-[#182238] text-slate-300 border border-white/10 hover:border-white/20"
                       }
                     >
                       {sport.label}
@@ -387,10 +389,10 @@ export default function AddFacilityPage() {
           </Card>
 
           {/* Step 4: Courts */}
-          <Card className="overflow-hidden rounded-2xl border-white/[0.09] bg-[#0c1916]">
+          <Card className="overflow-hidden rounded-2xl border-white/[0.09] bg-[#131C2E]">
             <CardHeader className="border-b border-white/[0.06] px-5 py-4">
               <CardTitle className="flex items-center gap-2 text-lg font-bold">
-                <Plus className="h-5 w-5 text-lime-400" /> Step 4: Courts & Pricing
+                <Plus className="h-5 w-5 text-orange-400" /> Step 4: Courts & Pricing
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 p-5">
@@ -399,7 +401,7 @@ export default function AddFacilityPage() {
                 <div className="space-y-2">
                   <Label className="text-slate-300">Added Courts</Label>
                   {courts.map((court, idx) => (
-                    <div key={idx} className="flex items-center justify-between rounded-xl border border-white/10 bg-[#121b24] px-4 py-3">
+                    <div key={idx} className="flex items-center justify-between rounded-xl border border-white/10 bg-[#182238] px-4 py-3">
                       <div className="flex-1">
                         <p className="text-sm font-bold text-white">{court.name}</p>
                         <p className="text-xs text-slate-400">
@@ -419,7 +421,7 @@ export default function AddFacilityPage() {
               )}
 
               {/* Add new court form */}
-              <div className="rounded-xl border border-dashed border-white/20 bg-[#121b24]/50 p-4 space-y-3">
+              <div className="rounded-xl border border-dashed border-white/20 bg-[#182238]/50 p-4 space-y-3">
                 <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Add a Court</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
@@ -428,13 +430,13 @@ export default function AddFacilityPage() {
                       value={newCourt.name}
                       onChange={(e) => setNewCourt({ ...newCourt, name: e.target.value })}
                       placeholder="e.g. Court 1"
-                      className="h-10 rounded-xl border border-white/10 bg-[#121b24] text-white placeholder:text-slate-500 focus:border-lime-400/50"
+                      className="h-10 rounded-xl border border-white/10 bg-[#182238] text-white placeholder:text-slate-500 focus:border-orange-400/50"
                     />
                   </div>
                   <div className="space-y-1">
                     <Label className="text-slate-300 text-xs">Sport</Label>
                     <Select value={newCourt.sportType} onValueChange={(v) => setNewCourt({ ...newCourt, sportType: v })}>
-                      <SelectTrigger className="h-10 rounded-xl border border-white/10 bg-[#121b24] text-white focus:border-lime-400/50">
+                      <SelectTrigger className="h-10 rounded-xl border border-white/10 bg-[#182238] text-white focus:border-orange-400/50">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -447,7 +449,7 @@ export default function AddFacilityPage() {
                   <div className="space-y-1">
                     <Label className="text-slate-300 text-xs">Surface</Label>
                     <Select value={newCourt.surfaceType} onValueChange={(v) => setNewCourt({ ...newCourt, surfaceType: v })}>
-                      <SelectTrigger className="h-10 rounded-xl border border-white/10 bg-[#121b24] text-white focus:border-lime-400/50">
+                      <SelectTrigger className="h-10 rounded-xl border border-white/10 bg-[#182238] text-white focus:border-orange-400/50">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -463,22 +465,22 @@ export default function AddFacilityPage() {
                       type="number"
                       value={newCourt.capacity}
                       onChange={(e) => setNewCourt({ ...newCourt, capacity: e.target.value })}
-                      className="bg-[#121b24] border-white/10 text-white focus:border-lime-400/50"
+                      className="bg-[#182238] border-white/10 text-white focus:border-orange-400/50"
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-slate-300 text-xs">Price per Hour (₹)</Label>
+                    <Label className="text-slate-300 text-xs">{newCourt?.sportType === "PS_GAMES" ? "Price per Person per Hour (₹)" : "Price per Hour (₹)"}</Label>
                     <Input
                       type="number"
                       value={newCourt.pricePerHour}
-                      onChange={(e) => setNewCourt({ ...newCourt, pricePerHour: parseInt(e.target.value) || 500 })}
-                      className="bg-[#121b24] border-white/10 text-white focus:border-lime-400/50"
+                      onChange={(e) => setNewCourt({ ...newCourt, pricePerHour: e.target.value })}
+                      className="bg-[#182238] border-white/10 text-white focus:border-orange-400/50"
                     />
                   </div>
                   <div className="space-y-1">
                     <Label className="text-slate-300 text-xs">Type</Label>
                     <Select value={newCourt.isIndoor ? "indoor" : "outdoor"} onValueChange={(v) => setNewCourt({ ...newCourt, isIndoor: v === "indoor" })}>
-                      <SelectTrigger className="h-10 rounded-xl border border-white/10 bg-[#121b24] text-white focus:border-lime-400/50">
+                      <SelectTrigger className="h-10 rounded-xl border border-white/10 bg-[#182238] text-white focus:border-orange-400/50">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -488,7 +490,7 @@ export default function AddFacilityPage() {
                     </Select>
                   </div>
                 </div>
-                <Button type="button" onClick={addCourt} className="w-full bg-lime-400/10 text-lime-400 hover:bg-lime-400/20 border border-lime-400/20">
+                <Button type="button" onClick={addCourt} className="w-full bg-orange-400/10 text-orange-400 hover:bg-orange-400/20 border border-orange-400/20">
                   <Plus className="h-4 w-4 mr-2" /> Add Court
                 </Button>
               </div>
@@ -499,7 +501,7 @@ export default function AddFacilityPage() {
                   <Input
                     id="openTime"
                     type="time"
-                    className="bg-[#121b24] border-white/10 text-white focus:border-lime-400/50"
+                    className="bg-[#182238] border-white/10 text-white focus:border-orange-400/50"
                     {...register("openTime")}
                   />
                 </div>
@@ -508,7 +510,7 @@ export default function AddFacilityPage() {
                   <Input
                     id="closeTime"
                     type="time"
-                    className="bg-[#121b24] border-white/10 text-white focus:border-lime-400/50"
+                    className="bg-[#182238] border-white/10 text-white focus:border-orange-400/50"
                     {...register("closeTime")}
                   />
                 </div>
@@ -517,10 +519,10 @@ export default function AddFacilityPage() {
           </Card>
 
           {/* Step 5: Dynamic Pricing */}
-          <Card className="overflow-hidden rounded-2xl border-white/[0.09] bg-[#0c1916]">
+          <Card className="overflow-hidden rounded-2xl border-white/[0.09] bg-[#131C2E]">
             <CardHeader className="border-b border-white/[0.06] px-5 py-4">
               <CardTitle className="flex items-center gap-2 text-lg font-bold">
-                <DollarSign className="h-5 w-5 text-lime-400" /> Step 5: Dynamic Pricing
+                <DollarSign className="h-5 w-5 text-orange-400" /> Step 5: Dynamic Pricing
               </CardTitle>
               <p className="mt-1 text-xs text-slate-500">Set different prices for different times and days</p>
             </CardHeader>
@@ -529,7 +531,7 @@ export default function AddFacilityPage() {
                 <div className="space-y-2">
                   <Label className="text-slate-300">Pricing Rules</Label>
                   {pricingRules.map((rule, idx) => (
-                    <div key={idx} className="flex items-center justify-between rounded-xl border border-white/10 bg-[#121b24] px-4 py-3">
+                    <div key={idx} className="flex items-center justify-between rounded-xl border border-white/10 bg-[#182238] px-4 py-3">
                       <div className="flex-1">
                         <p className="text-sm font-bold text-white">{rule.name}</p>
                         <p className="text-xs text-slate-400">
@@ -548,13 +550,13 @@ export default function AddFacilityPage() {
                 </div>
               )}
 
-              <div className="rounded-xl border border-dashed border-white/20 bg-[#121b24]/50 p-4 space-y-3">
+              <div className="rounded-xl border border-dashed border-white/20 bg-[#182238]/50 p-4 space-y-3">
                 <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Add Pricing Rule</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <Label className="text-slate-300 text-xs">Court (optional)</Label>
                     <Select value={newRule.courtId || "all"} onValueChange={(v) => setNewRule({ ...newRule, courtId: v === "all" ? "" : v })}>
-                      <SelectTrigger className="h-10 rounded-xl border border-white/10 bg-[#121b24] text-white focus:border-lime-400/50">
+                      <SelectTrigger className="h-10 rounded-xl border border-white/10 bg-[#182238] text-white focus:border-orange-400/50">
                         <SelectValue placeholder="All courts" />
                       </SelectTrigger>
                       <SelectContent>
@@ -571,7 +573,7 @@ export default function AddFacilityPage() {
                       value={newRule.name}
                       onChange={(e) => setNewRule({ ...newRule, name: e.target.value })}
                       placeholder="e.g. Peak Hours"
-                      className="h-10 rounded-xl border border-white/10 bg-[#121b24] text-white placeholder:text-slate-500 focus:border-lime-400/50"
+                      className="h-10 rounded-xl border border-white/10 bg-[#182238] text-white placeholder:text-slate-500 focus:border-orange-400/50"
                     />
                   </div>
                   <div className="space-y-1">
@@ -580,7 +582,7 @@ export default function AddFacilityPage() {
                       type="time"
                       value={newRule.startTime}
                       onChange={(e) => setNewRule({ ...newRule, startTime: e.target.value })}
-                      className="h-10 rounded-xl border border-white/10 bg-[#121b24] text-white focus:border-lime-400/50"
+                      className="h-10 rounded-xl border border-white/10 bg-[#182238] text-white focus:border-orange-400/50"
                     />
                   </div>
                   <div className="space-y-1">
@@ -589,16 +591,16 @@ export default function AddFacilityPage() {
                       type="time"
                       value={newRule.endTime}
                       onChange={(e) => setNewRule({ ...newRule, endTime: e.target.value })}
-                      className="h-10 rounded-xl border border-white/10 bg-[#121b24] text-white focus:border-lime-400/50"
+                      className="h-10 rounded-xl border border-white/10 bg-[#182238] text-white focus:border-orange-400/50"
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-slate-300 text-xs">Price per Hour (₹)</Label>
+                    <Label className="text-slate-300 text-xs">{newCourt?.sportType === "PS_GAMES" ? "Price per Person per Hour (₹)" : "Price per Hour (₹)"}</Label>
                     <Input
                       type="number"
                       value={newRule.pricePerHour}
-                      onChange={(e) => setNewRule({ ...newRule, pricePerHour: parseInt(e.target.value) || 500 })}
-                      className="h-10 rounded-xl border border-white/10 bg-[#121b24] text-white focus:border-lime-400/50"
+                      onChange={(e) => setNewRule({ ...newRule, pricePerHour: e.target.value })}
+                      className="h-10 rounded-xl border border-white/10 bg-[#182238] text-white focus:border-orange-400/50"
                     />
                   </div>
                 </div>
@@ -617,8 +619,8 @@ export default function AddFacilityPage() {
                         }}
                         className={
                           newRule.dayOfWeek.includes(i)
-                            ? "px-2.5 py-1 rounded-full text-[10px] font-semibold bg-lime-400 text-black"
-                            : "px-2.5 py-1 rounded-full text-[10px] font-semibold bg-[#121b24] text-slate-300 border border-white/10"
+                            ? "px-2.5 py-1 rounded-full text-[10px] font-semibold bg-orange-400 text-black"
+                            : "px-2.5 py-1 rounded-full text-[10px] font-semibold bg-[#182238] text-slate-300 border border-white/10"
                         }
                       >
                         {day}
@@ -633,10 +635,10 @@ export default function AddFacilityPage() {
                       alert("Please enter a rule name")
                       return
                     }
-                    setPricingRules([...pricingRules, { ...newRule }])
-                    setNewRule({ name: "Peak Hours", courtId: "", dayOfWeek: [0,1,2,3,4,5,6], startTime: "17:00", endTime: "22:00", pricePerHour: 800 })
+                    setPricingRules([...pricingRules, { ...newRule, pricePerHour: Number(newRule.pricePerHour) || 0 }])
+                    setNewRule({ name: "Peak Hours", courtId: "", dayOfWeek: [0,1,2,3,4,5,6], startTime: "17:00", endTime: "22:00", pricePerHour: "800" })
                   }}
-                  className="w-full bg-lime-400/10 text-lime-400 hover:bg-lime-400/20 border border-lime-400/20"
+                  className="w-full bg-orange-400/10 text-orange-400 hover:bg-orange-400/20 border border-orange-400/20"
                 >
                   <Plus className="h-4 w-4 mr-2" /> Add Pricing Rule
                 </Button>
@@ -648,10 +650,10 @@ export default function AddFacilityPage() {
             </CardContent>
           </Card>
 
-          <Card className="overflow-hidden rounded-2xl border-white/[0.09] bg-[#0c1916]">
+          <Card className="overflow-hidden rounded-2xl border-white/[0.09] bg-[#131C2E]">
             <CardHeader className="border-b border-white/[0.06] px-5 py-4">
               <CardTitle className="flex items-center gap-2 text-lg font-bold">
-                <Plus className="h-5 w-5 text-lime-400" /> Step 6: Photos & Amenities
+                <Plus className="h-5 w-5 text-orange-400" /> Step 6: Photos & Amenities
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 p-5">
@@ -659,7 +661,7 @@ export default function AddFacilityPage() {
                 <Label className="text-slate-300">Facility Images</Label>
                 <div className="flex flex-wrap gap-3">
                   {imageUrls.map((url, idx) => (
-                    <div key={idx} className="relative h-24 w-24 overflow-hidden rounded-xl border border-white/10 bg-[#121b24]">
+                    <div key={idx} className="relative h-24 w-24 overflow-hidden rounded-xl border border-white/10 bg-[#182238]">
                       <img src={url} alt={`Facility image ${idx + 1}`} className="h-full w-full object-cover" />
                       <button
                         type="button"
@@ -670,7 +672,7 @@ export default function AddFacilityPage() {
                       </button>
                     </div>
                   ))}
-                  <label className="flex h-24 w-24 cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-white/20 bg-[#121b24] text-slate-400 hover:border-lime-400/40 hover:text-lime-400">
+                  <label className="flex h-24 w-24 cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-white/20 bg-[#182238] text-slate-400 hover:border-orange-400/40 hover:text-orange-400">
                     <input
                       type="file"
                       accept="image/*"
@@ -697,7 +699,7 @@ export default function AddFacilityPage() {
                       }}
                     />
                     {isUploading ? (
-                      <div className="h-5 w-5 animate-spin rounded-full border-2 border-lime-400 border-t-transparent" />
+                      <div className="h-5 w-5 animate-spin rounded-full border-2 border-orange-400 border-t-transparent" />
                     ) : (
                       <>
                         <Plus className="h-5 w-5" />
@@ -725,8 +727,8 @@ export default function AddFacilityPage() {
                       }}
                       className={
                         selectedAmenities.includes(amenity)
-                          ? "px-3 py-1.5 rounded-full text-xs font-semibold bg-lime-400 text-black border border-lime-400"
-                          : "px-3 py-1.5 rounded-full text-xs font-semibold bg-[#121b24] text-slate-300 border border-white/10 hover:border-white/20"
+                          ? "px-3 py-1.5 rounded-full text-xs font-semibold bg-orange-400 text-black border border-orange-400"
+                          : "px-3 py-1.5 rounded-full text-xs font-semibold bg-[#182238] text-slate-300 border border-white/10 hover:border-white/20"
                       }
                     >
                       {amenity.replace("_", " ")}
@@ -743,7 +745,7 @@ export default function AddFacilityPage() {
                 Cancel
               </Button>
             </Link>
-            <Button type="submit" className="h-11 flex-1 rounded-xl bg-lime-400 font-bold text-black hover:bg-lime-300" disabled={isLoading}>
+            <Button type="submit" className="h-11 flex-1 rounded-xl bg-orange-400 font-bold text-black hover:bg-orange-300" disabled={isLoading}>
               {isLoading ? "Creating..." : "Create Facility"}
             </Button>
           </div>

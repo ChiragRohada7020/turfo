@@ -31,6 +31,9 @@ export const metadata: Metadata = {
   creator: "Strikora",
   publisher: "Strikora",
   applicationName: "Strikora",
+  verification: {
+    google: "google64f8fc198e1bef95",
+  },
   robots: {
     index: true,
     follow: true,

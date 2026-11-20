@@ -40,7 +40,8 @@ import { JoinRequestsPanel } from "@/components/booking/JoinRequestsPanel"
 import { OpenGameModal } from "@/components/booking/OpenGameModal"
 
 const filters = [
-  { label: "All bookings", value: "all" },
+  { label: "All Bookings", value: "all" },
+  { label: "My Bookings", value: "MY" },
   { label: "Confirmed", value: "CONFIRMED" },
   { label: "Completed", value: "COMPLETED" },
   { label: "Cancelled", value: "CANCELLED" },
@@ -63,7 +64,7 @@ export default function BookingsPage() {
   const isOwner = session?.user?.role === "OWNER"
   const { data: myData, isLoading: myLoading, refetch: refetchMy } = trpc.bookings.myBookings.useQuery({
     status:
-      statusFilter !== "all"
+      statusFilter !== "all" && statusFilter !== "MY"
         ? (statusFilter as BookingStatus)
         : undefined,
     limit: 20,
@@ -73,7 +74,7 @@ export default function BookingsPage() {
   })
   const { data: ownerData, isLoading: ownerLoading, refetch: refetchOwner } = trpc.bookings.ownerBookings.useQuery({
     status:
-      statusFilter !== "all"
+      statusFilter !== "all" && statusFilter !== "MY"
         ? (statusFilter as BookingStatus)
         : undefined,
     limit: 20,
@@ -155,7 +156,7 @@ export default function BookingsPage() {
   if (status === "loading") {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#070d12]">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-lime-400 border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-orange-400 border-t-transparent" />
       </div>
     )
   }
@@ -164,13 +165,13 @@ export default function BookingsPage() {
     return (
       <div className="min-h-screen bg-[#06110e] flex items-center justify-center px-4 text-white">
         <div className="w-full max-w-md rounded-3xl border border-white/10 bg-[#0d1c17] p-8 text-center">
-          <CalendarDays className="mx-auto mb-5 h-12 w-12 text-lime-400" />
+          <CalendarDays className="mx-auto mb-5 h-12 w-12 text-orange-400" />
           <h1 className="text-2xl font-bold">Sign in to continue</h1>
           <p className="mt-2 text-sm text-slate-400">
             Sign in to view and manage your turf bookings.
           </p>
           <Link href="/auth/login?callbackUrl=/dashboard/bookings">
-            <Button className="mt-6 w-full bg-lime-400 font-bold text-black hover:bg-lime-300">
+            <Button className="mt-6 w-full bg-orange-400 font-bold text-black hover:bg-orange-300">
               Sign In
             </Button>
           </Link>
@@ -179,7 +180,8 @@ export default function BookingsPage() {
     )
   }
 
-  const bookings = data?.bookings || []
+  const rawBookings = data?.bookings || []
+  const bookings = statusFilter === "MY" ? rawBookings.filter((b: any) => b.userId === session?.user?.id) : rawBookings
 
   const getStatusStyle = (status: string) => {
     switch (status) {
@@ -262,7 +264,7 @@ export default function BookingsPage() {
               <button className="flex shrink-0 items-center gap-2 rounded-xl p-1.5 hover:bg-white/5">
                 <Avatar className="h-9 w-9 border border-white/10">
                   <AvatarImage src={session.user?.image || ""} alt={session.user?.name || "User"} />
-                  <AvatarFallback className="bg-lime-400 font-bold text-black">{(session.user?.name || "U")[0]?.toUpperCase()}</AvatarFallback>
+                  <AvatarFallback className="bg-orange-400 font-bold text-black">{(session.user?.name || "U")[0]?.toUpperCase()}</AvatarFallback>
                 </Avatar>
               </button>
             </DropdownMenuTrigger>
@@ -278,23 +280,23 @@ export default function BookingsPage() {
         <div className="mx-auto max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8">
 
           {/* Header */}
-          <div className="relative mb-7 overflow-hidden rounded-3xl border border-emerald-400/10 bg-[#102c20]">
+          <div className="relative mb-7 overflow-hidden rounded-3xl border border-orange-400/10 bg-[#17233A]">
             <div
               className="absolute inset-0 -z-10 bg-cover bg-center opacity-30"
               style={{
                 backgroundImage: "url('https://images.unsplash.com/photo-1551958219-acbc6247805f?w=1800&q=85')"
               }}
             />
-            <div className="absolute inset-0 -z-10 bg-gradient-to-r from-[#06110e] via-[#06110e]/85 to-[#06110e]/40" />
-            <div className="pointer-events-none absolute -right-10 -top-20 h-64 w-64 rounded-full bg-lime-400/10 blur-3xl" />
+            <div className="absolute inset-0 -z-10 bg-gradient-to-r from-[#0B1020] via-[#0B1020]/85 to-[#0B1020]/40" />
+            <div className="pointer-events-none absolute -right-10 -top-20 h-64 w-64 rounded-full bg-orange-400/10 blur-3xl" />
             <div className="relative flex flex-col justify-between gap-5 p-6 sm:p-8 sm:flex-row sm:items-center">
               <div>
-                <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-lime-400">
+                <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-orange-400">
                   <CalendarCheck className="h-4 w-4" />
                   Your activity
                 </div>
                 <h1 className="text-3xl font-black tracking-tight sm:text-4xl">
-                  My <span className="text-lime-400">Bookings</span>
+                  My <span className="text-orange-400">Bookings</span>
                 </h1>
                 <p className="mt-2 max-w-lg text-sm text-slate-400">
                   Manage your reservations, organize your team and invite
@@ -303,7 +305,7 @@ export default function BookingsPage() {
               </div>
 
               <Link href={isOwner ? "/dashboard/facilities" : "/search"}>
-                 <Button className="h-12 rounded-xl bg-lime-400 px-5 font-bold text-black shadow-lg shadow-lime-400/10 hover:bg-lime-300">
+                 <Button className="h-12 rounded-xl bg-orange-400 px-5 font-bold text-black shadow-lg shadow-orange-400/10 hover:bg-orange-300">
                    <Plus className="mr-2 h-5 w-5" />
                    {isOwner ? "Book Offline" : "Book a Turf"}
                  </Button>
@@ -312,7 +314,7 @@ export default function BookingsPage() {
           </div>
            {isOwner && (
              <div className="mb-7 grid grid-cols-2 gap-3 lg:grid-cols-4">
-               <OverviewCard label="Total" value={bookings.length} icon={<CalendarDays />} color="text-lime-400" />
+               <OverviewCard label="Total" value={bookings.length} icon={<CalendarDays />} color="text-orange-400" />
                <OverviewCard label="Confirmed" value={bookings.filter((b: any) => b.status === "CONFIRMED").length} icon={<ShieldCheck />} color="text-emerald-400" />
                <OverviewCard label="Pending" value={bookings.filter((b: any) => b.status === "PENDING").length} icon={<AlertCircle />} color="text-amber-400" />
                <OverviewCard label="Cancelled" value={bookings.filter((b: any) => b.status === "CANCELLED").length} icon={<XCircle />} color="text-red-400" />
@@ -326,7 +328,7 @@ export default function BookingsPage() {
               label="Bookings shown"
               value={isLoading ? "—" : bookings.length}
               icon={<CalendarDays />}
-              color="text-lime-400"
+              color="text-orange-400"
             />
             <OverviewCard
               label="Confirmed"
@@ -370,8 +372,8 @@ export default function BookingsPage() {
                   onClick={() => setStatusFilter(filter.value)}
                   className={`shrink-0 rounded-xl px-4 py-2.5 text-xs font-semibold transition-all ${
                     statusFilter === filter.value
-                      ? "bg-lime-400 text-black shadow-lg shadow-lime-400/10"
-                      : "border border-white/[0.07] bg-[#102019] text-slate-400 hover:border-lime-400/30 hover:text-white"
+                      ? "bg-orange-400 text-black shadow-lg shadow-orange-400/10"
+                      : "border border-white/[0.07] bg-[#102019] text-slate-400 hover:border-orange-400/30 hover:text-white"
                   }`}
                 >
                   {filter.label}
@@ -402,7 +404,7 @@ export default function BookingsPage() {
                 return (
                   <Card
                     key={booking.id}
-                    className="group overflow-hidden rounded-2xl border border-white/[0.07] bg-[#0c1b15] transition-all duration-300 hover:border-lime-400/30 hover:bg-[#10231a]"
+                    className="group overflow-hidden rounded-2xl border border-white/[0.07] bg-[#0c1b15] transition-all duration-300 hover:border-orange-400/30 hover:bg-[#10231a]"
                   >
                     <CardContent className="p-0">
                       <div className="p-4 sm:p-5">
@@ -417,19 +419,23 @@ export default function BookingsPage() {
                               </Badge>
 
                               {booking.isPublic && (
-                                <Badge className="rounded-full border border-lime-400/20 bg-lime-400/10 px-3 py-1 text-lime-400">
+                                <Badge className="rounded-full border border-orange-400/20 bg-orange-400/10 px-3 py-1 text-orange-400">
                                   <Users className="mr-1.5 h-3 w-3" />
                                   Open for players
                                 </Badge>
                               )}
+
+                              <Badge className={`rounded-full border px-3 py-1 ${booking.userId === booking.facility?.ownerId ? "border-orange-400/20 bg-orange-400/10 text-orange-300" : "border-sky-400/20 bg-sky-400/10 text-sky-300"}`}>
+                                {booking.userId === booking.facility?.ownerId ? "Owner booking" : "Player booking"}
+                              </Badge>
                             </div>
 
                             <div className="flex flex-col gap-4 sm:flex-row">
                               {/* Turf image placeholder */}
-                              <div className="flex h-28 w-full shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-gradient-to-br from-[#173c27] to-[#08130e] sm:w-36">
+                              <div className="flex h-28 w-full shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-gradient-to-br from-[#2a1f3d] to-[#0f1220] sm:w-36">
                                 <div className="text-center">
-                                  <Trophy className="mx-auto h-8 w-8 text-lime-400/80" />
-                                  <span className="mt-2 block text-[10px] font-semibold uppercase tracking-widest text-lime-400/70">
+                                  <Trophy className="mx-auto h-8 w-8 text-orange-400/80" />
+                                  <span className="mt-2 block text-[10px] font-semibold uppercase tracking-widest text-orange-400/70">
                                     Turf booking
                                   </span>
                                 </div>
@@ -445,21 +451,21 @@ export default function BookingsPage() {
 
                                 <div className="mt-4 grid gap-3 text-sm text-slate-400 sm:grid-cols-2">
                                   <div className="flex items-center gap-2">
-                                    <CalendarDays className="h-4 w-4 shrink-0 text-lime-400" />
+                                    <CalendarDays className="h-4 w-4 shrink-0 text-orange-400" />
                                     <span>{formatDate(booking.startTime)}</span>
                                   </div>
                                   <div className="flex items-center gap-2">
-                                    <Clock3 className="h-4 w-4 shrink-0 text-lime-400" />
+                                    <Clock3 className="h-4 w-4 shrink-0 text-orange-400" />
                                     <span>
                                       {formatTime(booking.startTime)} – {formatTime(booking.endTime)}
                                     </span>
                                   </div>
                                   <div className="flex items-center gap-2">
-                                    <MapPin className="h-4 w-4 shrink-0 text-lime-400" />
+                                    <MapPin className="h-4 w-4 shrink-0 text-orange-400" />
                                     <span>{booking.facility?.city || "Location not available"}</span>
                                   </div>
                                   <div className="flex items-center gap-2">
-                                    <Users className="h-4 w-4 shrink-0 text-lime-400" />
+                                    <Users className="h-4 w-4 shrink-0 text-orange-400" />
                                     <span>
                                       {participantCount > 0
                                         ? `${participantCount} players`
@@ -478,11 +484,11 @@ export default function BookingsPage() {
 
                             {/* Team requirement / available seats */}
                             {booking.isPublic && (
-                              <div className="mt-5 rounded-xl border border-lime-400/15 bg-lime-400/[0.04] p-4">
+                              <div className="mt-5 rounded-xl border border-orange-400/15 bg-orange-400/[0.04] p-4">
                                 <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
                                   <div>
                                     <div className="flex items-center gap-2 text-sm font-bold text-white">
-                                      <UserPlus className="h-4 w-4 text-lime-400" />
+                                      <UserPlus className="h-4 w-4 text-orange-400" />
                                       Team recruitment
                                     </div>
                                     <p className="mt-1 text-xs text-slate-400">
@@ -504,7 +510,7 @@ export default function BookingsPage() {
                                       </span>
                                       <span className={`rounded-lg px-3 py-2 text-xs font-bold ${
                                         openSeats > 0
-                                          ? "bg-lime-400/10 text-lime-400"
+                                          ? "bg-orange-400/10 text-orange-400"
                                           : "bg-white/10 text-slate-300"
                                       }`}>
                                         {openSeats > 0
@@ -533,18 +539,17 @@ export default function BookingsPage() {
                               )}
 
                             {/* QR verification */}
-                            {booking.status === "CONFIRMED" &&
-                              booking.verificationCode && (
+                            {booking.status === "CONFIRMED" && booking.verificationCode && booking.userId !== booking.facility?.ownerId && (
                                 <button
                                   onClick={() => {
                                     setQrBooking(booking)
                                     setQrModalOpen(true)
                                   }}
-                                  className="mt-5 flex w-full items-center justify-between gap-4 rounded-xl border border-lime-400/20 bg-lime-400/[0.04] p-4 transition hover:border-lime-400/40 hover:bg-lime-400/[0.08]"
+                                  className="mt-5 flex w-full items-center justify-between gap-4 rounded-xl border border-orange-400/20 bg-orange-400/[0.04] p-4 transition hover:border-orange-400/40 hover:bg-orange-400/[0.08]"
                                 >
                                   <div className="flex items-center gap-3">
-                                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-lime-400/10">
-                                      <ShieldCheck className="h-6 w-6 text-lime-400" />
+                                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-orange-400/10">
+                                      <ShieldCheck className="h-6 w-6 text-orange-400" />
                                     </div>
                                     <div className="text-left">
                                       <p className="text-sm font-bold text-white">Booking Verification</p>
@@ -553,11 +558,38 @@ export default function BookingsPage() {
                                       </p>
                                     </div>
                                   </div>
-                                  <span className="text-xs font-semibold text-lime-400">
+                                  <span className="text-xs font-semibold text-orange-400">
                                     View QR →
                                   </span>
                                 </button>
                               )}
+
+                            {booking.status === "CONFIRMED" && booking.userId === booking.facility?.ownerId && (
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    const res = await fetch("/api/bookings/verify", {
+                                      method: "POST",
+                                      headers: { "Content-Type": "application/json" },
+                                      body: JSON.stringify({ verificationCode: booking.verificationCode, action: "confirm" }),
+                                    })
+                                    const data = await res.json()
+                                    if (res.ok) {
+                                      toast({ title: "Completed", description: "Booking marked as completed." })
+                                      window.location.reload()
+                                    } else {
+                                      toast({ title: "Error", description: data.error || "Failed to complete", variant: "destructive" })
+                                    }
+                                  } catch (e) {
+                                    toast({ title: "Error", description: "Failed to complete booking", variant: "destructive" })
+                                  }
+                                }}
+                                className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-orange-400 px-4 py-3 font-bold text-black transition hover:bg-orange-300"
+                              >
+                                <CheckCircle2 className="h-5 w-5" />
+                                Complete Booking
+                              </button>
+                            )}
                           </div>
 
                           {/* Price and actions */}
@@ -566,7 +598,7 @@ export default function BookingsPage() {
                               <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">
                                 Total amount
                               </p>
-                              <p className="mt-1 text-2xl font-black text-lime-400">
+                              <p className="mt-1 text-2xl font-black text-orange-400">
                                 {formatCurrency(booking.totalPrice)}
                               </p>
                               <p className="mt-1 text-[10px] text-slate-500">
@@ -581,8 +613,8 @@ export default function BookingsPage() {
                                   size="sm"
                                   className={`h-11 flex-1 rounded-lg border px-4 text-xs font-semibold lg:w-full ${
                                     booking.isPublic
-                                      ? "border-lime-400/30 bg-lime-400/10 text-lime-400 hover:bg-lime-400/15"
-                                      : "border-white/10 bg-white/[0.03] text-slate-300 hover:border-lime-400/30 hover:text-lime-400"
+                                      ? "border-orange-400/30 bg-orange-400/10 text-orange-400 hover:bg-orange-400/15"
+                                      : "border-white/10 bg-white/[0.03] text-slate-300 hover:border-orange-400/30 hover:text-orange-400"
                                   }`}
                                   onClick={() => {
                                     if (!booking.isPublic) {
@@ -621,7 +653,8 @@ export default function BookingsPage() {
                                 )}
 
                               {(booking.status === "PENDING" ||
-                                booking.status === "CONFIRMED") && (
+                                booking.status === "CONFIRMED") &&
+                                (session?.user?.role === "ADMIN" || booking.userId === session?.user?.id) && (
                                 <Button
                                   variant="outline"
                                   size="sm"
@@ -644,8 +677,8 @@ export default function BookingsPage() {
             </div>
           ) : (
             <div className="rounded-3xl border border-white/[0.07] bg-[#0c1b15] px-5 py-16 text-center">
-              <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-3xl border border-lime-400/10 bg-lime-400/[0.06]">
-                <CalendarDays className="h-9 w-9 text-lime-400" />
+              <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-3xl border border-orange-400/10 bg-orange-400/[0.06]">
+                <CalendarDays className="h-9 w-9 text-orange-400" />
               </div>
               <h3 className="text-xl font-bold text-white">
                 {statusFilter === "all"
@@ -659,7 +692,7 @@ export default function BookingsPage() {
               </p>
               {statusFilter === "all" ? (
                 <Link href="/search">
-                  <Button className="mt-6 rounded-xl bg-lime-400 px-6 font-bold text-black hover:bg-lime-300">
+                  <Button className="mt-6 rounded-xl bg-orange-400 px-6 font-bold text-black hover:bg-orange-300">
                     <Search className="mr-2 h-4 w-4" />
                     Explore turfs
                   </Button>
@@ -667,7 +700,7 @@ export default function BookingsPage() {
               ) : (
                 <Button
                   onClick={() => setStatusFilter("all")}
-                  className="mt-6 rounded-xl bg-lime-400 px-6 font-bold text-black hover:bg-lime-300"
+                  className="mt-6 rounded-xl bg-orange-400 px-6 font-bold text-black hover:bg-orange-300"
                 >
                   View all bookings
                 </Button>
@@ -764,7 +797,7 @@ function TimeRemaining({ startTime }: { startTime: string | Date }) {
   const diff = start.getTime() - now.getTime()
 
   if (diff <= 0) {
-    if (diff > -3600000) return <span className="text-lime-400 font-semibold text-xs">Starting now</span>
+    if (diff > -3600000) return <span className="text-orange-400 font-semibold text-xs">Starting now</span>
     return <span className="text-slate-500 text-xs">Started</span>
   }
 

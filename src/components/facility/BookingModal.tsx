@@ -34,7 +34,9 @@ export function BookingModal({ facility, courtId, date, slot, onClose }: Booking
   const [createdBookingId, setCreatedBookingId] = useState<string | null>(null)
   const [isSdkLoaded, setIsSdkLoaded] = useState(false)
   const [acknowledged, setAcknowledged] = useState(false)
+  const [playerCount, setPlayerCount] = useState("1")
   const court = facility.courts.find((c: any) => c.id === courtId)
+  const isPS = court?.sportType === "PS_GAMES"
 
   const handleClose = async () => {
     if (createdBookingId && isLoading) {
@@ -53,7 +55,7 @@ export function BookingModal({ facility, courtId, date, slot, onClose }: Booking
   }
 
   const durationMinutes = (new Date(`2000-01-01T${slot.end}`).getTime() - new Date(`2000-01-01T${slot.start}`).getTime()) / (1000 * 60)
-  const totalPrice = (slot.price * durationMinutes) / 60
+  const totalPrice = (slot.price * (isPS ? (parseInt(playerCount) || 1) : 1) * durationMinutes) / 60
 
 
 
@@ -248,6 +250,7 @@ export function BookingModal({ facility, courtId, date, slot, onClose }: Booking
         startTime: startTime.toISOString(),
         endTime: endTime.toISOString(),
         notes: notes || undefined,
+        ...(isPS ? { players: parseInt(playerCount) || 1 } : {}),
       })
     } catch (error) {
       // Error handled by onError
@@ -285,7 +288,7 @@ export function BookingModal({ facility, courtId, date, slot, onClose }: Booking
               <span className="text-white">{durationMinutes} mins</span>
             </div>
             <div className="flex justify-between text-sm border-t border-white/10 pt-2">
-              <span className="text-slate-400">Price/hr</span>
+              <span className="text-slate-400">{isPS ? "Price per person/hr" : "Price/hr"}</span>
               <span className="text-white">₹{slot.price}</span>
             </div>
             <div className="flex justify-between text-lg font-bold border-t border-white/10 pt-2">
@@ -298,6 +301,20 @@ export function BookingModal({ facility, courtId, date, slot, onClose }: Booking
             <div className="p-3 bg-red-500/20 border border-red-500/30 rounded-lg flex items-center gap-2 text-red-400">
               <AlertCircle className="w-5 h-5 flex-shrink-0" />
               <span className="text-sm">{error}</span>
+            </div>
+          )}
+
+          {isPS && (
+            <div>
+              <label className="block text-sm font-medium mb-2 text-slate-300">Number of Players</label>
+              <input
+                type="number"
+                min={1}
+                value={playerCount}
+                onChange={(e) => setPlayerCount(e.target.value)}
+                className="w-full p-3 border border-white/10 rounded-lg bg-[#121b24] text-white placeholder:text-slate-500 focus:border-lime-400/50 focus:outline-none"
+                disabled={isLoading}
+              />
             </div>
           )}
 
