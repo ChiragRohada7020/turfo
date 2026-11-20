@@ -10,10 +10,12 @@ import { Badge } from "@/components/ui/badge"
 import { Plus, Building2, MapPin, Users, CalendarDays, Edit, Trash2, Eye, DollarSign } from "lucide-react"
 import { formatCurrency } from "@/lib/utils"
 import { Sidebar } from "@/components/layout/Sidebar"
+import { TopNavbar } from "@/modules/shared/components/layout/TopNavbar"
 import { trpc } from "@/lib/trpc"
 
 export default function FacilitiesPage() {
   const { data: session, status } = useSession()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const { data: facilities, isLoading } = trpc.facilities.myFacilities.useQuery()
 
   const totalRevenue = (facilities || []).reduce((sum: number, f: any) => sum + (f.revenue || 0), 0)
@@ -44,8 +46,9 @@ export default function FacilitiesPage() {
 
   return (
     <div className="min-h-screen bg-[#070d12] text-white">
-      <Sidebar session={session} />
-      <div className="pt-14 md:pt-0 md:pl-[262px]">
+      <Sidebar session={session} mobileOpen={sidebarOpen} onMobileOpenChange={setSidebarOpen} />
+      <div className="min-h-screen md:pl-[262px]">
+        <TopNavbar onMenuClick={() => setSidebarOpen(true)} />
         <div className="max-w-[1800px] mx-auto p-4 sm:p-6 xl:p-7">
         <div className="flex items-center justify-between mb-6">
           <div>

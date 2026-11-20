@@ -136,7 +136,7 @@ export async function initiateCashfreePayout(params: {
         beneficiaryDetails: {
           beneficiaryId: params.beneficiaryId,
         },
-        remarks: params.remarks || "TurfPlay payout",
+        remarks: params.remarks || "Strikora payout",
       }),
     })
 

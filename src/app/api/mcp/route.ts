@@ -433,7 +433,7 @@ export async function GET(request: NextRequest) {
     if (!toolDef) return NextResponse.json({ error: "Tool not found" }, { status: 404 })
     return NextResponse.json(toolDef)
   }
-  return NextResponse.json({ name: "TurfPlay MCP Server", version: "1.0.0", tools: TOOLS, description: "Sports facility booking platform API" })
+  return NextResponse.json({ name: "Strikora MCP Server", version: "1.0.0", tools: TOOLS, description: "Sports facility booking platform API" })
 }
 
 export async function POST(request: NextRequest) {

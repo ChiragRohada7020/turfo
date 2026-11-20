@@ -21,6 +21,7 @@ import {
   X,
   LogOut,
   QrCode,
+  Lock,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -29,11 +30,18 @@ import { getNavForRole } from "../../constants/navigation"
 interface SidebarProps {
   session: any
   extra?: React.ReactNode
+  mobileOpen?: boolean
+  onMobileOpenChange?: (open: boolean) => void
 }
 
-export function Sidebar({ session, extra }: SidebarProps) {
+export function Sidebar({ session, extra, mobileOpen, onMobileOpenChange }: SidebarProps) {
   const pathname = usePathname()
-  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [internalOpen, setInternalOpen] = useState(false)
+  const sidebarOpen = mobileOpen !== undefined ? mobileOpen : internalOpen
+  const setSidebarOpen = (v: boolean) => {
+    if (onMobileOpenChange) onMobileOpenChange(v)
+    else setInternalOpen(v)
+  }
 
   const navItems = getNavForRole(session?.user?.role)
 
@@ -64,6 +72,17 @@ export function Sidebar({ session, extra }: SidebarProps) {
         <Brand />
         <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto px-4 py-6">
           {navItems.map((item) => (
+            item.locked ? (
+              <div
+                key={item.name}
+                aria-disabled="true"
+                className="flex items-center gap-3 rounded-xl px-4 py-3.5 text-sm font-medium text-slate-500 opacity-50 cursor-not-allowed"
+              >
+                <item.icon className="h-[18px] w-[18px]" />
+                <span className="truncate">{item.name}</span>
+                <Lock className="ml-auto h-3.5 w-3.5" />
+              </div>
+            ) : (
             <Link
               key={item.name}
               href={item.href}
@@ -78,11 +97,21 @@ export function Sidebar({ session, extra }: SidebarProps) {
               <span className="truncate">{item.name}</span>
               {item.badge && <span className="ml-auto text-[10px] font-bold text-slate-400">{item.badge}</span>}
             </Link>
+            )
           ))}
         </nav>
         {extra && <div className="px-3 py-2">{extra}</div>}
         {session && (
-          <div className="border-t border-white/[0.08] p-4">
+          <div className="border-t border-white/[0.08] p-4 md:hidden">
+            <div className="flex items-center justify-between mb-3">
+              <Link href="/notifications" onClick={() => setSidebarOpen(false)} className="relative flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-slate-300 hover:bg-white/5 hover:text-white">
+                <Bell className="h-4 w-4" /> Notifications
+                {/* unread badge could go here */}
+              </Link>
+              <Link href="/dashboard" onClick={() => setSidebarOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-slate-300 hover:bg-white/5 hover:text-white">
+                <Users className="h-4 w-4" /> Profile
+              </Link>
+            </div>
             <button
               onClick={() => signOut({ callbackUrl: "/" })}
               className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-400 transition hover:bg-white/5 hover:text-white"
@@ -112,6 +141,17 @@ export function Sidebar({ session, extra }: SidebarProps) {
         </div>
         <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto px-4 py-6">
           {navItems.map((item) => (
+            item.locked ? (
+              <div
+                key={item.name}
+                aria-disabled="true"
+                className="flex items-center gap-3 rounded-xl px-4 py-3.5 text-sm font-medium text-slate-500 opacity-50 cursor-not-allowed"
+              >
+                <item.icon className="h-[18px] w-[18px]" />
+                <span className="truncate">{item.name}</span>
+                <Lock className="ml-auto h-3.5 w-3.5" />
+              </div>
+            ) : (
             <Link
               key={item.name}
               href={item.href}
@@ -127,6 +167,7 @@ export function Sidebar({ session, extra }: SidebarProps) {
               <span className="truncate">{item.name}</span>
               {item.badge && <span className="ml-auto text-[10px] font-bold text-slate-400">{item.badge}</span>}
             </Link>
+            )
           ))}
         </nav>
         {extra && <div className="px-3 py-2">{extra}</div>}
@@ -143,14 +184,16 @@ export function Sidebar({ session, extra }: SidebarProps) {
         )}
       </aside>
 
-      {/* Mobile menu button */}
-      <button
-        onClick={() => setSidebarOpen(true)}
-        aria-label="Open menu"
-        className="fixed top-4 left-4 z-50 rounded-lg border border-white/10 bg-[#080f15] p-2 text-slate-300 md:hidden pointer-events-auto"
-      >
-        <Menu className="h-5 w-5" />
-      </button>
+      {/* Mobile menu button (only when uncontrolled) */}
+      {!onMobileOpenChange && (
+        <button
+          onClick={() => setSidebarOpen(true)}
+          aria-label="Open menu"
+          className="fixed top-4 left-4 z-50 rounded-lg border border-white/10 bg-[#080f15] p-2 text-slate-300 md:hidden pointer-events-auto"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+      )}
     </>
   )
 }
@@ -163,7 +206,7 @@ function Brand() {
       </div>
       <div>
         <Link href="/" className="text-[22px] font-black tracking-tight">
-          Turf<span className="text-lime-400">Play</span>
+          Strikora
         </Link>
         <p className="text-[10px] tracking-wide text-slate-500">Book · Play · Compete</p>
       </div>

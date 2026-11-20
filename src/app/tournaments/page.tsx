@@ -14,6 +14,24 @@ import { Sidebar } from "@/components/layout/Sidebar"
 
 export default function TournamentsPage() {
   const { data: session } = useSession()
+
+  if (!session) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#F7F8FC] px-4 text-[#171A2B]">
+        <div className="max-w-md w-full bg-white border border-slate-200 rounded-3xl p-8 text-center shadow-xl shadow-slate-900/5">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-500 text-white">
+            <Trophy className="h-6 w-6" />
+          </div>
+          <h1 className="text-2xl font-black tracking-tight">Tournaments</h1>
+          <p className="mt-2 text-sm text-slate-500">Please sign in to view and join tournaments.</p>
+          <Link href="/auth/login?callbackUrl=/tournaments" className="mt-6 w-full">
+            <Button className="w-full h-12 bg-orange-500 font-bold text-white hover:bg-orange-600 rounded-xl shadow-lg shadow-orange-500/20">Sign In</Button>
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
   const { data, isLoading } = trpc.tournaments.list.useQuery({ limit: 20 })
 
   const isOwner = session?.user?.role === "OWNER" || session?.user?.role === "ADMIN"
@@ -21,7 +39,7 @@ export default function TournamentsPage() {
   return (
     <div className="min-h-screen bg-[#070d12] text-white">
       <Sidebar session={session} />
-      <div className="pt-14 md:pt-0 md:pl-[262px]">
+      <div className="md:pt-0 md:pl-[262px]">
         <div className="max-w-4xl mx-auto p-4 sm:p-6">
           <div className="flex items-center justify-between mb-6">
             <div>

@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { useSession } from "next-auth/react"
+import { useSession, signOut } from "next-auth/react"
+import { Menu, Bell, LogOut } from "lucide-react"
 import {
   CalendarDays,
   Clock3,
@@ -24,6 +25,8 @@ import {
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
 import { formatCurrency, formatDate, formatTime } from "@/lib/utils"
 import { trpc } from "@/lib/trpc"
@@ -45,6 +48,7 @@ const filters = [
 
 export default function BookingsPage() {
   const { data: session, status } = useSession()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const [statusFilter, setStatusFilter] = useState("all")
   const [cancelModalOpen, setCancelModalOpen] = useState(false)
@@ -242,9 +246,35 @@ export default function BookingsPage() {
 
   return (
     <>
-      <Sidebar session={session} />
+      <Sidebar session={session} mobileOpen={sidebarOpen} onMobileOpenChange={setSidebarOpen} />
 
-      <main className="min-h-screen bg-[#06110e] text-white md:pl-[262px] pt-14 md:pt-0">
+      <main className="min-h-screen bg-[#06110e] text-white md:pl-[262px]">
+        <header className="sticky top-0 z-20 flex h-[64px] items-center gap-3 border-b border-white/[0.08] bg-[#080f15]/95 px-4 backdrop-blur-xl sm:px-6">
+          <button onClick={() => setSidebarOpen(true)} aria-label="Open menu" className="rounded-lg border border-white/10 p-2 text-slate-300 md:hidden">
+            <Menu className="h-5 w-5" />
+          </button>
+          <div className="ml-auto" />
+          <button aria-label="Notifications" className="relative rounded-full border border-white/10 bg-[#121b24] p-2.5 text-slate-300">
+            <Bell className="h-4 w-4" />
+          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="flex shrink-0 items-center gap-2 rounded-xl p-1.5 hover:bg-white/5">
+                <Avatar className="h-9 w-9 border border-white/10">
+                  <AvatarImage src={session.user?.image || ""} alt={session.user?.name || "User"} />
+                  <AvatarFallback className="bg-lime-400 font-bold text-black">{(session.user?.name || "U")[0]?.toUpperCase()}</AvatarFallback>
+                </Avatar>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="border-white/10 bg-[#111a22] text-white">
+              <DropdownMenuItem>{session.user?.email || "Account"}</DropdownMenuItem>
+              <DropdownMenuSeparator className="bg-white/10" />
+              <DropdownMenuItem onClick={() => signOut({ callbackUrl: "/" })}>
+                <LogOut className="mr-2 h-4 w-4" /> Sign Out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </header>
         <div className="mx-auto max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8">
 
           {/* Header */}
@@ -646,7 +676,7 @@ export default function BookingsPage() {
           )}
 
           <div className="mt-8 flex flex-col items-center justify-between gap-2 border-t border-white/[0.06] py-5 text-center text-xs text-slate-600 sm:flex-row sm:text-left">
-            <p>TurfPlay · Your games, your team, your turf.</p>
+            <p>Strikora · Your games, your team, your turf.</p>
             <p>Manage your reservations in one place.</p>
           </div>
         </div>

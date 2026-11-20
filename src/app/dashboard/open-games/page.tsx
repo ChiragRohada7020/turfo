@@ -2,12 +2,12 @@
 
 import { useMemo, useState } from "react"
 import Link from "next/link"
-import { useSession } from "next-auth/react"
+import { useSession, signOut } from "next-auth/react"
 import {
   CalendarDays, Clock3, MapPin, Users, User,
   Search, Trophy, Zap, Plus, ArrowRight,
   ShieldCheck, Gamepad2, ChevronRight, Loader2,
-  CheckCircle, Activity
+  CheckCircle, Activity, Menu, LogOut
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -15,6 +15,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
 import {
   formatCurrency,
@@ -30,6 +31,7 @@ export default function OpenGamesPage() {
   const { data: session, status } = useSession()
   const [search, setSearch] = useState("")
   const [activeFilter, setActiveFilter] = useState("All Games")
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const {
     data: openGames,
@@ -133,16 +135,15 @@ export default function OpenGamesPage() {
 
   return (
     <div className="min-h-screen bg-[#06100e] text-white">
-      <Sidebar session={session} />
+      <Sidebar session={session} mobileOpen={sidebarOpen} onMobileOpenChange={setSidebarOpen} />
 
-      <div className="pt-14 md:pt-0 md:pl-[262px]">
-
+      <div className="md:pl-[262px]">
+ 
         {/* TOP NAVIGATION */}
         <header className="sticky top-0 z-30 flex h-[68px] items-center justify-between gap-4 border-b border-white/[0.07] bg-[#07120f]/95 px-5 backdrop-blur-xl md:px-8">
-          <div className="flex items-center gap-2 text-sm text-slate-300">
-            <MapPin className="h-4 w-4 text-lime-400" />
-            Pachora, Maharashtra
-          </div>
+          <button onClick={() => setSidebarOpen(true)} aria-label="Open menu" className="rounded-lg border border-white/10 p-2 text-slate-300 md:hidden">
+            <Menu className="h-5 w-5" />
+          </button>
 
           <div className="hidden w-full max-w-md md:block">
             <div className="relative">
@@ -151,19 +152,35 @@ export default function OpenGamesPage() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search games, turfs or players..."
-                className="h-10 rounded-full border-white/10 bg-white/[0.04] pl-11 text-sm text-white placeholder:text-slate-500"
+                className="h-10 rounded-full border-white/10 bg-white/[0.04] pl-11 text-sm text-white placeholder:text-slate-500 focus:border-lime-400/50"
               />
             </div>
           </div>
 
           <div className="flex items-center gap-3">
             <Activity className="h-5 w-5 text-lime-400" />
-            <Avatar className="h-9 w-9 border border-white/10">
-              <AvatarImage src={session.user?.image || ""} />
-              <AvatarFallback className="bg-lime-400/20 text-lime-400">
-                {session.user?.name?.[0] || "U"}
-              </AvatarFallback>
-            </Avatar>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex shrink-0 items-center gap-2 rounded-xl p-1.5 hover:bg-white/5">
+                  <Avatar className="h-9 w-9 border border-white/10">
+                    <AvatarImage src={session.user?.image || ""} />
+                    <AvatarFallback className="bg-lime-400/20 text-lime-400">
+                      {session.user?.name?.[0] || "U"}
+                    </AvatarFallback>
+                  </Avatar>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="border-white/10 bg-[#111a22] text-white">
+                <DropdownMenuItem>{session.user?.email || "Account"}</DropdownMenuItem>
+                <DropdownMenuSeparator className="bg-white/10" />
+                <DropdownMenuItem onClick={() => (window.location.href = "/dashboard")}>
+                  Dashboard
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => signOut({ callbackUrl: "/" })}>
+                  <LogOut className="mr-2 h-4 w-4" /> Sign Out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </header>
 

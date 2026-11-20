@@ -9,6 +9,7 @@ import { Role, SportType, SurfaceType, BookingStatus, PaymentStatus, PayoutStatu
 import { randomBytes } from "crypto"
 import bcrypt from "bcryptjs"
 import { msg91 } from "@/lib/msg91/service"
+import { authyo } from "@/lib/authyo/service"
 import { createCashfreeOrder, generateOrderId, createCashfreeRefund, initiateCashfreePayout, createCashfreeContact } from "@/lib/cashfree"
 import { trackTaskProgress } from "@/lib/rewards/taskProgress"
 
@@ -31,6 +32,17 @@ export const appRouter = createTRPCRouter({
 
         if (existingUser) {
           throw new Error("Email already registered")
+        }
+
+        // Phone uniqueness per role
+        if (input.phone) {
+          const digits = input.phone.replace(/\D/g, "")
+          const last10 = digits.slice(-10)
+          const phoneVariants = [`+91${last10}`, `91${last10}`, last10]
+          const existingPhone = await prisma.user.findFirst({
+            where: { role: input.role, phone: { in: phoneVariants } },
+          })
+          if (existingPhone) throw new Error("Phone number already registered for this role")
         }
 
         const passwordHash = await bcrypt.hash(input.password, 12)
@@ -135,22 +147,32 @@ export const appRouter = createTRPCRouter({
 
     // Public OTP endpoints for registration
     sendRegistrationOTP: publicProcedure
-      .input(z.object({ phone: z.string() }))
+      .input(z.object({ phone: z.string(), email: z.string().email().optional(), role: z.nativeEnum(Role).optional() }))
       .mutation(async ({ input }) => {
-        const normalizedPhone = input.phone.startsWith("+91")
-          ? input.phone
-          : input.phone.startsWith("91")
-          ? `+${input.phone}`
-          : `+91${input.phone}`
+        const digits = input.phone.replace(/\D/g, "")
+        const last10 = digits.slice(-10)
+        const phoneVariants = [`+91${last10}`, `91${last10}`, last10, `+${digits}`]
 
-        // Check if phone already registered
-        const existing = await prisma.user.findFirst({
-          where: { phone: normalizedPhone },
-        })
-        if (existing) throw new Error("Phone number already registered")
+        const normalizedPhone = `+91${last10}`
 
-        const result = await msg91.sendOTP(normalizedPhone)
-        return { success: true, otp: (result as any).otp }
+        if (input.role) {
+          const existingPhone = await prisma.user.findFirst({
+            where: { role: input.role, phone: { in: phoneVariants } },
+          })
+          if (existingPhone) throw new Error("Phone number already registered for this role")
+        }
+
+        // Check if email already registered
+        if (input.email) {
+          const existingEmail = await prisma.user.findUnique({
+            where: { email: input.email.toLowerCase() },
+          })
+          if (existingEmail) throw new Error("Email already registered")
+        }
+
+        const result = await authyo.sendOTP(normalizedPhone)
+        if (!result.success) throw new Error(result.message)
+        return { success: true }
       }),
 
     verifyRegistrationOTP: publicProcedure
@@ -162,7 +184,7 @@ export const appRouter = createTRPCRouter({
           ? `+${input.phone}`
           : `+91${input.phone}`
 
-        await msg91.verifyOTP(normalizedPhone, input.otp)
+        await authyo.verifyOTP(normalizedPhone, input.otp)
         return { success: true, phone: normalizedPhone }
       }),
 
@@ -1947,8 +1969,9 @@ payments: createTRPCRouter({
         discountValue: z.number().min(0),
         minBookingAmount: z.number().min(0).default(0),
         maxDiscount: z.number().optional(),
-        validFrom: z.string().datetime(),
-        validTo: z.string().datetime(),
+        validityDays: z.number().min(1).default(30),
+        validFrom: z.string().datetime().optional(),
+        validTo: z.string().datetime().optional(),
         maxUses: z.number().min(1).default(100),
         maxUsesPerUser: z.number().min(1).default(1),
         targetAudience: z.enum(["ALL", "FREQUENT", "NEW", "HIGH_RELIABILITY", "SPECIFIC_SPORT"]).default("ALL"),
@@ -1959,11 +1982,11 @@ payments: createTRPCRouter({
       .mutation(async ({ ctx, input }) => {
         let sponsorId = input.sponsorId
         if (!sponsorId) {
-          let systemSponsor = await prisma.sponsor.findFirst({ where: { name: "TurfPlay System" } })
+          let systemSponsor = await prisma.sponsor.findFirst({ where: { name: "Strikora System" } })
           if (!systemSponsor) {
             // need a user for sponsor; use first admin or create? fallback to ctx user
             systemSponsor = await prisma.sponsor.create({
-              data: { name: "TurfPlay System", contactEmail: "system@turfplay.local", userId: ctx.session.user.id, isApproved: true, isActive: true },
+              data: { name: "Strikora System", contactEmail: "system@strikora.local", userId: ctx.session.user.id, isApproved: true, isActive: true },
             })
           }
           sponsorId = systemSponsor.id
@@ -1985,14 +2008,15 @@ payments: createTRPCRouter({
             discountValue: input.discountValue,
             minBookingAmount: input.minBookingAmount,
             maxDiscount: input.maxDiscount,
-            validFrom: new Date(input.validFrom),
-            validTo: new Date(input.validTo),
+            validFrom: input.validFrom ? new Date(input.validFrom) : new Date(),
+            validTo: input.validTo ? new Date(input.validTo) : new Date(Date.now() + (input.validityDays || 30) * 24 * 60 * 60 * 1000),
             maxUses: input.maxUses,
             maxUsesPerUser: input.maxUsesPerUser,
             targetAudience: input.targetAudience,
             targetSport: input.targetSport,
             targetCity: input.targetCity,
             imageUrl: input.imageUrl,
+            validityDays: input.validityDays ?? 30,
             isActive: false, // Requires admin approval
           },
         })
@@ -2012,6 +2036,7 @@ payments: createTRPCRouter({
         validTo: z.string().datetime().optional(),
         maxUses: z.number().optional(),
         maxUsesPerUser: z.number().optional(),
+        validityDays: z.number().min(1).optional(),
         isActive: z.boolean().optional(),
         imageUrl: z.string().optional(),
       }))
@@ -2034,6 +2059,7 @@ payments: createTRPCRouter({
             ...(input.validTo && { validTo: new Date(input.validTo) }),
             ...(input.maxUses !== undefined && { maxUses: input.maxUses }),
             ...(input.maxUsesPerUser !== undefined && { maxUsesPerUser: input.maxUsesPerUser }),
+            ...(input.validityDays !== undefined && { validityDays: input.validityDays }),
             ...(input.isActive !== undefined && { isActive: input.isActive }),
             ...(input.imageUrl !== undefined && { imageUrl: input.imageUrl }),
           },

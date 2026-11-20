@@ -22,14 +22,14 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
+       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
           throw new Error("Invalid credentials")
         }
 
-        const user = await authPrisma.user.findUnique({
-          where: { email: credentials.email },
-        })
+        const identifier = credentials.email.trim()
+
+        const user = await authPrisma.user.findUnique({ where: { email: identifier.toLowerCase() } })
 
         if (!user || !user.passwordHash) {
           throw new Error("Invalid credentials")

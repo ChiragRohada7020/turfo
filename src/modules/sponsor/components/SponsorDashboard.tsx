@@ -60,6 +60,7 @@ export default function SponsorDashboardPage() {
     validFrom: new Date().toISOString().split("T")[0],
     validTo: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
     couponCount: 100,
+    validityDays: 30,
     imageUrl: "",
   })
 
@@ -150,7 +151,7 @@ export default function SponsorDashboardPage() {
     return (
       <div className="min-h-screen bg-[#070d12] text-white">
         <Sidebar session={session} />
-        <div className="pt-14 md:pt-0 md:pl-[262px]">
+        <div className="md:pt-0 md:pl-[262px]">
           <div className="w-full px-6 py-6">
             <div className="text-center py-16">
               <Building2 className="w-16 h-16 text-slate-500 mx-auto mb-4" />
@@ -166,7 +167,7 @@ export default function SponsorDashboardPage() {
   return (
     <div className="min-h-screen bg-[#070d12] text-white">
       <Sidebar session={session} />
-      <div className="pt-14 md:pt-0 md:pl-[262px]">
+      <div className="md:pt-0 md:pl-[262px]">
         <div className="w-full px-6 py-6">
           {/* Header */}
           <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between mb-6 gap-4">
@@ -174,7 +175,7 @@ export default function SponsorDashboardPage() {
               <img src={sponsor.logoUrl || ""} alt={sponsor.name} className="w-8 h-8 rounded-lg object-cover" />
               <div>
                 <h1 className="text-2xl font-bold text-white">{sponsor.name}</h1>
-                <p className="text-sm text-slate-400">Track your offers, distribution, customers & business growth on TurfPlay.</p>
+                <p className="text-sm text-slate-400">Track your offers, distribution, customers & business growth on Strikora.</p>
               </div>
             </div>
             <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
@@ -189,90 +190,133 @@ export default function SponsorDashboardPage() {
                   <Plus className="w-4 h-4" /> Create New Offer
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl bg-[#111a22] border-white/10 text-white max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Create New Offer</DialogTitle>
+              <DialogContent className="max-w-2xl bg-[#0f1720] border border-white/10 text-white rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader className="space-y-1">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-lime-400/10">
+                      <Tag className="h-5 w-5 text-lime-400" />
+                    </div>
+                    <div>
+                      <DialogTitle className="text-xl font-bold">Create New Offer</DialogTitle>
+                      <p className="text-xs text-slate-400">Fill in the details to publish a new coupon for players</p>
+                    </div>
+                  </div>
                 </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Offer Code</Label>
-                      <Input value={newOffer.code} onChange={(e) => setNewOffer({ ...newOffer, code: e.target.value })} placeholder="e.g. SAVE20" className="bg-[#121b24] border-white/10 text-white" />
+                <div className="space-y-6 py-2">
+                  <div className="space-y-4 rounded-xl border border-white/5 bg-[#121b24] p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Basic Info</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-slate-300">Offer Code</Label>
+                        <Input value={newOffer.code} onChange={(e) => setNewOffer({ ...newOffer, code: e.target.value })} placeholder="e.g. SAVE20" className="bg-[#0c141c] border-white/10 text-white focus:border-lime-400" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-slate-300">Title</Label>
+                        <Input value={newOffer.title} onChange={(e) => setNewOffer({ ...newOffer, title: e.target.value })} placeholder="Offer title" className="bg-[#0c141c] border-white/10 text-white focus:border-lime-400" />
+                      </div>
                     </div>
                     <div className="space-y-2">
-                      <Label>Title</Label>
-                      <Input value={newOffer.title} onChange={(e) => setNewOffer({ ...newOffer, title: e.target.value })} placeholder="Offer title" className="bg-[#121b24] border-white/10 text-white" />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Description</Label>
-                    <Textarea value={newOffer.description} onChange={(e) => setNewOffer({ ...newOffer, description: e.target.value })} placeholder="Describe your offer" className="bg-[#121b24] border-white/10 text-white" />
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div className="space-y-2">
-                      <Label>Discount Type</Label>
-                      <select value={newOffer.discountType} onChange={(e) => setNewOffer({ ...newOffer, discountType: e.target.value })} className="w-full bg-[#121b24] border border-white/10 rounded-md px-3 py-2 text-white">
-                        <option value="PERCENTAGE">Percentage</option>
-                        <option value="FIXED">Fixed Amount</option>
-                      </select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Discount Value</Label>
-                      <Input type="number" value={newOffer.discountValue} onChange={(e) => setNewOffer({ ...newOffer, discountValue: Number(e.target.value) })} className="bg-[#121b24] border-white/10 text-white" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Max Discount (₹)</Label>
-                      <Input type="number" value={newOffer.maxDiscount} onChange={(e) => setNewOffer({ ...newOffer, maxDiscount: Number(e.target.value) })} className="bg-[#121b24] border-white/10 text-white" />
+                      <Label className="text-slate-300">Description</Label>
+                      <Textarea value={newOffer.description} onChange={(e) => setNewOffer({ ...newOffer, description: e.target.value })} placeholder="Describe your offer" className="bg-[#0c141c] border-white/10 text-white focus:border-lime-400 min-h-[80px]" />
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Valid From</Label>
-                      <Input type="date" value={newOffer.validFrom} onChange={(e) => setNewOffer({ ...newOffer, validFrom: e.target.value })} className="bg-[#121b24] border-white/10 text-white" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Valid To</Label>
-                      <Input type="date" value={newOffer.validTo} onChange={(e) => setNewOffer({ ...newOffer, validTo: e.target.value })} className="bg-[#121b24] border-white/10 text-white" />
+
+                  <div className="space-y-4 rounded-xl border border-white/5 bg-[#121b24] p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Discount</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-slate-300">Type</Label>
+                        <select value={newOffer.discountType} onChange={(e) => setNewOffer({ ...newOffer, discountType: e.target.value })} className="w-full bg-[#0c141c] border border-white/10 rounded-md px-3 py-2 text-white focus:border-lime-400">
+                          <option value="PERCENTAGE">Percentage</option>
+                          <option value="FIXED">Fixed Amount</option>
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-slate-300">Value</Label>
+                        <Input type="number" value={newOffer.discountValue} onChange={(e) => setNewOffer({ ...newOffer, discountValue: Number(e.target.value) })} className="bg-[#0c141c] border-white/10 text-white focus:border-lime-400" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-slate-300">Max Discount (₹)</Label>
+                        <Input type="number" value={newOffer.maxDiscount} onChange={(e) => setNewOffer({ ...newOffer, maxDiscount: Number(e.target.value) })} className="bg-[#0c141c] border-white/10 text-white focus:border-lime-400" />
+                      </div>
                     </div>
                   </div>
-                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                     <div className="space-y-2">
-                       <Label>Number of Coupons</Label>
-                       <Input type="number" value={newOffer.couponCount} onChange={(e) => setNewOffer({ ...newOffer, couponCount: Number(e.target.value) })} className="bg-[#121b24] border-white/10 text-white" />
-                     </div>
-                     <div className="space-y-2">
-                       <Label>Offer Image</Label>
-                       <Input type="file" accept="image/*" onChange={handleImageUpload} className="bg-[#121b24] border-white/10 text-white" />
-                       {newOffer.imageUrl && (
-                         <img src={newOffer.imageUrl} alt="preview" className="mt-2 h-20 w-full object-cover rounded-lg border border-white/10" />
-                       )}
-                     </div>
-                   </div>
-                   <div className="flex justify-end gap-2 pt-2">
-                     <Button variant="outline" className="border-white/10 text-white" onClick={() => setCreateOpen(false)}>Cancel</Button>
-                     <Button
-                       className="bg-lime-400 font-bold text-black hover:bg-lime-300"
-                       disabled={createOffer.isPending || !newOffer.code || !newOffer.title}
-                       onClick={() =>
-                         createOffer.mutate({
-                           sponsorId: sponsor?.id,
-                           code: newOffer.code,
-                           title: newOffer.title,
-                           description: newOffer.description,
-                           discountType: newOffer.discountType as any,
-                           discountValue: newOffer.discountValue,
-                           minBookingAmount: newOffer.minBookingAmount,
-                           maxDiscount: newOffer.maxDiscount || undefined,
-                           validFrom: new Date(newOffer.validFrom).toISOString(),
-                           validTo: new Date(newOffer.validTo).toISOString(),
-                           maxUses: newOffer.couponCount,
-                           imageUrl: newOffer.imageUrl || undefined,
-                         })
-                       }
-                     >
-                       {createOffer.isPending ? "Creating..." : "Create Offer"}
-                     </Button>
-                   </div>
+
+                  <div className="space-y-4 rounded-xl border border-white/5 bg-[#121b24] p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Availability</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-slate-300">Number of Coupons</Label>
+                        <Input type="number" value={newOffer.couponCount} onChange={(e) => setNewOffer({ ...newOffer, couponCount: Number(e.target.value) })} className="bg-[#0c141c] border-white/10 text-white focus:border-lime-400" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-slate-300">Valid for (days) after redemption</Label>
+                        <Input type="number" value={newOffer.validityDays} onChange={(e) => setNewOffer({ ...newOffer, validityDays: Number(e.target.value) })} className="bg-[#0c141c] border-white/10 text-white focus:border-lime-400" />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-slate-300">Min Booking Amount (₹)</Label>
+                      <Input type="number" value={newOffer.minBookingAmount} onChange={(e) => setNewOffer({ ...newOffer, minBookingAmount: Number(e.target.value) })} className="bg-[#0c141c] border-white/10 text-white focus:border-lime-400" />
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 rounded-xl border border-white/5 bg-[#121b24] p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Offer Image</p>
+                    <div className="flex flex-col sm:flex-row gap-4 items-start">
+                      <div className="flex-1">
+                        <Input type="file" accept="image/*" onChange={handleImageUpload} className="bg-[#0c141c] border-white/10 text-white focus:border-lime-400" />
+                      </div>
+                      {newOffer.imageUrl && (
+                        <img src={newOffer.imageUrl} alt="preview" className="h-24 w-32 object-cover rounded-lg border border-white/10" />
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-lime-400/20 bg-gradient-to-br from-lime-400/5 to-emerald-500/5 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-3">Live Preview</p>
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="min-w-0">
+                        <p className="font-mono text-lg font-bold text-lime-300">{newOffer.code || "CODE"}</p>
+                        <p className="text-sm font-semibold text-white truncate">{newOffer.title || "Offer title"}</p>
+                        <p className="text-xs text-slate-400 mt-1 line-clamp-2">{newOffer.description || "Description"}</p>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <p className="text-3xl font-black text-lime-400">
+                          {newOffer.discountType === "PERCENTAGE" ? `${newOffer.discountValue}%` : `₹${newOffer.discountValue}`}
+                        </p>
+                        <p className="text-[10px] text-slate-500">OFF</p>
+                      </div>
+                    </div>
+                    {newOffer.imageUrl && (
+                      <img src={newOffer.imageUrl} alt="preview" className="mt-3 h-28 w-full object-cover rounded-lg border border-white/10" />
+                    )}
+                    <p className="mt-3 text-[10px] text-slate-500">Valid for {newOffer.validityDays} days after redemption · {newOffer.couponCount} coupons</p>
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-2">
+                    <Button variant="outline" className="border-white/10 text-white hover:bg-white/5" onClick={() => setCreateOpen(false)}>Cancel</Button>
+                    <Button
+                      className="bg-lime-400 font-bold text-black hover:bg-lime-300 px-6"
+                      disabled={createOffer.isPending || !newOffer.code || !newOffer.title}
+                      onClick={() =>
+                        createOffer.mutate({
+                          sponsorId: sponsor?.id,
+                          code: newOffer.code,
+                          title: newOffer.title,
+                          description: newOffer.description,
+                          discountType: newOffer.discountType as any,
+                          discountValue: newOffer.discountValue,
+                          minBookingAmount: newOffer.minBookingAmount,
+                          maxDiscount: newOffer.maxDiscount || undefined,
+                          validityDays: newOffer.validityDays,
+                          maxUses: newOffer.couponCount,
+                          imageUrl: newOffer.imageUrl || undefined,
+                        })
+                      }
+                    >
+                      {createOffer.isPending ? "Creating..." : "Create Offer"}
+                    </Button>
+                  </div>
                 </div>
               </DialogContent>
             </Dialog>

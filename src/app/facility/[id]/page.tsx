@@ -177,7 +177,7 @@ const { data: availability, isLoading: availabilityLoading, refetch: refetchAvai
     <div className="min-h-screen bg-[#070d12] text-white">
       <Sidebar session={session as any} />
 
-      <div className="pt-14 md:pt-0 md:pl-[262px] pb-20 md:pb-0">
+      <div className="md:pt-0 md:pl-[262px] pb-20 md:pb-0">
         <header className="sticky top-0 z-20 bg-[#070d12]/80 backdrop-blur border-b border-white/10 px-4 py-3 pl-14 md:pl-4">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0">

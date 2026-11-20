@@ -38,8 +38,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 })
     }
 
-    // Check if expired
-    if (new Date() > redemption.offer.validTo) {
+    const validityDays = (redemption.offer as any).validityDays || 30
+    const expiresAt = new Date(redemption.redeemedAt.getTime() + validityDays * 24 * 60 * 60 * 1000)
+    if (new Date() > expiresAt) {
       await prisma.offerRedemption.update({
         where: { id: redemption.id },
         data: { status: "EXPIRED" },

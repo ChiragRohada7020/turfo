@@ -36,72 +36,7 @@ const FILTERS = [
   { name: "Claimed Offers" },
 ]
 
-const PARTNER_OFFERS = [
-  {
-    brand: "Domino's",
-    title: "20% OFF",
-    subtitle: "on orders above ₹199",
-    category: "FOOD & DRINKS",
-    image: "https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=400&q=80",
-  },
-  {
-    brand: "Burger Hut",
-    title: "50% OFF",
-    subtitle: "on orders above ₹299",
-    category: "FOOD & DRINKS",
-    image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400&q=80",
-  },
-  {
-    brand: "SportZone",
-    title: "10% OFF",
-    subtitle: "on all sports accessories",
-    category: "SPORTS GEAR",
-    image: "https://images.unsplash.com/photo-1526510154141-61f521a47887?w=400&q=80",
-  },
-  {
-    brand: "Café Brew",
-    title: "15% OFF",
-    subtitle: "on all beverages",
-    category: "CAFE",
-    image: "https://images.unsplash.com/photo-1552027710-c820d710873d?w=400&q=80",
-  },
-]
-
-const CHALLENGES = [
-  {
-    title: "Play Consistently",
-    subtitle: "Play on 4 different days within 7 days",
-    value: "2 / 4 days",
-    reward: "+100 Points",
-    status: "In Progress",
-    progress: 50,
-  },
-  {
-    title: "Build a Team",
-    subtitle: "Create a team and add 5 players",
-    value: "5 / 5",
-    reward: "+150 Points",
-    status: "Claim Reward",
-    progress: 100,
-    complete: true,
-  },
-  {
-    title: "Book & Play",
-    subtitle: "Complete 3 turf bookings",
-    value: "1 / 3",
-    reward: "+200 Points",
-    status: "In Progress",
-    progress: 33,
-  },
-  {
-    title: "Refer a Friend",
-    subtitle: "Invite a friend who books a turf",
-    value: "0 / 1",
-    reward: "+300 Points",
-    status: "Invite Now",
-    progress: 0,
-  },
-]
+const PARTNER_OFFERS: any[] = []
 
 export default function OffersPage() {
   const { data: session } = useSession()
@@ -114,6 +49,10 @@ export default function OffersPage() {
     },
   })
   const { data: myRedemptions } = trpc.offers.myRedemptions.useQuery()
+  const redeemedCount = (myRedemptions || []).filter((r: any) => r.status === "REDEEMED").length
+  const totalRedemptions = (myRedemptions || []).length
+  const pendingCount = totalRedemptions - redeemedCount
+  const redeemedPoints = (myRedemptions || []).filter((r: any) => r.status === "REDEEMED").reduce((sum: number, r: any) => sum + (r.discountApplied || 0), 0)
   const handleUseOffer = async (offer: any) => {
     try {
       const res = await createRedemption.mutateAsync({ offerId: offer.id })
@@ -172,18 +111,7 @@ export default function OffersPage() {
           <button onClick={() => {}} aria-label="Open menu" className="rounded-lg border border-white/10 p-2 text-slate-300 md:hidden">
             <Menu className="h-5 w-5" />
           </button>
-          <div className="hidden shrink-0 items-center gap-2 rounded-xl border border-white/10 bg-[#121c25] px-3 py-2 text-sm text-slate-300 sm:flex">
-            <MapPin className="h-4 w-4" />
-            Pachora, Maharashtra
-            <ChevronDown className="h-4 w-4 text-slate-500" />
-          </div>
-          <div className="relative mx-auto w-full max-w-[590px]">
-            <SearchIcon className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-            <input
-              placeholder="Search turfs, sports, players..."
-              className="h-10 w-full rounded-xl border border-white/10 bg-[#121b24] pl-10 pr-4 text-sm text-white outline-none placeholder:text-slate-500 focus:border-lime-400/50"
-            />
-          </div>
+          <div className="ml-auto" />
           <button aria-label="Notifications" className="relative rounded-full border border-white/10 bg-[#121b24] p-2.5 text-slate-300">
             <Bell className="h-4 w-4" />
             <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500" />
@@ -253,6 +181,7 @@ export default function OffersPage() {
           </div>
 
           {/* Sponsored Offers */}
+          {(activeFilter === "All Offers" || activeFilter === "Partner Offers") && (
           <div className="mb-6">
             <div className="mb-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -265,7 +194,7 @@ export default function OffersPage() {
               </Link>
             </div>
             <div className="flex gap-4 overflow-x-auto pb-2">
-              {(displayOffers ? displayOffers : PARTNER_OFFERS).map((offer: any) => {
+              {(displayOffers || []).map((offer: any) => {
                 const redemption = myRedemptions?.find((r: any) => r.offerId === offer.id || r.offer?.id === offer.id)
                 const isUsed = redemption?.status === "REDEEMED"
                 const isClaimed = !!redemption
@@ -303,8 +232,14 @@ export default function OffersPage() {
                 </Card>
                 )
               })}
+              {(!displayOffers || displayOffers.length === 0) && (
+                <div className="flex-1 min-w-[200px] rounded-2xl border border-white/10 bg-[#0c1916] p-6 text-center text-sm text-slate-400">
+                  No offers available right now. Check back soon!
+                </div>
+              )}
             </div>
           </div>
+          )}
 
           {/* Rewards grid */}
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -338,11 +273,11 @@ export default function OffersPage() {
                   </div>
                   <div className="mt-2 flex items-center justify-between text-xs text-slate-400">
                     <span>Points redeemed</span>
-                    <span className="text-white font-bold">0</span>
+                    <span className="text-white font-bold">{redeemedPoints}</span>
                   </div>
                   <div className="mt-2 flex items-center justify-between text-xs text-slate-400">
                     <span>Pending points</span>
-                    <span className="text-white font-bold">0</span>
+                    <span className="text-white font-bold">{pendingCount}</span>
                   </div>
                 </div>
               </CardContent>

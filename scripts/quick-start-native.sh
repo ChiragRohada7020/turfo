@@ -43,18 +43,18 @@ sudo -u $APP_USER pm2 startup
 
 # 7. Configure Nginx
 echo "Configuring Nginx..."
-cp docker/nginx-native.conf /etc/nginx/sites-available/erp.rohadas.in
-ln -sf /etc/nginx/sites-available/erp.rohadas.in /etc/nginx/sites-enabled/
+cp docker/nginx-native.conf /etc/nginx/sites-available/strikora.in
+ln -sf /etc/nginx/sites-available/strikora.in /etc/nginx/sites-enabled/
 rm -f /etc/nginx/sites-enabled/default
 nginx -t && systemctl reload nginx
 
 # 8. Setup SSL with Certbot
 echo "Setting up SSL certificate..."
-certbot --nginx -d erp.rohadas.in --non-interactive --agree-tos --email admin@rohadas.in --redirect
+certbot --nginx -d strikora.in --non-interactive --agree-tos --email admin@rohadas.in --redirect
 
 echo ""
 echo "=== Deployment Complete ==="
-echo "App running at: https://erp.rohadas.in"
+echo "App running at: https://strikora.in"
 echo ""
 echo "Useful commands:"
 echo "  pm2 status          - Check app status"

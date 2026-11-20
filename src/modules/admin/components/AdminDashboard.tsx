@@ -44,6 +44,12 @@ export default function AdminPage() {
   const { data: usersData } = trpc.admin.users.useQuery({ limit: 10 })
   const { data: facilitiesData } = trpc.admin.facilities.useQuery({ limit: 10 })
   const { data: pendingOwnersData } = trpc.admin.pendingOwners.useQuery({ limit: 20 })
+  const verifyOwner = trpc.admin.verifyOwner.useMutation({
+    onSuccess: () => {
+      // refetch
+      window.location.reload()
+    },
+  })
 
   if (!session) {
     return (
@@ -199,10 +205,10 @@ export default function AdminPage() {
                       <p className="font-medium text-white">{owner.name || "N/A"}</p>
                       <p className="text-xs text-slate-400">{owner.email}</p>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Button size="sm" className="bg-lime-400 font-bold text-black hover:bg-lime-300">Approve</Button>
-                      <Button size="sm" variant="outline" className="border-red-500/25 text-red-400 hover:bg-red-500/10">Reject</Button>
-                    </div>
+                      <div className="flex items-center gap-2">
+                        <Button size="sm" className="bg-lime-400 font-bold text-black hover:bg-lime-300" onClick={() => verifyOwner.mutate({ userId: owner.id, action: "VERIFY" })} disabled={verifyOwner.isPending}>Approve</Button>
+                        <Button size="sm" variant="outline" className="border-red-500/25 text-red-400 hover:bg-red-500/10" onClick={() => verifyOwner.mutate({ userId: owner.id, action: "REJECT" })} disabled={verifyOwner.isPending}>Reject</Button>
+                      </div>
                   </div>
                 ))}
               </div>

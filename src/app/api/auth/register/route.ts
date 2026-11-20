@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import bcrypt from "bcryptjs"
 import { Role } from "@prisma/client"
+import { sendWelcomeEmail } from "@/lib/email/service"
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,22 +24,33 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Password must be at least 8 characters" }, { status: 400 })
     }
 
+    // Validate role (only PLAYER or OWNER allowed via registration)
+    const userRole = role === "OWNER" ? Role.OWNER : role === "SPONSOR" ? Role.SPONSOR : Role.PLAYER
+
+    const normalizedPhone = phone ? (phone.startsWith("+91") ? phone.trim() : phone.startsWith("91") ? `+${phone.trim()}` : `+91${phone.trim().replace(/\D/g, "").slice(-10)}`) : null
+
+    if (normalizedPhone) {
+      const last10 = normalizedPhone.replace(/\D/g, "").slice(-10)
+      const existingPhone = await prisma.user.findFirst({
+        where: {
+          role: userRole,
+          phone: { in: [`+91${last10}`, `91${last10}`, last10, normalizedPhone] },
+        },
+      })
+      if (existingPhone) return NextResponse.json({ error: "Phone number already registered for this role" }, { status: 400 })
+    }
+
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
       where: { email: email.toLowerCase() },
     })
-
     if (existingUser) {
       return NextResponse.json({ error: "Email already registered" }, { status: 400 })
     }
 
-    // Validate role (only PLAYER or OWNER allowed via registration)
-    const userRole = role === "OWNER" ? Role.OWNER : Role.PLAYER
-
     // Players are auto-verified; owners require admin approval before login
     const isAutoVerified = userRole === Role.PLAYER
 
-    // Hash password
     const passwordHash = await bcrypt.hash(password, 12)
 
     // Create user
@@ -47,7 +59,7 @@ export async function POST(request: NextRequest) {
         name: name?.trim() || null,
         email: email.toLowerCase(),
         passwordHash,
-        phone: phone?.trim() || null,
+        phone: normalizedPhone,
         role: userRole,
         isPhoneVerified: phoneVerified === true,
         isVerified: isAutoVerified,
@@ -56,6 +68,11 @@ export async function POST(request: NextRequest) {
 
     // TODO: Send welcome email via SendGrid
     // TODO: Send welcome SMS via MSG91 if phone provided
+
+    // Send welcome email (non-blocking)
+    if (user.email) {
+      sendWelcomeEmail(user.email, user.name).catch(() => {})
+    }
 
     return NextResponse.json({
       success: true,

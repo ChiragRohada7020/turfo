@@ -7,7 +7,7 @@ import {
   ShieldCheck, Users, Trophy, CalendarDays, MapPin, Clock3,
   Plus, Share2, ChevronRight, Search, Bell, MoreHorizontal,
   Pencil, UserPlus, Swords, Settings, X, Zap, Crown,
-  ArrowUpRight, Filter, Loader2
+  ArrowUpRight, Filter, Loader2, Menu
 } from "lucide-react"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -23,6 +23,7 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
 import { Sidebar } from "@/modules/shared/components/layout/Sidebar"
+import { TopNavbar } from "@/modules/shared/components/layout/TopNavbar"
 import { trpc } from "@/lib/trpc"
 
 const SPORT_OPTIONS = [
@@ -188,6 +189,7 @@ export default function TeamsPage() {
   const [createImageUrl, setCreateImageUrl] = useState("")
   const [createUploading, setCreateUploading] = useState(false)
   const [search, setSearch] = useState("")
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [inviteOpen, setInviteOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   const [editTeamName, setEditTeamName] = useState("")
@@ -305,44 +307,28 @@ export default function TeamsPage() {
 
   return (
     <div className="min-h-screen bg-[#06100e] text-white">
-      <Sidebar session={session} />
+      <Sidebar session={session} mobileOpen={sidebarOpen} onMobileOpenChange={setSidebarOpen} />
 
       {/* Main dashboard */}
-      <div className="min-h-screen pt-14 md:pl-[262px] md:pt-0">
+      <div className="min-h-screen md:pl-[262px]">
 
         {/* Top navigation */}
-        <header className="sticky top-0 z-30 flex h-[70px] items-center justify-between gap-4 border-b border-white/[0.08] bg-[#07110f]/95 px-5 backdrop-blur-xl md:px-8">
-          <div className="flex items-center gap-2 text-sm font-semibold text-slate-300">
-            <MapPin className="h-4 w-4 text-lime-400" />
-            Pachora, Maharashtra
-            <ChevronRight className="h-3 w-3 rotate-90 text-slate-500" />
-          </div>
-
-          <div className="hidden max-w-md flex-1 md:block">
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-              <Input
-                placeholder="Search teams, players..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                className="h-10 rounded-full border-white/10 bg-white/[0.04] pl-11 text-sm text-white placeholder:text-slate-500"
-              />
+        <TopNavbar
+          onMenuClick={() => setSidebarOpen(true)}
+          searchSlot={
+            <div className="hidden max-w-md flex-1 md:block">
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                <Input
+                  placeholder="Search teams, players..."
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  className="h-10 rounded-full border-white/10 bg-white/[0.04] pl-11 text-sm text-white placeholder:text-slate-500"
+                />
+              </div>
             </div>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <button className="relative text-slate-400 hover:text-white" aria-label="Notifications">
-              <Bell className="h-5 w-5" />
-              <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-lime-400" />
-            </button>
-            <Avatar className="h-9 w-9 border border-white/10">
-              <AvatarImage src={session.user?.image || ""} />
-              <AvatarFallback className="bg-lime-500/20 text-lime-300">
-                {session.user?.name?.[0] || "U"}
-              </AvatarFallback>
-            </Avatar>
-          </div>
-        </header>
+          }
+        />
 
         <div className="mx-auto max-w-[1700px] p-4 sm:p-6 xl:p-8">
 
@@ -355,7 +341,7 @@ export default function TeamsPage() {
             <div className="relative flex flex-wrap items-center justify-between gap-5 p-6 sm:p-8">
               <div>
                 <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-lime-400">
-                  <Zap className="h-4 w-4" /> TurfPlay Community
+                  <Zap className="h-4 w-4" /> Strikora Community
                 </div>
                 <h1 className="text-3xl font-black tracking-tight sm:text-4xl">
                   My <span className="text-lime-400">Teams</span>

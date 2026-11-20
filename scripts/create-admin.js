@@ -9,7 +9,7 @@ import { Role } from "@prisma/client"
 const prisma = new PrismaClient()
 
 async function main() {
-  const email = process.env.ADMIN_EMAIL || "admin@erp.rohadas.in"
+  const email = process.env.ADMIN_EMAIL || "admin@strikora.in"
   const password = process.env.ADMIN_PASSWORD || "Admin@123456"
   const name = process.env.ADMIN_NAME || "Super Admin"
 

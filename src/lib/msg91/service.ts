@@ -61,10 +61,10 @@ export class MSG91Service {
 
     // Send via MSG91 sendhttp API (no template ID required)
     const senderId = this.senderId || "TURFAPP"
-    const message = `Your TurfPlay verification OTP is ${otp}. Valid for 5 minutes. Do not share with anyone.`
+    const message = `Your Strikora verification OTP is ${otp}. Valid for 5 minutes. Do not share with anyone.`
 
     try {
-      const url = `https://api.msg91.com/api/sendhttp.php?authkey=${this.authKey}&mobiles=${mobile.replace("+", "")}&message=${encodeURIComponent(message)}&sender=${senderId}&route=4&country=91`
+      const url = `https://api.msg91.com/api/sendhttp.php?authkey=${this.authKey}&mobiles=${mobile.replace("+91", "").replace("+", "")}&message=${encodeURIComponent(message)}&sender=${senderId}&route=4&country=91`
       console.log("[MSG91] Sending OTP to:", mobile, "URL:", url.substring(0, 80) + "...")
       const response = await fetch(url, { method: "GET" })
       const text = await response.text()

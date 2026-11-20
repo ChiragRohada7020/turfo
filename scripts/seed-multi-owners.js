@@ -15,9 +15,9 @@ async function main() {
 
   // Owners
   const owners = [
-    { email: "owner1@erp.rohadas.in", name: "Rahul Sharma", phone: "+919876543210" },
-    { email: "owner2@erp.rohadas.in", name: "Priya Patel", phone: "+919876543211" },
-    { email: "owner3@erp.rohadas.in", name: "Amit Kumar", phone: "+919876543212" },
+    { email: "owner1@strikora.in", name: "Rahul Sharma", phone: "+919876543210" },
+    { email: "owner2@strikora.in", name: "Priya Patel", phone: "+919876543211" },
+    { email: "owner3@strikora.in", name: "Amit Kumar", phone: "+919876543212" },
   ]
 
   const ownerUsers = []

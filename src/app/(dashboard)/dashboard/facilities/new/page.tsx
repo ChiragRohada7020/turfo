@@ -18,6 +18,7 @@ import { toast } from "@/hooks/use-toast"
 import { trpc } from "@/lib/trpc"
 import { SportType } from "@prisma/client"
 import { Sidebar } from "@/components/layout/Sidebar"
+import { TopNavbar } from "@/modules/shared/components/layout/TopNavbar"
 
 const facilitySchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters"),
@@ -81,6 +82,7 @@ interface Court {
 
 export default function AddFacilityPage() {
   const router = useRouter()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const { data: session } = useSession()
   const [selectedSports, setSelectedSports] = useState<string[]>([])
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>([])
@@ -179,8 +181,9 @@ export default function AddFacilityPage() {
 
   return (
     <div className="min-h-screen bg-[#070d12] text-white">
-      <Sidebar session={session} />
-      <div className="pt-14 md:pt-0 md:pl-[262px]">
+      <Sidebar session={session} mobileOpen={sidebarOpen} onMobileOpenChange={setSidebarOpen} />
+      <div className="min-h-screen md:pl-[262px]">
+        <TopNavbar onMenuClick={() => setSidebarOpen(true)} />
         <div className="max-w-4xl mx-auto p-4 sm:p-6 xl:p-8">
         {/* Hero */}
         <section className="relative mb-6 overflow-hidden rounded-3xl border border-white/10 bg-[#10251a]">
@@ -195,7 +198,7 @@ export default function AddFacilityPage() {
                 List Your <span className="text-lime-400">Turf</span>
               </h1>
               <p className="mt-2 text-sm text-slate-300 sm:text-base">
-                Add your sports facility to TurfPlay and start accepting bookings.
+                Add your sports facility to Strikora and start accepting bookings.
               </p>
             </div>
             <Link href="/dashboard/facilities">

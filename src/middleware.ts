@@ -25,12 +25,26 @@ export default withAuth(
         }
       }
 
+
+
       // Admin-only routes
       if (path.startsWith("/admin")) {
         if (token.role !== "ADMIN") {
           return NextResponse.redirect(new URL("/dashboard?error=unauthorized", req.url))
         }
       }
+    }
+
+    // Locked owner features
+    const lockedOwnerPaths = [
+      "/dashboard/payouts",
+      "/dashboard/analytics",
+      "/dashboard/promotions",
+      "/dashboard/campaigns",
+      "/offers",
+    ]
+    if (token?.role === "OWNER" && lockedOwnerPaths.some((p) => path === p || path.startsWith(p + "/"))) {
+      return NextResponse.redirect(new URL("/dashboard?error=locked", req.url))
     }
 
     return NextResponse.next()
@@ -69,6 +83,8 @@ export default withAuth(
 export const config = {
   matcher: [
     "/dashboard/:path*",
+    "/offers",
+    "/offers/:path*",
     "/admin/:path*",
     "/auth/:path*",
     "/api/:path*",

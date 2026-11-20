@@ -29,6 +29,7 @@ import {
   Trophy,
   Users,
   Wallet,
+  Lock,
   X,
 } from "lucide-react"
 import { PLAYER_NAV, OWNER_NAV, SPONSOR_NAV } from "@/modules/shared/constants/navigation"
@@ -124,7 +125,7 @@ export default function DashboardPage() {
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-[262px] flex-col overflow-hidden border-r border-white/[0.08] bg-[#080f15] md:flex">
         <Brand />
         <Sidebar items={navItems} active={active} />
-        <InviteFriends />
+        {!isOwner && <InviteFriends />}
         <div className="border-t border-white/[0.08] p-4">
           <button onClick={() => signOut({ callbackUrl: "/" })} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-400 transition hover:bg-white/5 hover:text-white">
             <LogOut className="h-4 w-4" /> Sign Out
@@ -140,7 +141,7 @@ export default function DashboardPage() {
           </button>
         </div>
         <Sidebar items={navItems} active={active} onNavigate={() => setSidebarOpen(false)} />
-        <InviteFriends />
+        {!isOwner && <InviteFriends />}
         <div className="border-t border-white/[0.08] p-4">
           <button onClick={() => signOut({ callbackUrl: "/" })} className="flex w-full items-center gap-3 px-3 py-2 text-sm text-slate-400">
             <LogOut className="h-4 w-4" /> Sign Out
@@ -250,7 +251,8 @@ function PlayerDashboard({ session, upcoming, myBooking, isLoading, setQrBooking
   return (
     <>
       <section className="relative mb-6 overflow-hidden rounded-3xl border border-white/10 bg-[#10251a]">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_75%_50%,rgba(34,197,94,0.2),transparent_55%),linear-gradient(110deg,#07150f,#12351d_60%,#07120f)]" />
+        <div className="absolute inset-0 -z-10 bg-cover bg-center opacity-60" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=1800&q=85')" }} />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_75%_50%,rgba(34,197,94,0.2),transparent_55%),linear-gradient(110deg,rgba(7,21,15,0.85),rgba(18,53,29,0.6),rgba(7,18,15,0.85))]" />
         <div className="absolute inset-0 opacity-20 bg-[linear-gradient(90deg,transparent_49%,rgba(255,255,255,0.08)_50%,transparent_51%)]" />
         <div className="relative flex flex-wrap items-center justify-between gap-6 p-6 sm:p-9">
           <div>
@@ -414,7 +416,8 @@ function OwnerDashboard({ session, myFacilities }: any) {
   return (
     <>
       <section className="relative mb-6 overflow-hidden rounded-3xl border border-white/10 bg-[#10251a]">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_75%_50%,rgba(34,197,94,0.2),transparent_55%),linear-gradient(110deg,#07150f,#12351d_60%,#07120f)]" />
+        <div className="absolute inset-0 -z-10 bg-cover bg-center opacity-60" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=1800&q=85')" }} />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_75%_50%,rgba(34,197,94,0.2),transparent_55%),linear-gradient(110deg,rgba(7,21,15,0.85),rgba(18,53,29,0.6),rgba(7,18,15,0.85))]" />
         <div className="absolute inset-0 opacity-20 bg-[linear-gradient(90deg,transparent_49%,rgba(255,255,255,0.08)_50%,transparent_51%)]" />
         <div className="relative flex flex-wrap items-center justify-between gap-6 p-6 sm:p-9">
           <div>
@@ -567,7 +570,7 @@ function Brand() {
     <div className="flex h-[76px] shrink-0 items-center gap-3 border-b border-white/[0.08] px-5">
       <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-lime-400 text-lime-400"><Activity className="h-6 w-6" /></div>
       <div>
-        <Link href="/dashboard" className="text-[22px] font-black tracking-tight">Turf<span className="text-lime-400">Play</span></Link>
+        <Link href="/dashboard" className="text-[22px] font-black tracking-tight">Strikora</Link>
         <p className="text-[10px] tracking-wide text-slate-500">Book · Play · Compete</p>
       </div>
     </div>
@@ -578,6 +581,12 @@ function Sidebar({ items, active, onNavigate }: { items: any[]; active: (href: s
   return (
     <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto px-4 py-6">
       {items.map((item: any) => (
+        item.locked ? (
+          <div key={item.name} aria-disabled="true" className="flex items-center gap-3 rounded-xl px-4 py-3.5 text-sm font-medium text-slate-500 opacity-50 cursor-not-allowed">
+            <item.icon className="h-[18px] w-[18px]" />{item.name}
+            <Lock className="ml-auto h-3.5 w-3.5" />
+          </div>
+        ) : (
         <Link key={item.name} href={item.href} onClick={onNavigate} className={cn(
           "flex items-center gap-3 rounded-xl px-4 py-3.5 text-sm font-medium transition",
           active(item.href) ? "bg-green-600 text-white shadow-lg shadow-green-950/30" : "text-slate-300 hover:bg-white/[0.06] hover:text-white",
@@ -585,6 +594,7 @@ function Sidebar({ items, active, onNavigate }: { items: any[]; active: (href: s
           <item.icon className="h-[18px] w-[18px]" />{item.name}
           {item.badge && <span className="ml-auto text-[10px] font-bold text-slate-400">{item.badge}</span>}
         </Link>
+        )
       ))}
     </nav>
   )

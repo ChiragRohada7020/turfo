@@ -7,7 +7,7 @@ import {
   Search, MapPin, Users, Gamepad2, ChevronRight,
   ShieldCheck, Star, Clock, Heart, Trophy,
   CalendarDays, Zap, ArrowRight, Send,
-  SlidersHorizontal, Activity, UserPlus
+  SlidersHorizontal, Activity, UserPlus, Menu
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -18,6 +18,7 @@ import {
   Avatar, AvatarFallback, AvatarImage
 } from "@/components/ui/avatar"
 import { Sidebar } from "@/components/layout/Sidebar"
+import { TopNavbar } from "@/modules/shared/components/layout/TopNavbar"
 
 const SPORT_FILTERS = [
   "All Sports", "Football", "Cricket", "Badminton", "Box Cricket"
@@ -132,12 +133,14 @@ function PlayerCard({ player }: { player: any }) {
 
 export default function FindPlayersPage() {
   const { data: session, status } = useSession()
-
   const [searchQuery, setSearchQuery] = useState("")
   const [activeSport, setActiveSport] = useState("All Sports")
   const [sortBy, setSortBy] = useState("Nearest")
+  const [distanceFilter, setDistanceFilter] = useState("Any Distance")
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const { data: players } = trpc.players.list.useQuery({})
+  const { data: openGames } = trpc.bookings.publicBookings.useQuery({ limit: 5 })
 
   const filteredPlayers = useMemo(() => {
     const list = players || []
@@ -147,11 +150,16 @@ export default function FindPlayersPage() {
         (player.city || "").toLowerCase().includes(searchQuery.toLowerCase())
       const sport = (player.playerPreference?.preferredSport || "").toLowerCase()
       const matchesSport = activeSport === "All Sports" || sport === activeSport.toLowerCase()
-      return matchesSearch && matchesSport
+      const matchesDistance = true
+      return matchesSearch && matchesSport && matchesDistance
     })
-    result = [...result].sort((a: any, b: any) => a.name.localeCompare(b.name))
+    result = [...result].sort((a: any, b: any) => {
+      if (sortBy === "Highest Rated") return (b.rewardPoints || 0) - (a.rewardPoints || 0)
+      if (sortBy === "Most Active") return (b.matches || 0) - (a.matches || 0)
+      return a.name.localeCompare(b.name)
+    })
     return result
-  }, [players, searchQuery, activeSport])
+  }, [players, searchQuery, activeSport, sortBy, distanceFilter])
 
   const resetFilters = () => {
     setSearchQuery("")
@@ -189,37 +197,27 @@ export default function FindPlayersPage() {
 
   return (
     <div className="min-h-screen bg-[#06100e] text-white">
-      <Sidebar session={session} />
+      <Sidebar session={session} mobileOpen={sidebarOpen} onMobileOpenChange={setSidebarOpen} />
 
-      <div className="min-h-screen pt-14 md:pt-0 md:pl-[262px]">
+      <div className="min-h-screen md:pl-[262px]">
 
         {/* TOP HEADER */}
-        <header className="sticky top-0 z-30 hidden h-[68px] items-center justify-between gap-4 border-b border-white/[0.08] bg-[#07120f]/95 px-6 backdrop-blur-xl md:flex">
-          <div className="flex items-center gap-2 text-sm text-slate-300">
-            <MapPin className="h-4 w-4 text-lime-400" />
-            Pachora, Maharashtra
-          </div>
-
-          <div className="relative w-full max-w-md">
-            <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-            <input
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Search players, teams or sports..."
-              className="h-10 w-full rounded-full border border-white/10 bg-white/[0.04] pl-11 pr-4 text-sm outline-none placeholder:text-slate-500 focus:border-lime-400/50"
-            />
-          </div>
-
-          <div className="flex items-center gap-3">
-            <ShieldCheck className="h-5 w-5 text-lime-400" />
-            <Avatar className="h-9 w-9 border border-white/10">
-              <AvatarImage src={session.user?.image || ""} />
-              <AvatarFallback className="bg-lime-400/10 text-lime-400">
-                {session.user?.name?.[0] || "U"}
-              </AvatarFallback>
-            </Avatar>
-          </div>
-        </header>
+        <TopNavbar
+          onMenuClick={() => setSidebarOpen(true)}
+          searchSlot={
+            <div className="hidden w-full max-w-md md:block">
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                <input
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  placeholder="Search players, teams or sports..."
+                  className="h-10 w-full rounded-full border border-white/10 bg-white/[0.04] pl-11 pr-4 text-sm outline-none placeholder:text-slate-500 focus:border-lime-400/50"
+                />
+              </div>
+            </div>
+          }
+        />
 
         <main className="mx-auto max-w-[1700px] space-y-6 p-4 sm:p-6 xl:p-8">
 
@@ -316,6 +314,17 @@ export default function FindPlayersPage() {
               <div className="col-span-2 flex items-center gap-2 rounded-xl border border-white/[0.07] bg-white/[0.025] px-3 py-2.5 text-xs text-slate-400 lg:col-span-1">
                 <ShieldCheck className="h-4 w-4 shrink-0 text-lime-400" />
                 Discover players and connect
+              </div>
+              <div className="col-span-2 lg:col-span-1">
+                <select
+                  value={distanceFilter}
+                  onChange={e => setDistanceFilter(e.target.value)}
+                  className="w-full rounded-xl border border-white/[0.07] bg-white/[0.025] px-3 py-2.5 text-xs text-white outline-none focus:border-lime-400/50"
+                >
+                  {DISTANCES.map(d => (
+                    <option key={d} value={d} className="bg-[#101c19]">{d}</option>
+                  ))}
+                </select>
               </div>
             </div>
           </section>
@@ -417,7 +426,15 @@ export default function FindPlayersPage() {
                   </div>
 
                   <div className="space-y-4">
-                    {/* no upcoming games */}
+                    {(openGames || []).slice(0, 3).map((g: any) => (
+                      <Link key={g.id} href="/dashboard/open-games" className="block rounded-xl border border-white/[0.06] bg-white/[0.025] p-3 hover:border-lime-400/30 transition">
+                        <p className="text-xs font-bold text-white truncate">{g.facility?.name || "Open Game"}</p>
+                        <p className="text-[10px] text-slate-400 mt-1">{g.facility?.city || ""} · {g.spotsLeft ?? 0} spots left</p>
+                      </Link>
+                    ))}
+                    {(!openGames || openGames.length === 0) && (
+                      <p className="text-xs text-slate-500 text-center py-2">No open games right now.</p>
+                    )}
                   </div>
                 </CardContent>
               </Card>

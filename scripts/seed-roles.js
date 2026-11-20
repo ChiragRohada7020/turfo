@@ -15,10 +15,10 @@ async function main() {
 
   // 1. Create Admin
   const admin = await prisma.user.upsert({
-    where: { email: "admin@erp.rohadas.in" },
+    where: { email: "admin@strikora.in" },
     update: {},
     create: {
-      email: "admin@erp.rohadas.in",
+      email: "admin@strikora.in",
       name: "Super Admin",
       passwordHash,
       role: Role.ADMIN,
@@ -30,10 +30,10 @@ async function main() {
 
   // 2. Create Owner
   const owner = await prisma.user.upsert({
-    where: { email: "owner@erp.rohadas.in" },
+    where: { email: "owner@strikora.in" },
     update: {},
     create: {
-      email: "owner@erp.rohadas.in",
+      email: "owner@strikora.in",
       name: "Facility Owner",
       passwordHash,
       role: Role.OWNER,
@@ -45,10 +45,10 @@ async function main() {
 
   // 3. Create Player
   const player = await prisma.user.upsert({
-    where: { email: "player@erp.rohadas.in" },
+    where: { email: "player@strikora.in" },
     update: {},
     create: {
-      email: "player@erp.rohadas.in",
+      email: "player@strikora.in",
       name: "Test Player",
       passwordHash,
       role: Role.PLAYER,
@@ -190,11 +190,11 @@ async function main() {
   console.log("┌─────────────┬─────────────────────────────┬──────────────┬─────────┐")
   console.log("│ Role        │ Email                       │ Password     │ Phone   │")
   console.log("├─────────────┼─────────────────────────────┼──────────────┼─────────┤")
-  console.log("│ ADMIN       │ admin@erp.rohadas.in        │ Test@123456  │ Verified│")
-  console.log("│ OWNER       │ owner@erp.rohadas.in        │ Test@123456  │ Verified│")
-  console.log("│ PLAYER      │ player@erp.rohadas.in       │ Test@123456  │ Verified│")
+  console.log("│ ADMIN       │ admin@strikora.in        │ Test@123456  │ Verified│")
+  console.log("│ OWNER       │ owner@strikora.in        │ Test@123456  │ Verified│")
+  console.log("│ PLAYER      │ player@strikora.in       │ Test@123456  │ Verified│")
   console.log("└─────────────┴─────────────────────────────┴──────────────┴─────────┘")
-  console.log("\n🔗 Login at: https://erp.rohadas.in/auth/login")
+  console.log("\n🔗 Login at: https://strikora.in/auth/login")
 }
 
 main()

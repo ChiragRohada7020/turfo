@@ -48,7 +48,7 @@ export default function TeamDetailPage() {
   return (
     <div className="min-h-screen bg-[#070d12] text-white">
       <Sidebar session={session} />
-      <div className="pt-14 md:pt-0 md:pl-[262px]">
+      <div className="md:pt-0 md:pl-[262px]">
         <div className="max-w-4xl mx-auto p-4 sm:p-6">
           <Link href="/dashboard/teams" className="text-sm text-slate-400 hover:text-white mb-4 inline-block">
             ← Back to Teams

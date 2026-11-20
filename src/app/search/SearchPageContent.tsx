@@ -10,7 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ChevronDown, ChevronRight, MapPin, Menu, Search as SearchIcon, Users, LogOut, Home, CalendarDays, Ticket, ShieldCheck, Trophy, Gift, Wallet, Bell } from "lucide-react"
+import { ChevronDown, ChevronRight, MapPin, Menu, Search as SearchIcon, Users, LogOut, Home, CalendarDays, Ticket, ShieldCheck, Trophy, Gift, Wallet, Bell, Zap } from "lucide-react"
 import { formatCurrency } from "@/lib/utils"
 import { trpc } from "@/lib/trpc"
 import { Sidebar } from "@/components/layout/Sidebar"
@@ -44,6 +44,7 @@ export default function SearchPageContent() {
   const sportParam = searchParams.get("sport") || ""
   const [searchQuery, setSearchQuery] = useState("")
   const [activeFilter, setActiveFilter] = useState(sportParam ? sportParam.charAt(0).toUpperCase() + sportParam.slice(1) : "All Sports")
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const { data: profile } = trpc.auth.getProfile.useQuery()
   const { data: sportTypesData } = trpc.facilities.sportTypes.useQuery()
@@ -84,16 +85,38 @@ export default function SearchPageContent() {
 
   if (!session) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#070d12] px-4 text-white">
-        <div className="max-w-md w-full bg-[#111a22] border border-white/10 rounded-2xl p-8 text-center">
-          <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-lime-400 text-black flex items-center justify-center">
-            <span className="text-lg">🏟️</span>
+      <div className="min-h-screen bg-[#F7F8FC] text-[#171A2B] flex items-center justify-center px-4 py-12">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-8">
+            <Link href="/" className="inline-flex items-center gap-2.5">
+              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#171A2B] text-lg font-black text-white shadow-lg">
+                S
+              </span>
+              <span className="text-2xl font-black tracking-[-0.06em] text-[#171A2B]">
+                strikora<span className="text-orange-500">.</span>
+              </span>
+            </Link>
+            <p className="text-slate-500 mt-2 text-sm">Book · Play · Compete</p>
           </div>
-          <h1 className="text-2xl font-bold">Book a Game</h1>
-          <p className="mt-2 text-sm text-slate-400">Please sign in to book turfs.</p>
-          <Link href="/auth/login?callbackUrl=/search" className="mt-6 w-full">
-            <Button className="w-full bg-lime-400 font-bold text-black hover:bg-lime-300">Sign In</Button>
-          </Link>
+
+          <Card className="bg-white border border-slate-200 rounded-3xl shadow-xl shadow-slate-900/5">
+            <CardContent className="p-6 sm:p-8 text-center">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-500 text-white">
+                <CalendarDays className="h-6 w-6" />
+              </div>
+              <h1 className="text-2xl font-black tracking-tight">Book a Game</h1>
+              <p className="mt-2 text-sm text-slate-500">Please sign in to book turfs.</p>
+              <Link href="/auth/login?callbackUrl=/search" className="mt-6 w-full">
+                <Button className="w-full h-12 bg-orange-500 font-bold text-white hover:bg-orange-600 rounded-xl shadow-lg shadow-orange-500/20">Sign In</Button>
+              </Link>
+            </CardContent>
+          </Card>
+
+          <div className="mt-6 flex items-center justify-center gap-6 text-xs text-slate-400">
+            <span className="flex items-center gap-1.5"><Zap className="h-3.5 w-3.5 text-orange-500" /> Instant booking</span>
+            <span className="flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5 text-orange-500" /> Secure login</span>
+            <span className="flex items-center gap-1.5"><Trophy className="h-3.5 w-3.5 text-orange-500" /> Tournaments</span>
+          </div>
         </div>
       </div>
     )
@@ -101,19 +124,19 @@ export default function SearchPageContent() {
 
   return (
     <div className="min-h-screen bg-[#070d12] text-white">
-      <Sidebar session={session} />
+      <Sidebar session={session} mobileOpen={sidebarOpen} onMobileOpenChange={setSidebarOpen} />
 
-      <div className="min-h-screen pt-14 md:pt-0 md:pl-[262px]">
+      <div className="min-h-screen md:pl-[262px]">
         <header className="sticky top-0 z-20 flex h-[64px] items-center gap-3 border-b border-white/[0.08] bg-[#080f15]/95 px-4 backdrop-blur-xl sm:px-6">
+          <button onClick={() => setSidebarOpen(true)} aria-label="Open menu" className="rounded-lg border border-white/10 p-2 text-slate-300 md:hidden">
+            <Menu className="h-5 w-5" />
+          </button>
           <div className="hidden shrink-0 items-center gap-2 rounded-xl border border-white/10 bg-[#121c25] px-3 py-2 text-sm text-slate-300 sm:flex">
             <MapPin className="h-4 w-4" />
  {profile?.city ? `${profile.city}${profile?.state ? ", " + profile.state : ""}` : "Set location"}
             <ChevronDown className="h-4 w-4 text-slate-500" />
           </div>
-          <div className="relative mx-auto w-full max-w-[590px]">
-            <SearchIcon className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-            <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search turfs, sports, or locations..." className="h-10 w-full rounded-xl border border-white/10 bg-[#121b24] pl-10 pr-4 text-sm text-white outline-none placeholder:text-slate-500 focus:border-lime-400/50" />
-          </div>
+          <div className="ml-auto" />
           <button aria-label="Notifications" className="relative rounded-full border border-white/10 bg-[#121b24] p-2.5 text-slate-300">
             <Bell className="h-4 w-4" />
             {(unreadNotifications?.total ?? 0) > 0 && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500" />}

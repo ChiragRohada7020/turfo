@@ -1,7 +1,7 @@
-# Quick Deployment Guide for erp.rohadas.in
+# Quick Deployment Guide for strikora.in
 
 ## Prerequisites
-- Domain `erp.rohadas.in` pointing to your server IP (A record)
+- Domain `strikora.in` pointing to your server IP (A record)
 - Server with Docker & Docker Compose installed
 - Ports 80, 443 open on firewall
 
@@ -60,7 +60,7 @@ docker-compose -f docker/docker-compose.yml up -d
 docker-compose -f docker/docker-compose.yml ps
 
 # Check health
-curl https://erp.rohadas.in/api/health
+curl https://strikora.in/api/health
 
 # View logs
 docker-compose -f docker/docker-compose.yml logs -f app
@@ -68,7 +68,7 @@ docker-compose -f docker/docker-compose.yml logs -f nginx
 ```
 
 ## 10. Access Application
-Open https://erp.rohadas.in in browser
+Open https://strikora.in in browser
 
 ## Default Test Accounts (from seed)
 - **Admin**: admin@turfbooking.com / admin123
@@ -137,5 +137,5 @@ sudo ufw enable
 
 ## DNS Configuration
 Ensure your domain provider has:
-- A record: `erp.rohadas.in` → YOUR_SERVER_IP
-- Optional: `www.erp.rohadas.in` → YOUR_SERVER_IP (add to nginx config if needed)
+- A record: `strikora.in` → YOUR_SERVER_IP
+- Optional: `www.strikora.in` → YOUR_SERVER_IP (add to nginx config if needed)

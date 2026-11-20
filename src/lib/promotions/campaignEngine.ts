@@ -44,10 +44,10 @@ export async function generateLowDemandCampaigns(ownerId?: string, maxCampaigns 
       if (settings && (f.hour < settings.allowedStartHour || f.hour >= settings.allowedEndHour)) continue
 
       // find or create system sponsor
-      let systemSponsor = await prisma.sponsor.findFirst({ where: { name: "TurfPlay System" } })
+      let systemSponsor = await prisma.sponsor.findFirst({ where: { name: "Strikora System" } })
       if (!systemSponsor) {
         systemSponsor = await prisma.sponsor.create({
-          data: { name: "TurfPlay System", contactEmail: "system@turfplay.local", userId: facility.ownerId, isApproved: true, isActive: true },
+          data: { name: "Strikora System", contactEmail: "system@strikora.local", userId: facility.ownerId, isApproved: true, isActive: true },
         })
       }
 

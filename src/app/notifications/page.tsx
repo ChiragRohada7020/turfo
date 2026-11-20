@@ -1,14 +1,17 @@
 "use client"
 
 import { useSession } from "next-auth/react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { trpc } from "@/lib/trpc"
 import { Sidebar } from "@/components/layout/Sidebar"
+import { TopNavbar } from "@/modules/shared/components/layout/TopNavbar"
 import { Bell, CheckCircle2, Clock3 } from "lucide-react"
 
 export default function NotificationsPage() {
   const { data: session } = useSession()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const { data, refetch } = trpc.notifications.list.useQuery({ limit: 50 })
   const markRead = trpc.notifications.markRead.useMutation({ onSuccess: () => refetch() })
   const markAll = trpc.notifications.markAllRead.useMutation({ onSuccess: () => refetch() })
@@ -17,8 +20,9 @@ export default function NotificationsPage() {
 
   return (
     <div className="min-h-screen bg-[#070d12] text-white">
-      <Sidebar session={session} />
+      <Sidebar session={session} mobileOpen={sidebarOpen} onMobileOpenChange={setSidebarOpen} />
       <div className="md:pl-[262px] p-6">
+        <TopNavbar onMenuClick={() => setSidebarOpen(true)} />
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold flex items-center gap-2"><Bell className="h-6 w-6 text-lime-400" /> Notifications</h1>
           <Button variant="outline" className="border-white/10 text-white" onClick={() => markAll.mutate()} disabled={markAll.isPending}>

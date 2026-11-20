@@ -55,7 +55,7 @@ export function OpenGameModal({ isOpen, onClose, onConfirm, isLoading, currentMa
 
           <div>
             <label className="block text-sm font-medium mb-2 text-slate-300">
-              Offline friends coming (not on TurfPlay)
+              Offline friends coming (not on Strikora)
             </label>
             <div className="flex items-center gap-3">
               <button
@@ -85,7 +85,7 @@ export function OpenGameModal({ isOpen, onClose, onConfirm, isLoading, currentMa
               </button>
             </div>
             <p className="text-xs text-slate-500 mt-2">
-              Friends who are not on TurfPlay but will be playing with you.
+              Friends who are not on Strikora but will be playing with you.
             </p>
           </div>
 
@@ -121,7 +121,7 @@ export function OpenGameModal({ isOpen, onClose, onConfirm, isLoading, currentMa
               </button>
             </div>
             <p className="text-xs text-slate-500 mt-2">
-              Players from TurfPlay who can join your game.
+              Players from Strikora who can join your game.
             </p>
           </div>
 

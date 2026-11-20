@@ -11,11 +11,13 @@ import { Textarea } from "@/components/ui/textarea"
 import { ArrowLeft, MapPin, Save, User } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import { trpc } from "@/lib/trpc"
-import { Sidebar } from "@/components/layout/Sidebar"
+import { Sidebar } from "@/modules/shared/components/layout/Sidebar"
+import { TopNavbar } from "@/modules/shared/components/layout/TopNavbar"
 
 export default function SettingsPage() {
   const { data: session, status } = useSession()
   const [isLoading, setIsLoading] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const isOwner = session?.user?.role === "OWNER" || session?.user?.role === "ADMIN"
 
   const [form, setForm] = useState({
@@ -136,8 +138,9 @@ export default function SettingsPage() {
 
   return (
     <div className="min-h-screen bg-[#070d12] text-white">
-      <Sidebar session={session} />
-      <div className="pt-14 md:pt-0 md:pl-[262px]">
+      <Sidebar session={session} mobileOpen={sidebarOpen} onMobileOpenChange={setSidebarOpen} />
+      <div className="md:pl-[262px]">
+        <TopNavbar onMenuClick={() => setSidebarOpen(true)} />
         <div className="max-w-2xl mx-auto p-4 sm:p-6">
           <div className="mb-6">
             <h1 className="text-2xl font-bold">Settings</h1>

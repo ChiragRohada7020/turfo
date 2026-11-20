@@ -20,6 +20,7 @@ export type NavItem = {
   href: string
   icon: any
   badge?: string
+  locked?: boolean
 }
 
 export const PLAYER_NAV: NavItem[] = [
@@ -42,11 +43,11 @@ export const OWNER_NAV: NavItem[] = [
   { name: "Add Facility", href: "/dashboard/facilities/new", icon: CalendarDays },
   { name: "Bookings", href: "/dashboard/bookings", icon: Ticket },
   { name: "Verify Booking", href: "/dashboard/verify", icon: QrCode },
-  { name: "Payouts", href: "/dashboard/payouts", icon: Wallet },
-  { name: "Analytics", href: "/dashboard/analytics", icon: Trophy },
-  { name: "Promotions", href: "/dashboard/promotions", icon: TrendingUp },
-  { name: "Campaigns", href: "/dashboard/campaigns", icon: Gift },
-  { name: "Offers & Rewards", href: "/offers", icon: Gift },
+  { name: "Payouts", href: "/dashboard/payouts", icon: Wallet, locked: true },
+  { name: "Analytics", href: "/dashboard/analytics", icon: Trophy, locked: true },
+  { name: "Promotions", href: "/dashboard/promotions", icon: TrendingUp, locked: true },
+  { name: "Campaigns", href: "/dashboard/campaigns", icon: Gift, locked: true },
+  { name: "Offers & Rewards", href: "/offers", icon: Gift, locked: true },
   { name: "Notifications", href: "/notifications", icon: Bell },
   { name: "Settings", href: "/dashboard/settings", icon: Settings },
   { name: "Support", href: "/help", icon: ShieldCheck },

@@ -1,9 +1,9 @@
 #!/bin/bash
-# SSL Setup Script for Let's Encrypt with domain erp.rohadas.in
+# SSL Setup Script for Let's Encrypt with domain strikora.in
 
 set -e
 
-DOMAIN="erp.rohadas.in"
+DOMAIN="strikora.in"
 EMAIL="admin@rohadas.in"  # Change this to your email
 NGINX_CONTAINER="turf-nginx"
 WEBROOT="/var/www/html"
