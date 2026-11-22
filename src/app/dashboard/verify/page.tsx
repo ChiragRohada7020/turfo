@@ -140,21 +140,21 @@ export default function VerifyBookingPage() {
 
   if (status === "loading") {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#070d12]">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-lime-400 border-t-transparent" />
+      <div className="flex min-h-screen items-center justify-center bg-[#0B1020]">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-orange-400 border-t-transparent" />
       </div>
     )
   }
 
   if (!session) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#070d12] px-4 text-white">
-        <div className="max-w-md w-full bg-[#111a22] border border-white/10 rounded-2xl p-8 text-center">
-          <QrCode className="w-12 h-12 text-lime-400 mx-auto mb-4" />
+      <div className="flex min-h-screen items-center justify-center bg-[#0B1020] px-4 text-white">
+        <div className="max-w-md w-full bg-[#131C2E] border border-white/10 rounded-2xl p-8 text-center">
+          <QrCode className="w-12 h-12 text-orange-400 mx-auto mb-4" />
           <h1 className="text-2xl font-bold">Sign In Required</h1>
           <p className="mt-2 text-sm text-slate-400">Please sign in to verify bookings.</p>
           <Link href="/auth/login?callbackUrl=/dashboard/verify" className="mt-6 w-full">
-            <Button className="w-full bg-lime-400 font-bold text-black hover:bg-lime-300">Sign In</Button>
+            <Button className="w-full bg-orange-400 font-bold text-black hover:bg-orange-300">Sign In</Button>
           </Link>
         </div>
       </div>
@@ -162,7 +162,7 @@ export default function VerifyBookingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#070d12] text-white">
+    <div className="min-h-screen bg-[#0B1020] text-white">
       <Sidebar session={session} mobileOpen={sidebarOpen} onMobileOpenChange={setSidebarOpen} />
       <div className="min-h-screen md:pl-[262px]">
         <TopNavbar onMenuClick={() => setSidebarOpen(true)} />
@@ -176,7 +176,7 @@ export default function VerifyBookingPage() {
           <div className="flex gap-2 mb-4">
             <Button
               variant={scanning ? "default" : "outline"}
-              className={scanning ? "bg-lime-400 text-black" : "border-white/10 text-white"}
+              className={scanning ? "bg-orange-400 text-black" : "border-white/10 text-white"}
               onClick={scanning ? stopScanner : startScanner}
             >
               <Camera className="w-4 h-4 mr-2" />
@@ -186,7 +186,7 @@ export default function VerifyBookingPage() {
 
           {/* QR Scanner */}
           {scanning && (
-            <Card className="bg-[#111a22] border-white/10 mb-4">
+            <Card className="bg-[#131C2E] border-white/10 mb-4">
               <CardContent className="p-4">
                 <div id="qr-reader" className="w-full" />
                 {scanError && (
@@ -201,18 +201,18 @@ export default function VerifyBookingPage() {
 
           {/* Manual entry */}
           {!scanning && !showConfirm && (
-            <Card className="bg-[#111a22] border-white/10 mb-6">
+            <Card className="bg-[#131C2E] border-white/10 mb-6">
               <CardContent className="p-6">
                 <div className="flex gap-2">
                   <input
                     value={code}
                     onChange={(e) => setCode(e.target.value)}
                     placeholder="Enter verification code"
-                    className="flex-1 bg-[#121b24] border border-white/10 rounded-lg px-4 py-3 text-white focus:border-lime-400 focus:outline-none"
+                    className="flex-1 bg-[#121b24] border border-white/10 rounded-lg px-4 py-3 text-white focus:border-orange-400 focus:outline-none"
                     onKeyDown={(e) => e.key === "Enter" && handleVerify(code)}
                   />
                   <Button
-                    className="bg-lime-400 font-bold text-black hover:bg-lime-300"
+                    className="bg-orange-400 font-bold text-black hover:bg-orange-300"
                     onClick={() => handleVerify(code)}
                     disabled={loading}
                   >
@@ -225,10 +225,10 @@ export default function VerifyBookingPage() {
 
           {/* Confirmation dialog */}
           {showConfirm && verifiedBooking && (
-            <Card className="bg-[#111a22] border-2 border-lime-400/30 mb-6">
+            <Card className="bg-[#131C2E] border-2 border-orange-400/30 mb-6">
               <CardContent className="p-6">
                 <div className="space-y-4">
-                  <div className="flex items-center gap-2 text-lime-400">
+                  <div className="flex items-center gap-2 text-orange-400">
                     <QrCode className="w-6 h-6" />
                     <span className="font-bold text-lg">Confirm Booking Completion</span>
                   </div>

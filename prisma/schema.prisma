@@ -23,6 +23,9 @@ model User {
   isVerified      Boolean   @default(false)
   noShowCount     Int       @default(0)
   cibilScore      Int       @default(750)
+  bookingBanUntil DateTime?
+  resetToken      String?   @unique
+  resetTokenExpiry DateTime?
   address         String?
   city            String?
   state           String?
@@ -30,7 +33,15 @@ model User {
   latitude        Float?
   longitude       Float?
   reliabilityScore Float    @default(100)
-  rewardPoints     Int      @default(0)
+  rewardPoints      Int       @default(0)
+  unlockedUntil     DateTime?
+  referralCode     String?  @unique
+  referredById     String?
+  referrer         User?    @relation("UserReferrer", fields: [referredById], references: [id], onDelete: SetNull)
+  referralsGiven   Referral[] @relation("ReferralsGiven")
+  referralReceived Referral?  @relation("ReferralReceived")
+  referees         User[]    @relation("UserReferrer")
+  offerRecommendation OfferRecommendation?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
@@ -43,6 +54,7 @@ model User {
   rewardTransactions  RewardTransaction[]
   playerPreference     PlayerPreference?
   ownerPromoSettings  OwnerPromoSettings?
+  taskSettings       TaskSettings?
   createdCampaigns    PromotionCampaign[] @relation("CampaignCreator")
   campaignReceipts    CampaignRecipient[]
   rewardRedemptions   RewardRedemption[]
@@ -494,6 +506,8 @@ model PlayerPreference {
   couponResponseScore Float  @default(0)
   engagementScore     Float  @default(0)
   inactivityDays    Int      @default(0)
+  taskRecommendation Json?
+  taskComputedAt     DateTime?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
@@ -614,6 +628,38 @@ model PlatformPromoSettings {
   updatedAt             DateTime @updatedAt
 }
 
+model TaskSettings {
+  id                    String   @id @default(cuid())
+  ownerId               String?  @unique
+  aiEnabled             Boolean  @default(true)
+  maxActiveTasks        Int      @default(5)
+  maxRewardPointsPerTask Int     @default(200)
+  monthlyRewardBudget   Float    @default(0)
+  spentRewardBudget     Float    @default(0)
+  defaultExpiryDays     Int      @default(7)
+  minBookingValue       Float    @default(0)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  owner                 User?    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+}
+
+model TaskTemplate {
+  id            String        @id @default(cuid())
+  key           String        @unique
+  title         String
+  description   String?
+  category      TaskCategory  @default(ENGAGEMENT)
+  type          TaskType
+  target        Int           @default(1)
+  rewardPoints  Int           @default(0)
+  criteria      Json?
+  isActive      Boolean       @default(true)
+  approved      Boolean       @default(false)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
 // Enums
 enum Role {
   PLAYER
@@ -691,24 +737,29 @@ enum NotificationType {
 
 // Task-based rewards
 model Task {
-  id            String   @id @default(cuid())
-  title         String
-  description   String?
-  type          TaskType
-  target        Int      @default(1)
-  rewardPoints  Int      @default(0)
-  isActive      Boolean  @default(true)
-  isAiGenerated Boolean  @default(false)
-  userId        String?
-  targetTurfId  String?
-  targetSport   SportType?
-  targetTimeSlot String?
-  expiresAt     DateTime?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                 String        @id @default(cuid())
+  title              String
+  description        String?
+  type               TaskType
+  category           TaskCategory  @default(ENGAGEMENT)
+  target             Int           @default(1)
+  rewardPoints       Int           @default(0)
+  isActive           Boolean       @default(true)
+  isAiGenerated      Boolean       @default(false)
+  status             TaskStatus    @default(AVAILABLE)
+  userId             String?
+  targetTurfId       String?
+  targetSport        SportType?
+  targetTimeSlot     String?
+  completionCriteria Json?
+  verification       Json?
+  startDate          DateTime      @default(now())
+  expiresAt          DateTime?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
 
-  user          User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userTasks     UserTask[]
+  user               User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userTasks          UserTask[]
 }
 
 enum TaskType {
@@ -721,32 +772,69 @@ enum TaskType {
   PLAY_TOURNAMENT
 }
 
-model UserTask {
-  id            String   @id @default(cuid())
-  userId        String
-  taskId        String
-  progress      Int      @default(0)
-  completed     Boolean  @default(false)
-  completedAt   DateTime?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+enum TaskStatus {
+  AVAILABLE
+  IN_PROGRESS
+  COMPLETED
+  EXPIRED
+  CANCELLED
+}
 
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  task          Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+enum TaskCategory {
+  BOOKING
+  REPEAT_BOOKING
+  GROUP_BOOKING
+  LOYALTY
+  SPORT_EXPLORATION
+  WEEKEND
+  COMEBACK
+  ENGAGEMENT
+  PROFILE
+}
+
+enum RewardTransactionStatus {
+  COMPLETED
+  REVERSED
+  PENDING
+}
+
+model UserTask {
+  id                  String      @id @default(cuid())
+  userId              String
+  taskId              String
+  progress            Int         @default(0)
+  status              TaskStatus  @default(AVAILABLE)
+  completed           Boolean     @default(false)
+  completedAt         DateTime?
+  verifiedAt          DateTime?
+  startedAt           DateTime?
+  rewardTransactionId String?
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+
+  user                User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task                Task        @relation(fields: [taskId], references: [id], onDelete: Cascade)
 
   @@unique([userId, taskId])
 }
 
 model RewardTransaction {
-  id            String   @id @default(cuid())
-  userId        String
-  points        Int
-  type          RewardType
-  description   String?
-  referenceId   String?
-  createdAt     DateTime @default(now())
+  id              String                    @id @default(cuid())
+  userId          String
+  points          Int
+  type            RewardType
+  status          RewardTransactionStatus   @default(COMPLETED)
+  description     String?
+  referenceId     String?
+  idempotencyKey  String?                   @unique
+  reversalOfId    String?
+  reversedAt      DateTime?
+  reversalReason  String?
+  createdAt       DateTime                  @default(now())
 
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user            User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reversalOf      RewardTransaction?        @relation("RewardReversal", fields: [reversalOfId], references: [id], onDelete: SetNull)
+  reversals       RewardTransaction[]       @relation("RewardReversal")
 }
 
 enum RewardType {
@@ -754,4 +842,32 @@ enum RewardType {
   REDEEMED
   EXPIRED
   BONUS
+}
+
+
+model Referral {
+  id            String   @id @default(cuid())
+  referrerId    String
+  refereeId     String   @unique
+  code          String
+  status        String   @default("PENDING") // PENDING, COMPLETED, REWARDED
+  rewardPoints  Int      @default(100)
+  completedAt   DateTime?
+  rewardedAt    DateTime?
+  createdAt     DateTime @default(now())
+
+  referrer      User     @relation("ReferralsGiven", fields: [referrerId], references: [id], onDelete: Cascade)
+  referee       User     @relation("ReferralReceived", fields: [refereeId], references: [id], onDelete: Cascade)
+
+  @@index([referrerId])
+}
+
+model OfferRecommendation {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  offerIds     String[]
+  playerSummary Json?
+  computedAt   DateTime @default(now())
+  expiresAt    DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

@@ -48,8 +48,8 @@ export default function ForgotPasswordPage() {
         return
       }
 
-      toast({ title: "Success", description: "Password reset link sent to your email", variant: "success" })
-      router.push("/auth/login")
+      toast({ title: "Success", description: "OTP sent to your email", variant: "success" })
+      router.push(`/auth/reset-password?email=${encodeURIComponent(data.email)}`)
     } catch (error) {
       toast({ title: "Error", description: "Something went wrong", variant: "destructive" })
     } finally {

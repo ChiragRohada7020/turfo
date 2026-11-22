@@ -39,6 +39,7 @@ const SPORTS = [
   { name: "Tennis", icon: "🎾", count: "70+ courts", tone: "from-lime-100 to-green-50" },
   { name: "Volleyball", icon: "🏐", count: "40+ courts", tone: "from-amber-100 to-yellow-50" },
   { name: "Basketball", icon: "🏀", count: "50+ courts", tone: "from-fuchsia-100 to-purple-50" },
+  { name: "PS5 Gaming", icon: "🎮", count: "20+ stations", tone: "from-slate-100 to-gray-50" },
   { name: "More sports", icon: "＋", count: "Explore all", tone: "from-slate-100 to-gray-50" },
 ]
 
@@ -85,12 +86,12 @@ const TOURNAMENTS = [
 
 const TURFS = [
   {
-    name: "GreenField Turf",
+    name: "GreenField Sports Complex",
     city: "Pachora, Maharashtra",
     rating: "4.8",
     reviews: "126 reviews",
-    sports: ["Football", "Cricket"],
-    price: 499,
+    sports: ["Football", "Cricket", "Badminton"],
+    price: 800,
     image: "https://www.ebaco.co.in/wp-content/uploads/2018/09/shutterstock_123684637-320x420.jpg",
   },
   {
@@ -98,8 +99,8 @@ const TURFS = [
     city: "Pachora, Maharashtra",
     rating: "4.7",
     reviews: "89 reviews",
-    sports: ["Football", "Box Cricket"],
-    price: 549,
+    sports: ["Football", "Cricket"],
+    price: 700,
     image: "https://www.ebaco.co.in/wp-content/uploads/2018/09/shutterstock_123684637-320x420.jpg",
   },
   {
@@ -107,8 +108,26 @@ const TURFS = [
     city: "Pachora, Maharashtra",
     rating: "4.6",
     reviews: "64 reviews",
-    sports: ["Football", "Pickleball"],
-    price: 449,
+    sports: ["Football", "Pickleball", "Badminton"],
+    price: 600,
+    image: "https://www.ebaco.co.in/wp-content/uploads/2018/09/shutterstock_123684637-320x420.jpg",
+  },
+  {
+    name: "Elite Sports Arena",
+    city: "Pachora, Maharashtra",
+    rating: "4.5",
+    reviews: "42 reviews",
+    sports: ["Football", "Cricket", "Badminton"],
+    price: 550,
+    image: "https://www.ebaco.co.in/wp-content/uploads/2018/09/shutterstock_123684637-320x420.jpg",
+  },
+  {
+    name: "Sports Hub Pachora",
+    city: "Pachora, Maharashtra",
+    rating: "4.4",
+    reviews: "38 reviews",
+    sports: ["Badminton", "Pickleball"],
+    price: 400,
     image: "https://www.ebaco.co.in/wp-content/uploads/2018/09/shutterstock_123684637-320x420.jpg",
   },
 ]
@@ -209,14 +228,14 @@ export default function HomePageContent() {
               <Search className="h-4 w-4" />
               Search turfs
             </Link>
-            <button
-              type="button"
+            <Link
+              href="/notifications"
               aria-label="Notifications"
               className="relative flex h-10 w-10 items-center justify-center rounded-xl text-slate-600 transition hover:bg-slate-100 hover:text-[#171A2B]"
             >
               <Bell className="h-[18px] w-[18px]" />
               <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-orange-500 ring-2 ring-white" />
-            </button>
+            </Link>
             <Link
               href="/search"
               className="hidden rounded-xl bg-orange-500 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-orange-500/20 transition hover:-translate-y-0.5 hover:bg-orange-600 sm:inline-flex"

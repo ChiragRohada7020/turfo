@@ -58,8 +58,8 @@ export default function SettingsPage() {
     onSuccess: () => {
       toast({ title: "Saved", description: "Profile updated successfully" })
     },
-    onError: (e) => {
-      toast({ title: "Error", description: e.message, variant: "destructive" })
+    onError: (e: any) => {
+      toast({ title: "Error", description: e?.message || "Something went wrong", variant: "destructive" })
     },
   })
 
@@ -68,8 +68,8 @@ export default function SettingsPage() {
       toast({ title: "Success", description: "Password changed successfully" })
       setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" })
     },
-    onError: (e) => {
-      toast({ title: "Error", description: e.message, variant: "destructive" })
+    onError: (e: any) => {
+      toast({ title: "Error", description: e?.message || "Something went wrong", variant: "destructive" })
     },
   })
 
@@ -116,20 +116,20 @@ export default function SettingsPage() {
 
   if (status === "loading") {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#070d12]">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-lime-400 border-t-transparent" />
+      <div className="flex min-h-screen items-center justify-center bg-[#0B1020]">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-orange-400 border-t-transparent" />
       </div>
     )
   }
 
   if (!session) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#070d12] px-4 text-white">
-        <div className="max-w-md w-full bg-[#111a22] border border-white/10 rounded-2xl p-8 text-center">
-          <User className="w-12 h-12 text-lime-400 mx-auto mb-4" />
+      <div className="flex min-h-screen items-center justify-center bg-[#0B1020] px-4 text-white">
+        <div className="max-w-md w-full bg-[#131C2E] border border-white/[0.08] rounded-2xl p-8 text-center">
+          <User className="w-12 h-12 text-orange-400 mx-auto mb-4" />
           <h1 className="text-2xl font-bold">Sign In Required</h1>
           <Link href="/auth/login" className="mt-6 w-full">
-            <Button className="w-full bg-lime-400 font-bold text-black hover:bg-lime-300">Sign In</Button>
+            <Button className="w-full bg-orange-400 font-bold text-black hover:bg-orange-300">Sign In</Button>
           </Link>
         </div>
       </div>
@@ -137,7 +137,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#070d12] text-white">
+    <div className="min-h-screen bg-[#0B1020] text-white">
       <Sidebar session={session} mobileOpen={sidebarOpen} onMobileOpenChange={setSidebarOpen} />
       <div className="md:pl-[262px]">
         <TopNavbar onMenuClick={() => setSidebarOpen(true)} />
@@ -148,113 +148,151 @@ export default function SettingsPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            <Card className="bg-[#111a22] border-white/10 rounded-2xl">
+            <Card className="bg-[#131C2E] border-white/[0.08] rounded-2xl">
               <CardHeader>
                 <CardTitle className="text-lg font-bold flex items-center gap-2">
-                  <User className="h-5 w-5 text-lime-400" /> Profile
+                  <User className="h-5 w-5 text-orange-400" /> Profile
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label className="text-slate-300">Name</Label>
-                  <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="bg-[#121b24] border-white/10 text-white" />
+                  <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="bg-[#182238] border-white/[0.08] text-white" />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-slate-300">Phone</Label>
-                  <Input value={form.phone} disabled className="bg-[#121b24] border-white/10 text-slate-400" />
+                  <Input value={form.phone} disabled className="bg-[#182238] border-white/[0.08] text-slate-400" />
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="bg-[#111a22] border-white/10 rounded-2xl">
+            <Card className="bg-[#131C2E] border-white/[0.08] rounded-2xl">
               <CardHeader>
                 <CardTitle className="text-lg font-bold flex items-center gap-2">
-                  <User className="h-5 w-5 text-lime-400" /> Profile
+                  <User className="h-5 w-5 text-orange-400" /> Profile
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label className="text-slate-300">Name</Label>
-                  <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="bg-[#121b24] border-white/10 text-white" />
+                  <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="bg-[#182238] border-white/[0.08] text-white" />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-slate-300">Email</Label>
-                  <Input value={profile?.email || ""} disabled className="bg-[#121b24] border-white/10 text-slate-400" />
+                  <Input value={profile?.email || ""} disabled className="bg-[#182238] border-white/[0.08] text-slate-400" />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-slate-300">Phone</Label>
-                  <Input value={form.phone} disabled className="bg-[#121b24] border-white/10 text-slate-400" />
+                  <Input value={form.phone} disabled className="bg-[#182238] border-white/[0.08] text-slate-400" />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-slate-300">Role</Label>
-                  <Input value={session?.user?.role || ""} disabled className="bg-[#121b24] border-white/10 text-slate-400" />
+                  <Input value={session?.user?.role || ""} disabled className="bg-[#182238] border-white/[0.08] text-slate-400" />
                 </div>
                 {session?.user?.role === "PLAYER" && (
                   <div className="p-3 bg-[#17222d] rounded-lg border border-white/[0.08]">
                     <p className="text-xs text-slate-400">CIBIL Score</p>
-                    <p className="text-lg font-bold text-lime-400">{profile?.cibilScore || 750}</p>
+                    <p className="text-lg font-bold text-orange-400">{profile?.cibilScore || 750}</p>
                     <p className="text-[10px] text-slate-500 mt-1">Join games and complete bookings to improve your score</p>
                   </div>
                 )}
               </CardContent>
             </Card>
 
-            <Card className="bg-[#111a22] border-white/10 rounded-2xl">
+            <Card className="bg-[#131C2E] border-white/[0.08] rounded-2xl">
                 <CardHeader>
                   <CardTitle className="text-lg font-bold flex items-center gap-2">
-                    <MapPin className="h-5 w-5 text-lime-400" /> Location
+                    <MapPin className="h-5 w-5 text-orange-400" /> Location
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
                     <Label className="text-slate-300">Address</Label>
-                    <Textarea value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} className="bg-[#121b24] border-white/10 text-white" />
+                    <Textarea value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} className="bg-[#182238] border-white/[0.08] text-white" />
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label className="text-slate-300">City</Label>
-                      <Input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} className="bg-[#121b24] border-white/10 text-white" />
+                      <Input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} className="bg-[#182238] border-white/[0.08] text-white" />
                     </div>
                     <div className="space-y-2">
                       <Label className="text-slate-300">State</Label>
-                      <Input value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} className="bg-[#121b24] border-white/10 text-white" />
+                      <Input value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} className="bg-[#182238] border-white/[0.08] text-white" />
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label className="text-slate-300">Postal Code</Label>
-                      <Input value={form.postalCode} onChange={(e) => setForm({ ...form, postalCode: e.target.value })} className="bg-[#121b24] border-white/10 text-white" />
+                      <Input value={form.postalCode} onChange={(e) => setForm({ ...form, postalCode: e.target.value })} className="bg-[#182238] border-white/[0.08] text-white" />
                     </div>
-                    <div className="space-y-2">
-                      <Label className="text-slate-300">Latitude</Label>
-                      <Input value={form.latitude} onChange={(e) => setForm({ ...form, latitude: e.target.value })} className="bg-[#121b24] border-white/10 text-white" />
+                    <div className="space-y-2 flex items-end">
+                      <Button type="button" variant="outline" className="w-full border-white/[0.08] text-white" onClick={() => {
+                        if (!navigator.geolocation) { toast({ title: "Unsupported", description: "Geolocation not supported", variant: "destructive" }); return }
+                        navigator.geolocation.getCurrentPosition(async (pos) => {
+                          const lat = pos.coords.latitude
+                          const lng = pos.coords.longitude
+                          let updatedForm = { ...form, latitude: lat.toString(), longitude: lng.toString() }
+                          try {
+                            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`, { headers: { "Accept-Language": "en" } })
+                            const data = await res.json()
+                            const a = data?.address || {}
+                            updatedForm = {
+                              ...updatedForm,
+                              address: [a.road, a.suburb, a.neighbourhood].filter(Boolean).join(", ") || updatedForm.address,
+                              city: a.city || a.town || a.village || updatedForm.city,
+                              state: a.state || updatedForm.state,
+                              postalCode: a.postcode || updatedForm.postalCode,
+                            }
+                            setForm(updatedForm)
+                            // auto-save so saved pin updates immediately
+                            const saved = await updateProfile.mutateAsync({
+                              name: updatedForm.name,
+                              address: updatedForm.address,
+                              city: updatedForm.city,
+                              state: updatedForm.state,
+                              postalCode: updatedForm.postalCode,
+                              latitude: parseFloat(updatedForm.latitude),
+                              longitude: parseFloat(updatedForm.longitude),
+                            })
+                            setForm((f) => ({ ...f, latitude: saved.latitude?.toString() || updatedForm.latitude, longitude: saved.longitude?.toString() || updatedForm.longitude }))
+                            toast({ title: "Location saved", description: "Current location set as your saved pin" })
+                          } catch {
+                            setForm(updatedForm)
+                            toast({ title: "Location captured", description: "Coordinates saved; address not auto-filled" })
+                          }
+                         }, (err: any) => toast({ title: "Error", description: err?.message || "Could not get location", variant: "destructive" }), { enableHighAccuracy: false, maximumAge: 60000, timeout: 15000 })
+                      }}>
+                        <MapPin className="h-4 w-4 mr-2" /> Use My Location
+                      </Button>
                     </div>
-                    <div className="space-y-2">
-                      <Label className="text-slate-300">Longitude</Label>
-                      <Input value={form.longitude} onChange={(e) => setForm({ ...form, longitude: e.target.value })} className="bg-[#121b24] border-white/10 text-white" />
-                    </div>
+                  </div>
+                   <div className="flex gap-2">
+                     <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([form.address, form.city, form.state, form.postalCode].filter(Boolean).join(", "))}`} target="_blank" rel="noopener noreferrer" className="text-sm text-orange-400 hover:underline">Open in Google Maps</a>
+                    {form.latitude && form.longitude && (
+                      <a href={`https://www.google.com/maps/search/?api=1&query=${form.latitude},${form.longitude}`} target="_blank" rel="noopener noreferrer" className="text-sm text-slate-400 hover:underline">View saved pin</a>
+                    )}
                   </div>
                   <p className="text-xs text-slate-500">This location will be used as default for new facilities you create.</p>
                 </CardContent>
               </Card>
-            <Card className="bg-[#111a22] border-white/10 rounded-2xl">
+            <Card className="bg-[#131C2E] border-white/[0.08] rounded-2xl">
               <CardHeader>
                 <CardTitle className="text-lg font-bold flex items-center gap-2">
-                  <User className="h-5 w-5 text-lime-400" /> Change Password
+                  <User className="h-5 w-5 text-orange-400" /> Change Password
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label className="text-slate-300">Current Password</Label>
-                  <Input type="password" value={passwordForm.currentPassword} onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })} className="bg-[#121b24] border-white/10 text-white" />
+                  <Input type="password" value={passwordForm.currentPassword} onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })} className="bg-[#182238] border-white/[0.08] text-white" />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-slate-300">New Password</Label>
-                  <Input type="password" value={passwordForm.newPassword} onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })} className="bg-[#121b24] border-white/10 text-white" />
+                  <Input type="password" value={passwordForm.newPassword} onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })} className="bg-[#182238] border-white/[0.08] text-white" />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-slate-300">Confirm Password</Label>
-                  <Input type="password" value={passwordForm.confirmPassword} onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })} className="bg-[#121b24] border-white/10 text-white" />
+                  <Input type="password" value={passwordForm.confirmPassword} onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })} className="bg-[#182238] border-white/[0.08] text-white" />
                 </div>
                 <Button type="button" onClick={handlePasswordChange} className="w-full bg-white/10 text-white hover:bg-white/20" disabled={isLoading}>
                   {isLoading ? "Changing..." : "Change Password"}
@@ -262,7 +300,7 @@ export default function SettingsPage() {
               </CardContent>
             </Card>
 
-            <Button type="submit" className="w-full bg-lime-400 font-bold text-black hover:bg-lime-300" disabled={isLoading}>
+            <Button type="submit" className="w-full bg-orange-400 font-bold text-black hover:bg-orange-300" disabled={isLoading}>
               {isLoading ? "Saving..." : "Save Settings"}
             </Button>
           </form>

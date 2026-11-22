@@ -80,6 +80,7 @@ interface Court {
   capacity: number | string
   isIndoor: boolean
   pricePerHour: number | string
+  images: string[]
 }
 
 export default function AddFacilityPage() {
@@ -101,6 +102,7 @@ export default function AddFacilityPage() {
     capacity: 10,
     isIndoor: false,
     pricePerHour: 500,
+    images: [],
   })
 
   const {
@@ -142,6 +144,7 @@ export default function AddFacilityPage() {
           capacity: Number(c.capacity) || 1,
           isIndoor: c.isIndoor,
           pricePerHour: Number(c.pricePerHour) || 500,
+          images: c.images || [],
         })) : undefined,
       })
     } finally {
@@ -174,6 +177,7 @@ export default function AddFacilityPage() {
       capacity: 10,
       isIndoor: false,
       pricePerHour: 500,
+      images: [],
     })
   }
 
@@ -488,6 +492,39 @@ export default function AddFacilityPage() {
                         <SelectItem value="indoor">Indoor</SelectItem>
                       </SelectContent>
                     </Select>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-slate-300 text-xs">Court Images</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {(newCourt.images || []).map((url, idx) => (
+                      <div key={idx} className="relative h-16 w-16 overflow-hidden rounded-lg border border-white/10 bg-[#182238]">
+                        <img src={url} alt="court" className="h-full w-full object-cover" />
+                        <button type="button" onClick={() => setNewCourt({ ...newCourt, images: (newCourt.images || []).filter((_, i) => i !== idx) })} className="absolute right-0.5 top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-black/60 text-white hover:bg-red-500">×</button>
+                      </div>
+                    ))}
+                    <label className="flex h-16 w-16 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-white/20 bg-[#182238] text-slate-400 hover:border-orange-400/40 hover:text-orange-400">
+                      <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                        const file = e.target.files?.[0]
+                        if (!file) return
+                        setIsUploading(true)
+                        try {
+                          const formData = new FormData()
+                          formData.append("file", file)
+                          const res = await fetch("/api/upload/facility-image", { method: "POST", body: formData })
+                           const text = await res.text()
+                           let data: any = {}
+                           try { data = JSON.parse(text) } catch { throw new Error(text || "Upload failed") }
+                           if (!res.ok) throw new Error(data.error || "Upload failed")
+                          setNewCourt((c) => ({ ...c, images: [...(c.images || []), data.url] }))
+                        } catch (err: any) {
+                          alert(err.message || "Upload failed")
+                        } finally {
+                          setIsUploading(false)
+                        }
+                      }} />
+                      {isUploading ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-orange-400 border-t-transparent" /> : <Plus className="h-4 w-4" />}
+                    </label>
                   </div>
                 </div>
                 <Button type="button" onClick={addCourt} className="w-full bg-orange-400/10 text-orange-400 hover:bg-orange-400/20 border border-orange-400/20">

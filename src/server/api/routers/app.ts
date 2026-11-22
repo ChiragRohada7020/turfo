@@ -2,6 +2,7 @@ import { z } from "zod"
 import { sponsorsRouter } from "./sponsors.router"
 import { adminRouter } from "./admin.router"
 import { promotionsRouter } from "./promotions.router"
+import { tasksRouter } from "./tasks.router"
 import { createTRPCRouter, publicProcedure, protectedProcedure, ownerProcedure, adminProcedure, sponsorProcedure } from "@/server/trpc/init"
 import { TRPCError } from "@trpc/server"
 import prisma from "@/lib/prisma"
@@ -12,6 +13,7 @@ import { msg91 } from "@/lib/msg91/service"
 import { authyo } from "@/lib/authyo/service"
 import { createCashfreeOrder, generateOrderId, createCashfreeRefund, initiateCashfreePayout, createCashfreeContact } from "@/lib/cashfree"
 import { trackTaskProgress } from "@/lib/rewards/taskProgress"
+import { onBookingCompleted, onBookingCancelled } from "@/lib/tasks/refresh"
 
 export const appRouter = createTRPCRouter({
   auth: createTRPCRouter({
@@ -128,7 +130,7 @@ export const appRouter = createTRPCRouter({
       .input(
         z.object({
           name: z.string().min(2).optional(),
-          avatarUrl: z.string().url().optional(),
+           avatarUrl: z.string().optional(),
           address: z.string().optional(),
           city: z.string().optional(),
           state: z.string().optional(),
@@ -138,11 +140,12 @@ export const appRouter = createTRPCRouter({
         })
       )
       .mutation(async ({ ctx, input }) => {
-        const user = await prisma.user.update({
-          where: { id: ctx.session.user.id },
-          data: input,
-        })
-        return { id: user.id, email: user.email, name: user.name, phone: user.phone, avatarUrl: user.avatarUrl, address: user.address, city: user.city, state: user.state, postalCode: user.postalCode, latitude: user.latitude, longitude: user.longitude }
+         const user = await prisma.user.update({
+           where: { id: ctx.session.user.id },
+           data: input,
+         })
+         try { const { trackTaskProgress } = await import("@/lib/rewards/taskProgress"); await trackTaskProgress(ctx.session.user.id, "COMPLETE_PROFILE" as any, 1) } catch (e) { console.error(e) }
+         return { id: user.id, email: user.email, name: user.name, phone: user.phone, avatarUrl: user.avatarUrl, address: user.address, city: user.city, state: user.state, postalCode: user.postalCode, latitude: user.latitude, longitude: user.longitude }
       }),
 
     // Public OTP endpoints for registration
@@ -239,7 +242,8 @@ export const appRouter = createTRPCRouter({
       .query(async ({ input }) => {
         const where: Prisma.FacilityWhereInput = {
           isActive: true,
-          ...(input.city && { city: { equals: input.city, mode: "insensitive" } }),
+          owner: { isVerified: true },
+          ...(input.city && { city: { equals: input.city.trim(), mode: "insensitive" } }),
           ...(input.sportTypes?.length && { sportTypes: { hasSome: input.sportTypes } }),
         }
 
@@ -294,7 +298,7 @@ export const appRouter = createTRPCRouter({
           where: { id: input.id },
           include: {
             courts: { where: { isActive: true }, include: { pricingRules: { where: { isActive: true } } } },
-            owner: { select: { id: true, name: true, avatarUrl: true, phone: true } },
+             owner: { select: { id: true, name: true, avatarUrl: true, phone: true, latitude: true, longitude: true, isVerified: true } },
             pricingRules: { where: { isActive: true } },
             availability: { where: { date: { gte: new Date() }, isBlocked: false }, take: 30 },
             reviews: {
@@ -336,7 +340,7 @@ export const appRouter = createTRPCRouter({
           longitude: z.number().optional(),
           sportTypes: z.array(z.nativeEnum(SportType)).min(1),
           amenities: z.array(z.string()).default([]),
-          images: z.array(z.string().url()).default([]),
+          images: z.array(z.string()).default([]),
           openTime: z.string().optional(),
           closeTime: z.string().optional(),
           courts: z.array(z.object({
@@ -345,6 +349,7 @@ export const appRouter = createTRPCRouter({
             surfaceType: z.string(),
             capacity: z.number(),
             pricePerHour: z.number(),
+            images: z.array(z.string()).optional(),
           })).optional(),
           pricingRules: z.array(z.object({
             name: z.string(),
@@ -362,6 +367,10 @@ export const appRouter = createTRPCRouter({
         // Verify user exists (prevents FK constraint errors from stale sessions)
         const user = await prisma.user.findUnique({ where: { id: ctx.session.user.id } })
         if (!user) throw new TRPCError({ code: "UNAUTHORIZED", message: "Session expired. Please log in again." })
+
+         if (user.bookingBanUntil && user.bookingBanUntil > new Date() && user.role !== "OWNER" && user.role !== "ADMIN") {
+          throw new TRPCError({ code: "FORBIDDEN", message: `You cannot book until ${user.bookingBanUntil.toLocaleString()} due to a recent no-show.` })
+        }
 
         // Auto-fill location from owner profile if not provided
         const owner = await prisma.user.findUnique({
@@ -403,6 +412,7 @@ export const appRouter = createTRPCRouter({
                 sportType: court.sportType,
                 surfaceType: court.surfaceType as any,
                 capacity: court.capacity,
+                images: court.images || [],
                 isActive: true,
               },
             })
@@ -418,7 +428,7 @@ export const appRouter = createTRPCRouter({
                 endTime: "22:00",
                 pricePerHour: court.pricePerHour,
                 minDuration: 30,
-                maxDuration: 60,
+                maxDuration: 1440,
                 isActive: true,
               },
             })
@@ -468,7 +478,7 @@ export const appRouter = createTRPCRouter({
           longitude: z.number().optional(),
           sportTypes: z.array(z.nativeEnum(SportType)).optional(),
           amenities: z.array(z.string()).optional(),
-          images: z.array(z.string().url()).optional(),
+          images: z.array(z.string()).optional(),
           openTime: z.string().optional(),
           closeTime: z.string().optional(),
           isActive: z.boolean().optional(),
@@ -492,12 +502,12 @@ export const appRouter = createTRPCRouter({
         })
         if (!facility) throw new Error("Facility not found or access denied")
 
-        return prisma.facility.delete({ where: { id: input.id } })
+        return prisma.facility.update({ where: { id: input.id }, data: { isActive: false } })
       }),
 
     myFacilities: protectedProcedure.query(async ({ ctx }) => {
       return prisma.facility.findMany({
-        where: { ownerId: ctx.session.user.id },
+        where: { ownerId: ctx.session.user.id, isActive: true },
         include: {
           courts: true,
           _count: { select: { bookings: true, reviews: true, courts: true } },
@@ -613,7 +623,7 @@ export const appRouter = createTRPCRouter({
           images: input.images,
         } })
 
-        if (input.pricePerHour) {
+        if (input.pricePerHour || true) {
           await prisma.pricingRule.create({
             data: {
               facilityId: input.facilityId,
@@ -622,9 +632,9 @@ export const appRouter = createTRPCRouter({
               dayOfWeek: [0,1,2,3,4,5,6],
               startTime: facility.openTime || "06:00",
               endTime: facility.closeTime || "22:00",
-              pricePerHour: input.pricePerHour,
+              pricePerHour: input.pricePerHour || 500,
               minDuration: 30,
-              maxDuration: 60,
+              maxDuration: 1440,
               isActive: true,
             },
           })
@@ -899,6 +909,10 @@ export const appRouter = createTRPCRouter({
         const user = await prisma.user.findUnique({ where: { id: ctx.session.user.id } })
         if (!user) throw new TRPCError({ code: "UNAUTHORIZED", message: "Session expired. Please log in again." })
 
+         if (user.bookingBanUntil && user.bookingBanUntil > new Date() && user.role !== "OWNER" && user.role !== "ADMIN") {
+          throw new TRPCError({ code: "FORBIDDEN", message: `You cannot book until ${user.bookingBanUntil.toLocaleString()} due to a recent no-show.` })
+        }
+
         // Check CIBIL score - minimum 600 to book (skip for owner)
         if (!isOwnerBooking && user.cibilScore < 600) {
           throw new TRPCError({
@@ -1139,7 +1153,7 @@ export const appRouter = createTRPCRouter({
           prisma.booking.findMany({
             where,
             include: {
-              facility: { select: { id: true, name: true, address: true, city: true, images: true, ownerId: true } },
+              facility: { select: { id: true, name: true, address: true, city: true, state: true, latitude: true, longitude: true, images: true, ownerId: true } },
               court: { select: { id: true, name: true } },
               payment: { select: { status: true, amount: true } },
             },
@@ -1196,27 +1210,25 @@ export const appRouter = createTRPCRouter({
           throw new Error("Please provide a cancellation reason")
         }
 
-        const updated = await prisma.booking.update({
-          where: { id: input.id },
-          data: {
-            status: BookingStatus.CANCELLED,
-            notes: input.reason ? `Cancelled: ${input.reason}` : `Cancelled by ${isOwnerOrAdmin ? "owner" : "player"}`,
-          },
-        })
-
-        // No online payment - no refund processing needed
-        // Update payment status if exists
-        if (booking.payment) {
-          await prisma.payment.update({
-            where: { id: booking.payment.id },
-            data: { status: PaymentStatus.FAILED },
+        const updated = await prisma.$transaction(async (tx) => {
+          const u = await tx.booking.update({
+            where: { id: input.id },
+            data: {
+              status: BookingStatus.CANCELLED,
+              notes: input.reason ? `Cancelled: ${input.reason}` : `Cancelled by ${isOwnerOrAdmin ? "owner" : "player"}`,
+            },
           })
-        }
-
-        // Decrease CIBIL score for cancellation
-        await prisma.user.update({
-          where: { id: ctx.session.user.id },
-          data: { cibilScore: { decrement: 50 } },
+          if (booking.payment) {
+            await tx.payment.update({
+              where: { id: booking.payment.id },
+              data: { status: PaymentStatus.FAILED },
+            })
+          }
+          await tx.user.update({
+            where: { id: ctx.session.user.id },
+            data: { cibilScore: { decrement: 50 } },
+          })
+          return u
         })
 
         // Create notification for the other party
@@ -1244,6 +1256,7 @@ export const appRouter = createTRPCRouter({
           })
         }
 
+        try { await onBookingCancelled(booking.userId, booking.id) } catch (e) { console.error(e) }
         return { ...updated, refundPercent: 0, refundAmount: 0 }
       }),
 
@@ -1696,7 +1709,7 @@ export const appRouter = createTRPCRouter({
             where,
             include: {
               user: { select: { id: true, name: true, email: true, phone: true } },
-              facility: { select: { id: true, name: true, address: true, city: true, images: true, ownerId: true } },
+              facility: { select: { id: true, name: true, address: true, city: true, state: true, latitude: true, longitude: true, images: true, ownerId: true } },
               court: { select: { id: true, name: true } },
               payment: { select: { status: true, amount: true, platformFee: true, ownerPayout: true } },
             },
@@ -1748,7 +1761,7 @@ export const appRouter = createTRPCRouter({
 
         await prisma.booking.update({ where: { id: booking.id }, data: { status: BookingStatus.COMPLETED } })
 
-        try { await trackTaskProgress(booking.userId, "BOOK_TURFS", 1) } catch (e) { console.error(e) }
+        try { await onBookingCompleted(booking.userId, booking.id) } catch (e) { console.error(e) }
 
         await prisma.notification.create({
           data: {
@@ -2190,13 +2203,23 @@ payments: createTRPCRouter({
     // Get personalized offers for a user (algorithm)
   received: protectedProcedure
     .query(async ({ ctx }) => {
+      const now = new Date()
+      const cached = await prisma.offerRecommendation.findUnique({ where: { userId: ctx.session.user.id } })
+      if (cached && cached.expiresAt > now) {
+        const cachedOffers = await prisma.offer.findMany({
+          where: { id: { in: cached.offerIds }, isActive: true, validFrom: { lte: now }, validTo: { gte: now }, sponsor: { isApproved: true, isActive: true } },
+          include: { sponsor: { select: { name: true, logoUrl: true, budget: true, spentBudget: true } } },
+        })
+        return cachedOffers.filter((o: any) => o.usedCount < o.maxUses && o.sponsor.spentBudget < o.sponsor.budget)
+      }
+
       const recipients = await prisma.campaignRecipient.findMany({
         where: { userId: ctx.session.user.id },
         select: { couponCode: true, isHoldout: true },
       })
       const codes = recipients.filter((r) => !r.isHoldout).map((r) => r.couponCode)
       if (codes.length === 0) return []
-      const now = new Date()
+
       const offers = await prisma.offer.findMany({
         where: {
           code: { in: codes },
@@ -2214,7 +2237,64 @@ payments: createTRPCRouter({
         _count: { offerId: true },
       })
       const redemptionMap = new Map(userRedemptions.map((r) => [r.offerId, r._count.offerId]))
-      return offers.filter((o: any) => o.usedCount < o.maxUses && o.sponsor.spentBudget < o.sponsor.budget && (redemptionMap.get(o.id) || 0) < o.maxUsesPerUser)
+      const eligible = offers.filter((o: any) => o.usedCount < o.maxUses && o.sponsor.spentBudget < o.sponsor.budget && (redemptionMap.get(o.id) || 0) < o.maxUsesPerUser)
+
+      // AI-driven offer decision
+      const completedCount = await prisma.booking.count({ where: { userId: ctx.session.user.id, status: BookingStatus.COMPLETED } })
+      const totalBookings = await prisma.booking.count({ where: { userId: ctx.session.user.id } })
+      const user = await prisma.user.findUnique({ where: { id: ctx.session.user.id }, select: { cibilScore: true, rewardPoints: true } })
+
+      try {
+        const apiKey = process.env.KILO_API_KEY
+        const apiUrl = process.env.KILO_API_URL
+        const model = process.env.KILO_MODEL || "kilo-auto/small"
+        if (apiKey && apiUrl && eligible.length > 0) {
+          const offerList = eligible.map((o: any) => ({ id: o.id, title: o.title, discountValue: o.discountValue, minBookingAmount: o.minBookingAmount }))
+          const prompt = `You are an offer recommendation engine for a sports booking platform. Decide which offers to show to this player to increase engagement and bookings.
+Player stats: completedBookings=${completedCount}, totalBookings=${totalBookings}, cibilScore=${user?.cibilScore}, rewardPoints=${user?.rewardPoints}.
+Candidate offers: ${JSON.stringify(offerList)}.
+Return ONLY a JSON array of offer IDs to show to this player. Return at most 2 offer IDs. Distribute offers gradually to avoid showing all at once. If player has completed at least 3 bookings, favor rewarding them; otherwise show at most 1 offer.`
+          const res = await fetch(apiUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+            body: JSON.stringify({ model, messages: [{ role: "user", content: prompt }], temperature: 0.2 }),
+          })
+          if (res.ok) {
+            const data = await res.json()
+            const content = data?.choices?.[0]?.message?.content || "[]"
+            const match = content.match(/\[[\s\S]*\]/)
+            const ids: string[] = match ? JSON.parse(match[0]) : []
+            if (Array.isArray(ids) && ids.length > 0) {
+              const idSet = new Set(ids)
+              const selected = eligible.filter((o: any) => idSet.has(o.id)).slice(0, 2)
+              if (selected.length > 0) {
+                await prisma.offerRecommendation.upsert({
+                  where: { userId: ctx.session.user.id },
+                  update: { offerIds: selected.map((o: any) => o.id), playerSummary: { completedCount, totalBookings } as any, computedAt: now, expiresAt: new Date(now.getTime() + 6 * 60 * 60 * 1000) },
+                  create: { userId: ctx.session.user.id, offerIds: selected.map((o: any) => o.id), playerSummary: { completedCount, totalBookings } as any, expiresAt: new Date(now.getTime() + 6 * 60 * 60 * 1000) },
+                })
+                return selected
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.error("[AI offers] failed", e)
+      }
+
+      // Fallback heuristic (gradual distribution)
+      let result: any[] = []
+      if (completedCount >= 3) result = eligible.slice(0, 2)
+      else result = eligible.slice(0, 1)
+
+      // AI branch returns directly above; if reached here, store cache
+      await prisma.offerRecommendation.upsert({
+        where: { userId: ctx.session.user.id },
+        update: { offerIds: result.map((o: any) => o.id), playerSummary: { completedCount, totalBookings } as any, computedAt: now, expiresAt: new Date(now.getTime() + 6 * 60 * 60 * 1000) },
+        create: { userId: ctx.session.user.id, offerIds: result.map((o: any) => o.id), playerSummary: { completedCount, totalBookings } as any, expiresAt: new Date(now.getTime() + 6 * 60 * 60 * 1000) },
+      })
+
+      return result
     }),
 
     getPersonalized: protectedProcedure
@@ -2327,16 +2407,11 @@ payments: createTRPCRouter({
     tasks: protectedProcedure
       .query(async ({ ctx }) => {
         const tasks = await prisma.task.findMany({
-          where: { isActive: true },
-          orderBy: { createdAt: "asc" },
+          where: { isActive: true, OR: [{ userId: null }, { userId: ctx.session.user.id }] },
+          orderBy: { createdAt: "desc" },
         })
-
-        const userTasks = await prisma.userTask.findMany({
-          where: { userId: ctx.session.user.id },
-        })
-
+        const userTasks = await prisma.userTask.findMany({ where: { userId: ctx.session.user.id } })
         const userTaskMap = new Map(userTasks.map((ut) => [ut.taskId, ut]))
-
         return tasks.map((task) => {
           const ut = userTaskMap.get(task.id)
           return {
@@ -2344,11 +2419,14 @@ payments: createTRPCRouter({
             title: task.title,
             description: task.description,
             type: task.type,
+            category: task.category,
             target: task.target,
             rewardPoints: task.rewardPoints,
             progress: ut?.progress || 0,
             completed: ut?.completed || false,
             completedAt: ut?.completedAt,
+            status: ut?.status || task.status,
+            expiresAt: task.expiresAt,
           }
         })
       }),
@@ -2357,233 +2435,39 @@ payments: createTRPCRouter({
     updateTaskProgress: protectedProcedure
       .input(z.object({ taskId: z.string(), increment: z.number().min(1).default(1) }))
       .mutation(async ({ ctx, input }) => {
+        const { trackTaskProgress } = await import("@/lib/rewards/taskProgress")
         const task = await prisma.task.findUnique({ where: { id: input.taskId } })
-        if (!task) throw new Error("Task not found")
-
-        const userTask = await prisma.userTask.upsert({
-          where: { userId_taskId: { userId: ctx.session.user.id, taskId: input.taskId } },
-          create: { userId: ctx.session.user.id, taskId: input.taskId, progress: input.increment },
-          update: { progress: { increment: input.increment } },
-        })
-
-        // Check if task is now complete
-        if (!userTask.completed && userTask.progress >= task.target) {
-          await prisma.userTask.update({
-            where: { id: userTask.id },
-            data: { completed: true, completedAt: new Date() },
-          })
-
-          // Award reward points
-          await prisma.user.update({
-            where: { id: ctx.session.user.id },
-            data: { rewardPoints: { increment: task.rewardPoints } },
-          })
-
-          await prisma.rewardTransaction.create({
-            data: {
-              userId: ctx.session.user.id,
-              points: task.rewardPoints,
-              type: "EARNED",
-              description: `Completed task: ${task.title}`,
-              referenceId: task.id,
-            },
-          }).catch(() => {})
-
-          return { completed: true, pointsAwarded: task.rewardPoints }
-        }
-
-        return { completed: false, pointsAwarded: 0 }
-      }),
-
-    // Get user's reward points
-    myRewardPoints: protectedProcedure
-      .query(async ({ ctx }) => {
-        const user = await prisma.user.findUnique({
-          where: { id: ctx.session.user.id },
-          select: { rewardPoints: true },
-        })
-        return user?.rewardPoints || 0
-      }),
-
-    // Get user's reward transactions
-    myRewardTransactions: protectedProcedure
-      .query(async ({ ctx }) => {
-        return prisma.rewardTransaction.findMany({
-          where: { userId: ctx.session.user.id },
-          orderBy: { createdAt: "desc" },
-          take: 20,
-        })
+        if (task) await trackTaskProgress(ctx.session.user.id, task.type, input.increment)
+        const { verifyAndCreditTask } = await import("@/lib/tasks/verification")
+        return verifyAndCreditTask(ctx.session.user.id, input.taskId)
       }),
 
     // AI-generated personalized tasks
     generateTasks: protectedProcedure
       .mutation(async ({ ctx }) => {
-        const userId = ctx.session.user.id
-        const now = new Date()
-
-        // Get user's booking history
-        const userBookings = await prisma.booking.findMany({
-          where: { userId },
-          include: { facility: { select: { id: true, name: true, city: true } }, court: { select: { sportType: true } } },
-          orderBy: { createdAt: "desc" },
-          take: 50,
-        })
-
-        // Analyze user behavior
-        const bookingCount = userBookings.length
-        const sportCounts: Record<string, number> = {}
-        const cityCounts: Record<string, number> = {}
-        const dayCounts: Record<number, number> = {}
-        const hourCounts: Record<number, number> = {}
-
-        userBookings.forEach((b) => {
-          const sport = b.court?.sportType || "FOOTBALL"
-          sportCounts[sport] = (sportCounts[sport] || 0) + 1
-          const city = b.facility?.city
-          if (city) cityCounts[city] = (cityCounts[city] || 0) + 1
-          const day = new Date(b.startTime).getDay()
-          dayCounts[day] = (dayCounts[day] || 0) + 1
-          const hour = new Date(b.startTime).getHours()
-          hourCounts[hour] = (hourCounts[hour] || 0) + 1
-        })
-
-        const mostBookedSport = Object.entries(sportCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "FOOTBALL"
-        const leastBookedDay = [0,1,2,3,4,5,6].sort((a, b) => (dayCounts[a] || 0) - (dayCounts[b] || 0))[0]
-        const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
-
-        // Find underutilized turfs (less crowded)
-        const allFacilities = await prisma.facility.findMany({
-          where: { isActive: true },
-          include: { _count: { select: { bookings: true } } },
-          orderBy: { createdAt: "desc" },
-          take: 10,
-        })
-
-        // Score facilities by booking count (lower = less crowded = better for throughput)
-        const underutilized = allFacilities
-          .sort((a, b) => (a._count?.bookings || 0) - (b._count?.bookings || 0))
-          .slice(0, 3)
-
-        // Generate personalized tasks
-        const tasksToCreate: any[] = []
-
-        // Task 1: Play consistency - based on user's booking frequency
-        const playTarget = Math.max(2, Math.min(5, Math.ceil(bookingCount / 5) + 1))
-        tasksToCreate.push({
-          title: `Play ${playTarget} Games This Week`,
-          description: `Book and play ${playTarget} games this week to earn bonus points. You can play on any day or time that suits you.`,
-          type: "PLAY_GAMES",
-          target: playTarget,
-          rewardPoints: playTarget * 25,
-          isAiGenerated: true,
-          userId,
-          expiresAt: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000),
-        })
-
-        // Task 2: Try an underutilized turf
-        if (underutilized.length > 0) {
-          const turf = underutilized[0]
-          tasksToCreate.push({
-            title: `Discover ${turf.name}`,
-            description: `This turf has fewer bookings - visit it on ${dayNames[leastBookedDay]} for a quieter experience and help improve its visibility!`,
-            type: "BOOK_TURFS",
-            target: 1,
-            rewardPoints: 75,
-            isAiGenerated: true,
-            userId,
-            targetTurfId: turf.id,
-            expiresAt: new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000),
-          })
-        }
-
-        // Task 3: Try a different sport
-        const sports = ["FOOTBALL", "CRICKET", "BADMINTON", "TENNIS", "BASKETBALL", "VOLLEYBALL", "PS_GAMES"]
-        const untriedSport = sports.find((s) => !sportCounts[s]) || sports[Math.floor(Math.random() * sports.length)]
-        tasksToCreate.push({
-          title: `Try ${untriedSport.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c: string) => c.toUpperCase())}`,
-          description: `Book a ${untriedSport.toLowerCase().replace(/_/g, " ")} session to diversify your game and earn bonus points.`,
-          type: "BOOK_TURFS",
-          target: 1,
-          rewardPoints: 50,
-          isAiGenerated: true,
-          userId,
-          targetSport: untriedSport as any,
-          expiresAt: new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000),
-        })
-
-        // Task 4: Join open games
-        tasksToCreate.push({
-          title: "Join Open Games",
-          description: "Join 2 open games to meet new players and earn points.",
-          type: "JOIN_OPEN_GAMES",
-          target: 2,
-          rewardPoints: 100,
-          isAiGenerated: true,
-          userId,
-          expiresAt: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000),
-        })
-
-        // Create tasks (skip if already exists for this user with same title)
-        const existingTasks = await prisma.task.findMany({
-          where: { userId, isAiGenerated: true, expiresAt: { gte: now } },
-        })
-        const existingTitles = new Set(existingTasks.map((t) => t.title))
-
-        let created = 0
-        for (const taskData of tasksToCreate) {
-          if (existingTitles.has(taskData.title)) continue
-          const task = await prisma.task.create({ data: taskData })
-          // Create UserTask entry
-          await prisma.userTask.create({
-            data: { userId, taskId: task.id, progress: 0 },
-          })
-          created++
-        }
-
-        return { created, total: tasksToCreate.length }
+        const { generateTasksForPlayer } = await import("@/lib/tasks/generator")
+        return generateTasksForPlayer(ctx.session.user.id)
       }),
 
-    // Get user's personalized tasks (global + AI-generated for this user)
+    // Get user's personalized tasks
     myTasks: protectedProcedure
       .query(async ({ ctx }) => {
-        const now = new Date()
+        const { expireStaleTasks } = await import("@/lib/tasks/refresh")
+        await expireStaleTasks()
         const tasks = await prisma.task.findMany({
-          where: {
-            isActive: true,
-            OR: [
-              { userId: null },
-              { userId: ctx.session.user.id },
-            ],
-            ...( { expiresAt: { gte: now } } ),
-          },
+          where: { isActive: true, OR: [{ userId: null }, { userId: ctx.session.user.id }] },
           orderBy: { createdAt: "desc" },
         })
-
-        // Also include expired AI tasks that are still in progress
-        const expiredTasks = await prisma.task.findMany({
-          where: {
-            isActive: true,
-            userId: ctx.session.user.id,
-            expiresAt: { lt: now },
-          },
-          orderBy: { createdAt: "desc" },
-        })
-
-        const allTasks = [...tasks, ...expiredTasks.filter((t) => !tasks.find((x) => x.id === t.id))]
-
-        const userTasks = await prisma.userTask.findMany({
-          where: { userId: ctx.session.user.id },
-        })
-
+        const userTasks = await prisma.userTask.findMany({ where: { userId: ctx.session.user.id } })
         const userTaskMap = new Map(userTasks.map((ut) => [ut.taskId, ut]))
-
-        return allTasks.map((task) => {
+        return tasks.map((task) => {
           const ut = userTaskMap.get(task.id)
           return {
             id: task.id,
             title: task.title,
             description: task.description,
             type: task.type,
+            category: task.category,
             target: task.target,
             rewardPoints: task.rewardPoints,
             progress: ut?.progress || 0,
@@ -2593,9 +2477,21 @@ payments: createTRPCRouter({
             expiresAt: task.expiresAt,
             targetTurfId: task.targetTurfId,
             targetSport: task.targetSport,
-            targetTimeSlot: task.targetTimeSlot,
+            status: ut?.status || task.status,
           }
         })
+      }),
+
+    // Reward points (delegated)
+    myRewardPoints: protectedProcedure
+      .query(async ({ ctx }) => {
+        const user = await prisma.user.findUnique({ where: { id: ctx.session.user.id }, select: { rewardPoints: true } })
+        return user?.rewardPoints || 0
+      }),
+
+    myRewardTransactions: protectedProcedure
+      .query(async ({ ctx }) => {
+        return prisma.rewardTransaction.findMany({ where: { userId: ctx.session.user.id }, orderBy: { createdAt: "desc" }, take: 20 })
       }),
 
     // Redeem an offer
@@ -3588,6 +3484,7 @@ payments: createTRPCRouter({
       }),
   }),
 
+  tasks: tasksRouter,
   admin: adminRouter,
 })
 
@@ -3617,9 +3514,9 @@ const istOffset = 5.5 * 60 * 60 * 1000
     }
   })
 
-  for (let minutes = startMinutes; minutes < endMinutes; minutes += 60) {
+  for (let minutes = startMinutes; minutes < endMinutes; minutes += 30) {
     const slotStart = minutes
-    const slotEnd = minutes + 60
+    const slotEnd = minutes + 30
 
     const isBooked = bookedSlots.some((b) => b.start < slotEnd && b.end > slotStart)
     if (isBooked) continue

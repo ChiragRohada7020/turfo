@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import { getServerSession } from "next-auth"
 import { trackTaskProgress } from "@/lib/rewards/taskProgress"
+import { onBookingCompleted } from "@/lib/tasks/refresh"
 import { authOptions } from "@/lib/auth/config"
 
 export async function POST(request: NextRequest) {
@@ -107,7 +108,7 @@ export async function POST(request: NextRequest) {
         })
       })
 
-      try { await trackTaskProgress(booking.userId, "BOOK_TURFS", 1) } catch (e) { console.error(e) }
+      try { await onBookingCompleted(booking.userId, booking.id) } catch (e) { console.error(e) }
 
       return NextResponse.json({
         success: true,

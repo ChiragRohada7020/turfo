@@ -61,6 +61,11 @@ export default withAuth(
       return NextResponse.redirect(new URL("/dashboard?error=locked", req.url))
     }
 
+    // Sponsors should not access player-facing search/facility pages
+    if (token?.role === "SPONSOR" && (path === "/search" || path.startsWith("/facility/"))) {
+      return NextResponse.redirect(new URL("/dashboard/sponsor", req.url))
+    }
+
     return NextResponse.next()
   },
   {
@@ -76,6 +81,7 @@ export default withAuth(
           "/api/auth/",
           "/api/health",
           "/api/webhooks/",
+          "/api/upload/",
         ]
 
         if (publicRoutes.some((route) => path.startsWith(route))) {
@@ -97,6 +103,10 @@ export default withAuth(
 export const config = {
   matcher: [
     "/dashboard/:path*",
+    "/find-players",
+    "/find-players/:path*",
+    "/tournaments",
+    "/tournaments/:path*",
     "/offers",
     "/offers/:path*",
     "/admin/:path*",

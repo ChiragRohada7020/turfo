@@ -159,7 +159,7 @@ export function MobileHeader() {
                       <Button className="w-full" size="lg">Sign In</Button>
                     </Link>
                     <Link href="/auth/register" className="w-full">
-                      <Button variant="outline" className="w-full" size="lg">Sign Up</Button>
+                        <Button variant="outline" className="w-full" size="lg">Create Account</Button>
                     </Link>
                   </div>
                 )}

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { signIn } from "next-auth/react"
+import { signIn, getSession } from "next-auth/react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { useForm } from "react-hook-form"
@@ -53,7 +53,13 @@ export default function LoginPageContent() {
         toast({ title: "Error", description: result.error, variant: "destructive" })
       } else {
         toast({ title: "Success", description: "Welcome back!", variant: "success" })
-        window.location.href = result?.url || callbackUrl
+        const session = await getSession()
+        const role = (session?.user as any)?.role
+        let target = callbackUrl
+        if (role === "SPONSOR") target = "/dashboard/sponsor"
+        else if (role === "OWNER") target = "/dashboard"
+        else if (role === "ADMIN") target = "/admin"
+        window.location.href = result?.url || target
       }
     } catch (error) {
       const msg = error instanceof Error ? error.message : "Something went wrong"
@@ -81,7 +87,7 @@ export default function LoginPageContent() {
 
         <Card className="bg-white border border-slate-200 rounded-3xl shadow-xl shadow-slate-900/5">
           <CardContent className="p-6 sm:p-8">
-            <h1 className="text-2xl font-black text-center mb-2 tracking-tight">Welcome Back</h1>
+            <h1 className="text-2xl font-black text-center mb-2 tracking-tight text-black">Welcome Back</h1>
             <p className="text-slate-500 text-center text-sm mb-6">Sign in to your account to continue</p>
 
             {verificationError && (
@@ -155,7 +161,7 @@ export default function LoginPageContent() {
               <p className="text-sm text-slate-500">
                 Don't have an account?{" "}
                 <Link href="/auth/register" className="text-green-600 hover:underline font-bold">
-                  Sign up
+                  Create account
                 </Link>
               </p>
             </div>

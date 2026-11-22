@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ArrowLeft, Building2, MapPin, Plus, X, DollarSign, Clock, Loader2 } from "lucide-react"
+import { ArrowLeft, Building2, MapPin, Plus, X, DollarSign, Clock, Loader2, Pencil } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import { trpc } from "@/lib/trpc"
 import { SportType } from "@prisma/client"
@@ -73,12 +73,14 @@ const SURFACE_OPTIONS = [
 const COURT_FORMATS = ["5v5", "7v7", "9v9", "11v11", "Singles", "Doubles", "4v4"]
 
 interface Court {
+  id?: string
   name: string
   sportType: string
   surfaceType: string
   capacity: number | string
   isIndoor: boolean
   pricePerHour: number | string
+  images?: string[]
 }
 
 export default function AddFacilityPage() {
@@ -109,6 +111,7 @@ export default function AddFacilityPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [courts, setCourts] = useState<Court[]>([])
+  const [editingCourtId, setEditingCourtId] = useState<string | null>(null)
   const [pricingRules, setPricingRules] = useState<any[]>([])
   const [newRule, setNewRule] = useState({ name: "Peak Hours", courtId: "", dayOfWeek: [0,1,2,3,4,5,6], startTime: "17:00", endTime: "22:00", pricePerHour: "800" })
   const [newCourt, setNewCourt] = useState<Court>({
@@ -118,6 +121,7 @@ export default function AddFacilityPage() {
     capacity: 10,
     isIndoor: false,
     pricePerHour: 500,
+    images: [],
   })
 
   const {
@@ -155,12 +159,14 @@ export default function AddFacilityPage() {
     setImageUrls(facility.images || [])
     if (facility.courts) {
       setCourts(facility.courts.map((c: any) => ({
+        id: c.id,
         name: c.name,
         sportType: c.sportType,
         surfaceType: c.surfaceType || "ARTIFICIAL_TURF",
         capacity: c.capacity,
         isIndoor: false,
         pricePerHour: c.pricingRules?.[0]?.pricePerHour || 500,
+        images: c.images || [],
       })))
     }
   }, [facility, setValue])
@@ -202,24 +208,64 @@ export default function AddFacilityPage() {
     )
   }
 
-  const addCourt = () => {
+  const updateCourt = trpc.courts.update.useMutation({
+    onSuccess: () => { refetch(); toast({ title: "Court updated", description: "Court updated successfully" }); setEditingCourtId(null); },
+    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  })
+
+  const createCourt = trpc.courts.create.useMutation({
+    onSuccess: () => { refetch(); toast({ title: "Court added", description: "Court created successfully" }); },
+    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  })
+
+  const saveCourt = async () => {
     if (!newCourt.name.trim()) {
       alert("Please enter a court name")
       return
     }
-    setCourts([...courts, { ...newCourt }])
-    setNewCourt({
-      name: "",
-      sportType: "FOOTBALL",
-      surfaceType: "ARTIFICIAL_TURF",
-      capacity: 10,
-      isIndoor: false,
-      pricePerHour: 500,
-    })
+    try {
+      if (editingCourtId) {
+        await updateCourt.mutateAsync({
+          id: editingCourtId,
+          name: newCourt.name,
+          sportType: newCourt.sportType as SportType,
+          surfaceType: newCourt.surfaceType as any,
+          capacity: Number(newCourt.capacity) || 10,
+          images: newCourt.images || [],
+        })
+      } else {
+        await createCourt.mutateAsync({
+          facilityId: facilityId,
+          name: newCourt.name,
+          sportType: newCourt.sportType as SportType,
+          surfaceType: newCourt.surfaceType as any,
+          capacity: Number(newCourt.capacity) || 10,
+          pricePerHour: Number(newCourt.pricePerHour) || undefined,
+          images: newCourt.images || [],
+        })
+      }
+      setNewCourt({
+        name: "",
+        sportType: "FOOTBALL",
+        surfaceType: "ARTIFICIAL_TURF",
+        capacity: 10,
+        isIndoor: false,
+        pricePerHour: 500,
+        images: [],
+      })
+      setEditingCourtId(null)
+    } catch (e) {}
   }
 
-  const removeCourt = (idx: number) => {
-    setCourts(courts.filter((_, i) => i !== idx))
+  const deleteCourt = trpc.courts.delete.useMutation({
+    onSuccess: () => { refetch(); toast({ title: "Court deleted" }) },
+    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  })
+
+  const removeCourt = (court: any) => {
+    if (court.id) {
+      deleteCourt.mutate({ id: court.id })
+    }
   }
 
   if (loadingFacility) {
@@ -456,13 +502,33 @@ export default function AddFacilityPage() {
                           {court.sportType} · {court.surfaceType} · {court.capacity} players · ₹{court.pricePerHour}/hr · {court.isIndoor ? "Indoor" : "Outdoor"}
                         </p>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => removeCourt(idx)}
-                        className="ml-3 flex h-6 w-6 items-center justify-center rounded-full bg-red-500/10 text-red-400 hover:bg-red-500/20"
-                      >
-                        ×
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setNewCourt({
+                              name: court.name,
+                              sportType: court.sportType,
+                              surfaceType: court.surfaceType,
+                              capacity: court.capacity,
+                              isIndoor: court.isIndoor,
+                              pricePerHour: court.pricePerHour,
+                              images: court.images || [],
+                            })
+                            setEditingCourtId(court.id || null)
+                          }}
+                          className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-500/10 text-blue-400 hover:bg-blue-500/20"
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => removeCourt(court)}
+                          className="flex h-6 w-6 items-center justify-center rounded-full bg-red-500/10 text-red-400 hover:bg-red-500/20"
+                        >
+                          ×
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -525,6 +591,37 @@ export default function AddFacilityPage() {
                       className="bg-[#121b24] border-white/10 text-white focus:border-lime-400/50"
                     />
                   </div>
+                  <div className="space-y-1 sm:col-span-2">
+                    <Label className="text-slate-300 text-xs">Court Images</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {(newCourt.images || []).map((url, idx) => (
+                        <div key={idx} className="relative h-16 w-16 overflow-hidden rounded-lg border border-white/10">
+                          <img src={url} alt="court" className="h-full w-full object-cover" />
+                          <button type="button" onClick={() => setNewCourt({ ...newCourt, images: (newCourt.images || []).filter((_, i) => i !== idx) })} className="absolute right-0.5 top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-black/60 text-white hover:bg-red-500">×</button>
+                        </div>
+                      ))}
+                      <label className="flex h-16 w-16 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-white/20 bg-[#121b24] text-slate-400 hover:border-lime-400/40 hover:text-lime-400">
+                        <input type="file" accept="image/*" multiple className="hidden" onChange={async (e) => {
+                          const files = Array.from(e.target.files || [])
+                          if (files.length === 0) return
+                          try {
+                            for (const file of files) {
+                              const formData = new FormData()
+                              formData.append("file", file)
+                              const res = await fetch("/api/upload/facility-image", { method: "POST", body: formData })
+                              const text = await res.text()
+                              let data: any = {}
+                              try { data = JSON.parse(text) } catch { throw new Error(text || "Upload failed") }
+                              if (!res.ok) throw new Error(data.error || "Upload failed")
+                              setNewCourt((prev) => ({ ...prev, images: [...(prev.images || []), data.url] }))
+                            }
+                          } catch (err: any) { alert(err.message || "Upload failed") }
+                        }} />
+                        <Plus className="h-4 w-4" />
+                        <span className="mt-0.5 text-[9px]">Upload</span>
+                      </label>
+                    </div>
+                  </div>
                   <div className="space-y-1">
                     <Label className="text-slate-300 text-xs">Type</Label>
                     <Select value={newCourt.isIndoor ? "indoor" : "outdoor"} onValueChange={(v) => setNewCourt({ ...newCourt, isIndoor: v === "indoor" })}>
@@ -538,8 +635,8 @@ export default function AddFacilityPage() {
                     </Select>
                   </div>
                 </div>
-                <Button type="button" onClick={addCourt} className="w-full bg-lime-400/10 text-lime-400 hover:bg-lime-400/20 border border-lime-400/20">
-                  <Plus className="h-4 w-4 mr-2" /> Add Court
+                <Button type="button" onClick={saveCourt} className="w-full bg-lime-400/10 text-lime-400 hover:bg-lime-400/20 border border-lime-400/20">
+                  <Plus className="h-4 w-4 mr-2" /> {editingCourtId ? "Update Court" : "Add Court"}
                 </Button>
               </div>
 
@@ -753,7 +850,9 @@ export default function AddFacilityPage() {
                             const formData = new FormData()
                             formData.append("file", file)
                             const res = await fetch("/api/upload/facility-image", { method: "POST", body: formData })
-                            const data = await res.json()
+                            const text = await res.text()
+                            let data: any = {}
+                            try { data = JSON.parse(text) } catch { throw new Error(text || "Upload failed") }
                             if (!res.ok) throw new Error(data.error || "Upload failed")
                             setImageUrls((prev) => [...prev, data.url])
                           }

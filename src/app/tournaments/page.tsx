@@ -10,10 +10,13 @@ import { Trophy, CalendarDays, Users, MapPin, Plus, Clock } from "lucide-react"
 import { formatCurrency, formatDate } from "@/lib/utils"
 import { trpc } from "@/lib/trpc"
 import { toast } from "@/hooks/use-toast"
+import { LockedFeatureGate } from "@/components/LockedFeatureGate"
 import { Sidebar } from "@/components/layout/Sidebar"
+import { TopNavbar } from "@/modules/shared/components/layout/TopNavbar"
 
 export default function TournamentsPage() {
   const { data: session } = useSession()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   if (!session) {
     return (
@@ -36,10 +39,21 @@ export default function TournamentsPage() {
 
   const isOwner = session?.user?.role === "OWNER" || session?.user?.role === "ADMIN"
 
+  const unlockStatus = trpc.tasks.isUnlocked.useQuery()
+  if (unlockStatus.isLoading) return <div className="min-h-screen flex items-center justify-center text-slate-400">Loading...</div>
+  if (!unlockStatus.data?.unlocked) {
+    return (
+      <div className="min-h-screen bg-[#0B1020] text-white">
+        <LockedFeatureGate>{null}</LockedFeatureGate>
+      </div>
+    )
+  }
+
   return (
-    <div className="min-h-screen bg-[#070d12] text-white">
-      <Sidebar session={session} />
-      <div className="md:pt-0 md:pl-[262px]">
+    <div className="min-h-screen bg-[#0B1020] text-white">
+      <Sidebar session={session} mobileOpen={sidebarOpen} onMobileOpenChange={setSidebarOpen} />
+      <div className="min-h-screen md:pl-[262px]">
+        <TopNavbar onMenuClick={() => setSidebarOpen(true)} />
         <div className="max-w-4xl mx-auto p-4 sm:p-6">
           <div className="flex items-center justify-between mb-6">
             <div>
@@ -48,7 +62,7 @@ export default function TournamentsPage() {
             </div>
             {isOwner && (
               <Link href="/dashboard/tournaments/new">
-                <Button className="bg-lime-400 font-bold text-black hover:bg-lime-300">
+                <Button className="bg-orange-400 font-bold text-black hover:bg-orange-300">
                   <Plus className="w-4 h-4 mr-2" />
                   Create Tournament
                 </Button>
@@ -65,10 +79,10 @@ export default function TournamentsPage() {
           ) : data?.tournaments && data.tournaments.length > 0 ? (
             <div className="space-y-4">
               {data.tournaments.map((t: any) => (
-                <Card key={t.id} className="bg-[#111a22] border-white/10 hover:border-lime-400/30 transition-colors overflow-hidden">
+                <Card key={t.id} className="bg-[#131C2E] border-white/10 hover:border-orange-400/30 transition-colors overflow-hidden">
                   <CardContent className="p-0">
                     <div className="flex flex-col sm:flex-row">
-                      <div className="relative h-32 sm:h-auto sm:w-40 shrink-0 bg-[#1a3027]">
+                      <div className="relative h-32 sm:h-auto sm:w-40 shrink-0 bg-[#1B2940]">
                         <img
                           src={t.imageUrl || "/placeholder.svg"}
                           alt={t.name}
@@ -87,7 +101,7 @@ export default function TournamentsPage() {
                             <p className="text-sm text-slate-400">{t.sportType} · {t.facility?.name}</p>
                           </div>
                           <div className="text-right shrink-0">
-                            <p className="text-sm font-bold text-lime-400">{t._count?.teams || 0}/{t.maxTeams} teams</p>
+                            <p className="text-sm font-bold text-orange-400">{t._count?.teams || 0}/{t.maxTeams} teams</p>
                             {t.prizePool > 0 && <p className="text-[10px] text-slate-400">Prize: ₹{t.prizePool}</p>}
                           </div>
                         </div>
@@ -111,7 +125,7 @@ export default function TournamentsPage() {
                       </div>
                       <div className="p-4 sm:border-l sm:border-white/10 flex items-center justify-center">
                         <Link href={`/tournaments/${t.id}`}>
-                          <Button size="sm" className="bg-lime-400 font-bold text-black hover:bg-lime-300 w-full sm:w-auto">
+                          <Button size="sm" className="bg-orange-400 font-bold text-black hover:bg-orange-300 w-full sm:w-auto">
                             View Details
                           </Button>
                         </Link>
@@ -128,7 +142,7 @@ export default function TournamentsPage() {
               <p className="text-slate-400 mb-6">No tournaments available right now.</p>
               {isOwner && (
                 <Link href="/dashboard/tournaments/new">
-                  <Button className="bg-lime-400 font-bold text-black hover:bg-lime-300">Create Tournament</Button>
+                  <Button className="bg-orange-400 font-bold text-black hover:bg-orange-300">Create Tournament</Button>
                 </Link>
               )}
             </div>

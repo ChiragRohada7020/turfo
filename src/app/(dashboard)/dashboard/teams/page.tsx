@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
+import { LockedFeatureGate } from "@/components/LockedFeatureGate"
 import { Sidebar } from "@/modules/shared/components/layout/Sidebar"
 import { TopNavbar } from "@/modules/shared/components/layout/TopNavbar"
 import { trpc } from "@/lib/trpc"
@@ -43,7 +44,7 @@ const SPORT_OPTIONS = [
 ]
 
 const ACCENTS = [
-  "from-lime-500/20 to-emerald-500/5 text-lime-400",
+  "from-lime-500/20 to-emerald-500/5 text-orange-400",
   "from-blue-500/20 to-cyan-500/5 text-blue-400",
   "from-purple-500/20 to-violet-500/5 text-purple-400",
   "from-rose-500/20 to-pink-500/5 text-rose-400",
@@ -124,9 +125,9 @@ function TeamCard({
       onClick={onSelect}
       className={cn(
         "group w-full rounded-2xl border p-4 text-left transition-all duration-200",
-        "bg-[#0c1718]/90 hover:-translate-y-0.5 hover:border-lime-400/40",
+        "bg-[#0c1718]/90 hover:-translate-y-0.5 hover:border-orange-400/40",
         selected
-          ? "border-lime-400 bg-lime-400/[0.06] shadow-[0_0_25px_rgba(163,230,53,0.07)]"
+          ? "border-orange-400 bg-orange-400/[0.06] shadow-[0_0_25px_rgba(163,230,53,0.07)]"
           : "border-white/[0.09]"
       )}
     >
@@ -144,7 +145,7 @@ function TeamCard({
         <Badge className={cn(
           "shrink-0 border text-[10px]",
           isCaptain
-            ? "border-lime-500/20 bg-lime-500/10 text-lime-400"
+            ? "border-lime-500/20 bg-lime-500/10 text-orange-400"
             : "border-white/10 bg-white/5 text-slate-300"
         )}>
           {isCaptain ? "Captain" : "Member"}
@@ -170,7 +171,7 @@ function TeamCard({
 
         <span className={cn(
           "flex items-center gap-1 text-xs font-semibold transition",
-          selected ? "text-lime-400" : "text-slate-500 group-hover:text-lime-400"
+          selected ? "text-orange-400" : "text-slate-500 group-hover:text-orange-400"
         )}>
           View team <ChevronRight className="h-3.5 w-3.5" />
         </span>
@@ -282,7 +283,7 @@ export default function TeamsPage() {
   if (status === "loading") {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#070d12]">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-lime-400 border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-orange-400 border-t-transparent" />
       </div>
     )
   }
@@ -290,18 +291,28 @@ export default function TeamsPage() {
   if (!session) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#06100e] px-4 text-white">
-        <Card className="w-full max-w-md border-white/10 bg-[#101c19] text-white">
+        <Card className="w-full max-w-md border-white/10 bg-[#182238] text-white">
           <CardContent className="p-8 text-center">
-            <ShieldCheck className="mx-auto mb-4 h-12 w-12 text-lime-400" />
+            <ShieldCheck className="mx-auto mb-4 h-12 w-12 text-orange-400" />
             <h1 className="text-2xl font-bold">Sign In Required</h1>
             <p className="mt-2 text-sm text-slate-400">
               Please sign in to manage your teams.
             </p>
-            <Button asChild className="mt-6 w-full bg-lime-400 font-bold text-black hover:bg-lime-300">
+            <Button asChild className="mt-6 w-full bg-orange-400 font-bold text-black hover:bg-orange-300">
               <Link href="/auth/login?callbackUrl=/dashboard/teams">Sign In</Link>
             </Button>
           </CardContent>
         </Card>
+      </div>
+    )
+  }
+
+  const unlockStatus = trpc.tasks.isUnlocked.useQuery()
+  if (unlockStatus.isLoading) return <div className="min-h-screen flex items-center justify-center text-slate-400">Loading...</div>
+  if (!unlockStatus.data?.unlocked) {
+    return (
+      <div className="min-h-screen bg-[#06100e] text-white">
+        <LockedFeatureGate>{null}</LockedFeatureGate>
       </div>
     )
   }
@@ -341,11 +352,11 @@ export default function TeamsPage() {
             </div>
             <div className="relative flex flex-wrap items-center justify-between gap-5 p-6 sm:p-8">
               <div>
-                <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-lime-400">
+                <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-orange-400">
                   <Zap className="h-4 w-4" /> Strikora Community
                 </div>
                 <h1 className="text-3xl font-black tracking-tight sm:text-4xl">
-                  My <span className="text-lime-400">Teams</span>
+                  My <span className="text-orange-400">Teams</span>
                 </h1>
                 <p className="mt-2 text-sm text-slate-300">
                   Create, manage and play together. Your team, your game.
@@ -354,7 +365,7 @@ export default function TeamsPage() {
 
               <Button
                 onClick={() => setCreateOpen(true)}
-                className="h-11 rounded-xl bg-lime-400 px-5 font-bold text-black hover:bg-lime-300"
+                className="h-11 rounded-xl bg-orange-400 px-5 font-bold text-black hover:bg-orange-300"
               >
                 <Plus className="mr-2 h-4 w-4" /> Create Team
               </Button>
@@ -367,13 +378,13 @@ export default function TeamsPage() {
             onValueChange={value => setTab(value as typeof tab)}
           >
             <TabsList className="mb-6 grid h-auto w-full max-w-[560px] grid-cols-3 rounded-xl border border-white/10 bg-[#101b18] p-1">
-              <TabsTrigger value="my" className="rounded-lg py-2.5 text-xs data-[state=active]:bg-lime-400 data-[state=active]:font-bold data-[state=active]:text-black sm:text-sm">
+              <TabsTrigger value="my" className="rounded-lg py-2.5 text-xs data-[state=active]:bg-orange-400 data-[state=active]:font-bold data-[state=active]:text-black sm:text-sm">
                 My Teams ({myTeams.length})
               </TabsTrigger>
-              <TabsTrigger value="joined" className="rounded-lg py-2.5 text-xs data-[state=active]:bg-lime-400 data-[state=active]:font-bold data-[state=active]:text-black sm:text-sm">
+              <TabsTrigger value="joined" className="rounded-lg py-2.5 text-xs data-[state=active]:bg-orange-400 data-[state=active]:font-bold data-[state=active]:text-black sm:text-sm">
                 Joined Teams
               </TabsTrigger>
-              <TabsTrigger value="invites" className="rounded-lg py-2.5 text-xs data-[state=active]:bg-lime-400 data-[state=active]:font-bold data-[state=active]:text-black sm:text-sm">
+              <TabsTrigger value="invites" className="rounded-lg py-2.5 text-xs data-[state=active]:bg-orange-400 data-[state=active]:font-bold data-[state=active]:text-black sm:text-sm">
                 Invites
               </TabsTrigger>
             </TabsList>
@@ -417,7 +428,7 @@ export default function TeamsPage() {
                         </p>
                         <Button
                           onClick={() => setCreateOpen(true)}
-                          className="mt-5 bg-lime-400 font-bold text-black hover:bg-lime-300"
+                          className="mt-5 bg-orange-400 font-bold text-black hover:bg-orange-300"
                         >
                           <Plus className="mr-2 h-4 w-4" /> Create Your Team
                         </Button>
@@ -431,7 +442,7 @@ export default function TeamsPage() {
                       title="Discover Teams"
                       subtitle="Find teams and players in your area."
                       action={
-                        <Link href="/dashboard/teams" className="text-xs font-semibold text-lime-400 hover:text-lime-300">
+                        <Link href="/dashboard/teams" className="text-xs font-semibold text-orange-400 hover:text-orange-300">
                           View all <ArrowUpRight className="inline h-3.5 w-3.5" />
                         </Link>
                       }
@@ -458,7 +469,7 @@ export default function TeamsPage() {
                     ) : (
                       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                         {filteredDiscover.map((team: any) => (
-                          <Card key={team.id} className="overflow-hidden rounded-2xl border-white/[0.09] bg-[#0c1916] transition hover:border-lime-400/30">
+                          <Card key={team.id} className="overflow-hidden rounded-2xl border-white/[0.09] bg-[#131C2E] transition hover:border-orange-400/30">
                             <CardContent className="p-4">
                               <TeamLogo name={team.name} imageUrl={team.imageUrl} size="h-12 w-12" />
                               <h3 className="mt-4 truncate font-bold">{team.name}</h3>
@@ -473,7 +484,7 @@ export default function TeamsPage() {
                                   size="sm"
                                   disabled={joinTeam.isPending}
                                   onClick={() => joinTeam.mutate({ teamId: team.id })}
-                                  className="h-8 rounded-lg border border-lime-400/30 bg-lime-400/10 text-xs font-semibold text-lime-400 hover:bg-lime-400 hover:text-black"
+                                  className="h-8 rounded-lg border border-orange-400/30 bg-orange-400/10 text-xs font-semibold text-orange-400 hover:bg-orange-400 hover:text-black"
                                 >
                                   Request to Join
                                 </Button>
@@ -502,7 +513,7 @@ export default function TeamsPage() {
             </TabsContent>
 
             <TabsContent value="joined">
-              <div className="rounded-2xl border border-white/10 bg-[#0c1916] p-12 text-center">
+              <div className="rounded-2xl border border-white/10 bg-[#131C2E] p-12 text-center">
                 <Users className="mx-auto mb-4 h-12 w-12 text-slate-500" />
                 <h3 className="font-bold">Joined Teams</h3>
                 <p className="mt-2 text-sm text-slate-400">
@@ -512,7 +523,7 @@ export default function TeamsPage() {
             </TabsContent>
 
             <TabsContent value="invites">
-              <div className="rounded-2xl border border-white/10 bg-[#0c1916] p-12 text-center">
+              <div className="rounded-2xl border border-white/10 bg-[#131C2E] p-12 text-center">
                 <Trophy className="mx-auto mb-4 h-12 w-12 text-slate-500" />
                 <h3 className="font-bold">Team Invitations</h3>
                 <p className="mt-2 text-sm text-slate-400">
@@ -551,10 +562,10 @@ export default function TeamsPage() {
               <select
                 value={createSportType}
                 onChange={e => setCreateSportType(e.target.value)}
-                className="w-full appearance-none rounded-xl border border-white/10 bg-[#0c1916] px-4 py-2.5 text-sm text-white shadow-sm transition focus:border-lime-400/50 focus:outline-none focus:ring-2 focus:ring-lime-400/20"
+                className="w-full appearance-none rounded-xl border border-white/10 bg-[#131C2E] px-4 py-2.5 text-sm text-white shadow-sm transition focus:border-orange-400/50 focus:outline-none focus:ring-2 focus:ring-orange-400/20"
               >
                 {SPORT_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value} className="bg-[#0c1916] text-white">
+                  <option key={opt.value} value={opt.value} className="bg-[#131C2E] text-white">
                     {opt.label}
                   </option>
                 ))}
@@ -600,7 +611,7 @@ export default function TeamsPage() {
               <Button
                 type="submit"
                 disabled={!teamName.trim() || createTeam.isPending}
-                className="bg-lime-400 font-bold text-black hover:bg-lime-300"
+                className="bg-orange-400 font-bold text-black hover:bg-orange-300"
               >
                 {createTeam.isPending ? (
                   <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating...</>
@@ -643,10 +654,10 @@ export default function TeamsPage() {
               <select
                 value={editSportType}
                 onChange={e => setEditSportType(e.target.value)}
-                className="w-full appearance-none rounded-xl border border-white/10 bg-[#0c1916] px-4 py-2.5 text-sm text-white shadow-sm transition focus:border-lime-400/50 focus:outline-none focus:ring-2 focus:ring-lime-400/20"
+                className="w-full appearance-none rounded-xl border border-white/10 bg-[#131C2E] px-4 py-2.5 text-sm text-white shadow-sm transition focus:border-orange-400/50 focus:outline-none focus:ring-2 focus:ring-orange-400/20"
               >
                 {SPORT_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value} className="bg-[#0c1916] text-white">
+                  <option key={opt.value} value={opt.value} className="bg-[#131C2E] text-white">
                     {opt.label}
                   </option>
                 ))}
@@ -691,7 +702,7 @@ export default function TeamsPage() {
               <Button
                 type="submit"
                 disabled={!editTeamName.trim() || updateTeam.isPending}
-                className="bg-lime-400 font-bold text-black hover:bg-lime-300"
+                className="bg-orange-400 font-bold text-black hover:bg-orange-300"
               >
                 {updateTeam.isPending ? "Updating..." : "Update Team"}
               </Button>
@@ -738,7 +749,7 @@ export default function TeamsPage() {
               <Button
                 type="submit"
                 disabled={!memberUserId.trim() || addMember.isPending}
-                className="bg-lime-400 font-bold text-black hover:bg-lime-300"
+                className="bg-orange-400 font-bold text-black hover:bg-orange-300"
               >
                 {addMember.isPending ? "Adding..." : "Add Member"}
               </Button>
@@ -782,8 +793,8 @@ function TeamOverviewPanel({
 
   if (!teamId) {
     return (
-      <div className="flex min-h-[420px] flex-col items-center justify-center rounded-2xl border border-white/10 bg-[#0c1916] p-8 text-center">
-        <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-lime-400/10 text-lime-400">
+      <div className="flex min-h-[420px] flex-col items-center justify-center rounded-2xl border border-white/10 bg-[#131C2E] p-8 text-center">
+        <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-orange-400/10 text-orange-400">
           <ShieldCheck className="h-8 w-8" />
         </div>
         <h3 className="font-bold">Select Your Team</h3>
@@ -796,7 +807,7 @@ function TeamOverviewPanel({
 
   if (isLoading) {
     return (
-      <div className="space-y-4 rounded-2xl border border-white/10 bg-[#0c1916] p-6">
+      <div className="space-y-4 rounded-2xl border border-white/10 bg-[#131C2E] p-6">
         <div className="h-16 animate-pulse rounded-xl bg-white/5" />
         <div className="h-24 animate-pulse rounded-xl bg-white/5" />
         <div className="h-32 animate-pulse rounded-xl bg-white/5" />
@@ -806,7 +817,7 @@ function TeamOverviewPanel({
 
   if (!team) {
     return (
-      <div className="rounded-2xl border border-white/10 bg-[#0c1916] p-8 text-center">
+      <div className="rounded-2xl border border-white/10 bg-[#131C2E] p-8 text-center">
         <p className="text-sm text-slate-400">Team not found.</p>
       </div>
     )
@@ -827,11 +838,11 @@ function TeamOverviewPanel({
   ]
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#0c1916]">
+    <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#131C2E]">
 
       {/* Team heading */}
       <div className="relative overflow-hidden border-b border-white/[0.07] p-5">
-        <div className="absolute right-0 top-0 h-40 w-40 rounded-full bg-lime-400/[0.06] blur-3xl" />
+        <div className="absolute right-0 top-0 h-40 w-40 rounded-full bg-orange-400/[0.06] blur-3xl" />
 
         <div className="relative flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
@@ -841,7 +852,7 @@ function TeamOverviewPanel({
               <p className="mt-1 text-xs text-slate-400">
                 {sportLabel(team.sportType || "FOOTBALL")} Team
               </p>
-              <p className="mt-1 text-[11px] text-lime-400">
+              <p className="mt-1 text-[11px] text-orange-400">
                 {isCaptain ? "♛ Team Captain" : "Team Member"}
               </p>
             </div>
@@ -863,7 +874,7 @@ function TeamOverviewPanel({
           <div key={stat.label} className="rounded-xl border border-white/[0.07] bg-white/[0.025] p-3">
             <div className="flex items-center justify-between">
               <span className="text-[11px] text-slate-400">{stat.label}</span>
-              <stat.icon className="h-4 w-4 text-lime-400" />
+              <stat.icon className="h-4 w-4 text-orange-400" />
             </div>
             <p className="mt-2 text-xl font-black">{stat.value}</p>
           </div>
@@ -874,22 +885,22 @@ function TeamOverviewPanel({
       <div className="px-4 pb-4">
         <div className="mb-3 flex items-center justify-between">
           <h3 className="text-sm font-bold">Upcoming Match</h3>
-          <span className="text-xs font-semibold text-lime-400">View all →</span>
+          <span className="text-xs font-semibold text-orange-400">View all →</span>
         </div>
 
         <div className="overflow-hidden rounded-xl border border-white/10 bg-[#13231d]">
           <div className="h-24 bg-[radial-gradient(ellipse_at_50%_100%,rgba(34,197,94,0.28),transparent_70%),linear-gradient(135deg,#142c20,#091510)]">
             <div className="flex h-full items-center justify-center">
-              <Trophy className="h-9 w-9 text-lime-400/60" />
+              <Trophy className="h-9 w-9 text-orange-400/60" />
             </div>
           </div>
           <div className="p-3">
             <div className="flex items-center justify-between">
               <h4 className="text-sm font-bold">Your Next Match</h4>
-              <Badge className="border-lime-500/20 bg-lime-500/10 text-lime-400">5v5</Badge>
+              <Badge className="border-lime-500/20 bg-lime-500/10 text-orange-400">5v5</Badge>
             </div>
             <p className="mt-2 text-xs text-slate-400">
-              <MapPin className="mr-1 inline h-3 w-3 text-lime-400" />
+              <MapPin className="mr-1 inline h-3 w-3 text-orange-400" />
               Book a turf to schedule your next match
             </p>
           </div>
@@ -904,7 +915,7 @@ function TeamOverviewPanel({
             <p className="mt-1 text-[11px] text-slate-500">{members.length} players in your team</p>
           </div>
           {isCaptain && (
-            <Button size="sm" className="h-8 bg-lime-400 text-xs font-bold text-black hover:bg-lime-300" onClick={() => setInviteOpen(true)}>
+            <Button size="sm" className="h-8 bg-orange-400 text-xs font-bold text-black hover:bg-orange-300" onClick={() => setInviteOpen(true)}>
               <UserPlus className="mr-1.5 h-3.5 w-3.5" /> Add
             </Button>
           )}
@@ -923,7 +934,7 @@ function TeamOverviewPanel({
                 {member.user?.name || "Player"}
               </span>
               {member.role === "CAPTAIN" && (
-                <span className="text-[9px] font-semibold text-lime-400">Captain</span>
+                <span className="text-[9px] font-semibold text-orange-400">Captain</span>
               )}
             </div>
           ))}
@@ -932,7 +943,7 @@ function TeamOverviewPanel({
 
       {/* Bottom actions */}
       <div className="grid grid-cols-2 gap-2 border-t border-white/[0.07] p-4">
-        <Button className="h-11 bg-lime-400 text-xs font-bold text-black hover:bg-lime-300">
+        <Button className="h-11 bg-orange-400 text-xs font-bold text-black hover:bg-orange-300">
           <CalendarDays className="mr-2 h-4 w-4" /> Book Turf
         </Button>
         <Button variant="outline" className="h-11 border-white/10 bg-white/5 text-xs text-white hover:bg-white/10" onClick={() => {

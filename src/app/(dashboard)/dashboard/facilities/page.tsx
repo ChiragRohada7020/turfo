@@ -5,6 +5,8 @@ import Link from "next/link"
 import Image from "next/image"
 import { useSession } from "next-auth/react"
 import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
+import { useToast } from "@/hooks/use-toast"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Plus, Building2, MapPin, Users, CalendarDays, Edit, Trash2, Eye, DollarSign } from "lucide-react"
@@ -16,8 +18,13 @@ import { trpc } from "@/lib/trpc"
 export default function FacilitiesPage() {
   const { data: session, status } = useSession()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [deleteId, setDeleteId] = useState<string | null>(null)
+  const { toast } = useToast()
   const { data: facilities, isLoading, refetch } = trpc.facilities.myFacilities.useQuery()
-  const deleteFacility = trpc.facilities.delete.useMutation({ onSuccess: () => refetch(), onError: (e) => alert(e.message) })
+  const deleteFacility = trpc.facilities.delete.useMutation({
+    onSuccess: () => { refetch(); setDeleteId(null); toast({ title: "Facility deleted", description: "The facility has been removed.", variant: "success" }) },
+    onError: (e) => toast({ title: "Delete failed", description: e.message, variant: "destructive" }),
+  })
 
   const totalRevenue = (facilities || []).reduce((sum: number, f: any) => sum + (f.revenue || 0), 0)
   const totalBookings = (facilities || []).reduce((sum: number, f: any) => sum + (f._count?.bookings || 0), 0)
@@ -124,7 +131,7 @@ export default function FacilitiesPage() {
         ) : facilities && facilities.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {facilities.map((facility: any) => (
-              <Card key={facility.id} className="bg-[#131C2E] border-white/10 overflow-hidden hover:border-orange-400/30 transition-colors">
+               <Card key={facility.id} onClick={() => { window.location.href = "/facility/" + facility.id }} className="bg-[#131C2E] border-white/10 overflow-hidden hover:border-orange-400/30 transition-colors cursor-pointer">
                 <div className="relative h-40 overflow-hidden bg-[#1a3027]">
                   <Image src={facility.images?.[0] || "/placeholder.svg"} alt={facility.name} fill sizes="300px" className="object-cover" />
                   <div className="absolute top-2 right-2 flex gap-1">
@@ -154,28 +161,23 @@ export default function FacilitiesPage() {
                     </span>
                   </div>
                                      <div className="flex gap-2 mt-4">
-                     <Link href={`/facility/${facility.id}`} className="flex-1">
+                      <Link href={`/facility/${facility.id}?book=1`} className="flex-1" onClick={(e) => e.stopPropagation()}>
+                        <Button size="sm" className="w-full bg-orange-400 font-bold text-black hover:bg-orange-300">
+                          <CalendarDays className="h-3 w-3 mr-1" /> Book
+                        </Button>
+                      </Link>
+                     <Link href={`/dashboard/facilities/${facility.id}/edit`} className="flex-1" onClick={(e) => e.stopPropagation()}>
                        <Button size="sm" className="w-full bg-orange-400 font-bold text-black hover:bg-orange-300">
-                         <CalendarDays className="h-3 w-3 mr-1" /> Book
+                         <Edit className="h-3 w-3 mr-1" /> Edit
                        </Button>
                      </Link>
-                     <Link href={`/facility/${facility.id}`} className="flex-1">
-                       <Button size="sm" variant="outline" className="w-full border-white/10 text-white hover:bg-white/5">
-                         <Eye className="h-3 w-3 mr-1" /> View
-                       </Button>
-                     </Link>
-                    <Link href={`/dashboard/facilities/${facility.id}/edit`} className="flex-1">
-                      <Button size="sm" className="w-full bg-orange-400 font-bold text-black hover:bg-orange-300">
-                        <Edit className="h-3 w-3 mr-1" /> Edit
-                      </Button>
-                    </Link>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="flex-1 border-red-500/30 text-red-400 hover:bg-red-500/10"
-                      onClick={() => { if (confirm("Delete this facility?")) deleteFacility.mutate({ id: facility.id }) }}
-                      disabled={deleteFacility.isPending}
-                    >
+                     <Button
+                       size="sm"
+                       variant="outline"
+                       className="flex-1 border-red-500/30 text-red-400 hover:bg-red-500/10"
+                       onClick={(e) => { e.stopPropagation(); setDeleteId(facility.id) }}
+                       disabled={deleteFacility.isPending}
+                     >
                       <Trash2 className="h-3 w-3 mr-1" /> Delete
                     </Button>
                   </div>
@@ -221,6 +223,23 @@ export default function FacilitiesPage() {
         )}
       </div>
       </div>
+
+      <Dialog open={!!deleteId} onOpenChange={(o) => { if (!o) setDeleteId(null) }}>
+        <DialogContent className="bg-[#131C2E] border-white/10 text-white">
+          <DialogHeader>
+            <DialogTitle>Delete facility?</DialogTitle>
+            <DialogDescription className="text-slate-400">
+              This will remove the facility from your active list. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" className="border-white/10 text-white" onClick={() => setDeleteId(null)}>Cancel</Button>
+            <Button className="bg-red-500 text-white hover:bg-red-600" disabled={deleteFacility.isPending} onClick={() => deleteId && deleteFacility.mutate({ id: deleteId })}>
+              {deleteFacility.isPending ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge"
 import {
   Avatar, AvatarFallback, AvatarImage
 } from "@/components/ui/avatar"
+import { LockedFeatureGate } from "@/components/LockedFeatureGate"
 import { Sidebar } from "@/components/layout/Sidebar"
 import { TopNavbar } from "@/modules/shared/components/layout/TopNavbar"
 
@@ -49,14 +50,14 @@ function HeartButton() {
 
 function PlayerCard({ player }: { player: any }) {
   return (
-    <Card className="group overflow-hidden rounded-2xl border-white/[0.09] bg-[#0c1916] transition-all duration-300 hover:-translate-y-1 hover:border-lime-400/40 hover:shadow-xl hover:shadow-black/20">
+    <Card className="group overflow-hidden rounded-2xl border-white/[0.09] bg-[#131C2E] transition-all duration-300 hover:-translate-y-1 hover:border-orange-400/40 hover:shadow-xl hover:shadow-black/20">
       <CardContent className="p-4">
 
         {/* Player profile */}
         <div className="flex items-start gap-3">
-          <Avatar className="h-14 w-14 shrink-0 border-2 border-lime-400/30">
+          <Avatar className="h-14 w-14 shrink-0 border-2 border-orange-400/30">
             <AvatarImage src={player.avatarUrl || ""} alt={player.name} />
-            <AvatarFallback className="bg-lime-400/10 text-lime-400">
+            <AvatarFallback className="bg-orange-400/10 text-orange-400">
               {player.name[0]}
             </AvatarFallback>
           </Avatar>
@@ -66,11 +67,11 @@ function PlayerCard({ player }: { player: any }) {
               {player.name}
             </h3>
             <p className="mt-1 flex items-center gap-1 text-xs text-slate-400">
-              <MapPin className="h-3 w-3 text-lime-400" />
+              <MapPin className="h-3 w-3 text-orange-400" />
               {player.city || "Unknown"} 
             </p>
-            <Badge className="mt-2 border border-lime-400/20 bg-lime-400/10 text-[10px] text-lime-400">
-              <span className="mr-1 h-1.5 w-1.5 rounded-full bg-lime-400" />
+            <Badge className="mt-2 border border-orange-400/20 bg-orange-400/10 text-[10px] text-orange-400">
+              <span className="mr-1 h-1.5 w-1.5 rounded-full bg-orange-400" />
               {player.rewardPoints ?? 0} pts
             </Badge>
           </div>
@@ -93,7 +94,7 @@ function PlayerCard({ player }: { player: any }) {
 
           <div className="rounded-xl border border-white/[0.06] bg-white/[0.025] p-2.5">
             <div className="flex items-center gap-1.5">
-              <Trophy className="h-3.5 w-3.5 text-lime-400" />
+              <Trophy className="h-3.5 w-3.5 text-orange-400" />
               <span className="text-sm font-bold text-white">
                 {player.matches}
               </span>
@@ -107,7 +108,7 @@ function PlayerCard({ player }: { player: any }) {
         <div className="mt-4 grid grid-cols-[1fr_auto] gap-2">
           <Button
             asChild
-            className="h-10 rounded-xl bg-lime-400 text-xs font-bold text-black hover:bg-lime-300"
+            className="h-10 rounded-xl bg-orange-400 text-xs font-bold text-black hover:bg-orange-300"
           >
             <Link href={`/players/${player.id}`}>
               <Send className="mr-2 h-3.5 w-3.5" />
@@ -169,7 +170,7 @@ export default function FindPlayersPage() {
   if (status === "loading") {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#070d12]">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-lime-400 border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-orange-400 border-t-transparent" />
       </div>
     )
   }
@@ -177,20 +178,30 @@ export default function FindPlayersPage() {
   if (!session) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#06100e] px-4 text-white">
-        <Card className="w-full max-w-md border-white/10 bg-[#101c19]">
+        <Card className="w-full max-w-md border-white/10 bg-[#182238]">
           <CardContent className="p-8 text-center">
-            <Users className="mx-auto mb-4 h-12 w-12 text-lime-400" />
+            <Users className="mx-auto mb-4 h-12 w-12 text-orange-400" />
             <h1 className="text-2xl font-bold">Sign In Required</h1>
             <p className="mt-2 text-sm text-slate-400">
               Sign in to find and connect with players.
             </p>
-            <Button asChild className="mt-6 w-full bg-lime-400 font-bold text-black hover:bg-lime-300">
+            <Button asChild className="mt-6 w-full bg-orange-400 font-bold text-black hover:bg-orange-300">
               <Link href="/auth/login?callbackUrl=/find-players">
                 Sign In
               </Link>
             </Button>
           </CardContent>
         </Card>
+      </div>
+    )
+  }
+
+  const unlockStatus = trpc.tasks.isUnlocked.useQuery()
+  if (unlockStatus.isLoading) return <div className="min-h-screen flex items-center justify-center text-slate-400">Loading...</div>
+  if (!unlockStatus.data?.unlocked) {
+    return (
+      <div className="min-h-screen bg-[#06100e] text-white">
+        <LockedFeatureGate>{null}</LockedFeatureGate>
       </div>
     )
   }
@@ -212,7 +223,7 @@ export default function FindPlayersPage() {
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                   placeholder="Search players, teams or sports..."
-                  className="h-10 w-full rounded-full border border-white/10 bg-white/[0.04] pl-11 pr-4 text-sm outline-none placeholder:text-slate-500 focus:border-lime-400/50"
+                  className="h-10 w-full rounded-full border border-white/10 bg-white/[0.04] pl-11 pr-4 text-sm outline-none placeholder:text-slate-500 focus:border-orange-400/50"
                 />
               </div>
             </div>
@@ -222,7 +233,7 @@ export default function FindPlayersPage() {
         <main className="mx-auto max-w-[1700px] space-y-6 p-4 sm:p-6 xl:p-8">
 
           {/* HERO */}
-          <section className="relative isolate overflow-hidden rounded-3xl border border-white/10 bg-[#10251a]">
+          <section className="relative isolate overflow-hidden rounded-3xl border border-white/10 bg-[#17233A]">
             <div
               className="absolute inset-0 -z-10 bg-cover bg-center opacity-45"
               style={{
@@ -233,13 +244,13 @@ export default function FindPlayersPage() {
 
             <div className="flex flex-wrap items-center justify-between gap-6 p-6 sm:p-9">
               <div className="max-w-xl">
-                <Badge className="mb-4 border-lime-400/20 bg-lime-400/10 text-lime-400">
+                <Badge className="mb-4 border-orange-400/20 bg-orange-400/10 text-orange-400">
                   <Users className="mr-1.5 h-3 w-3" />
                   TURFPLAY COMMUNITY
                 </Badge>
 
                 <h1 className="text-4xl font-black tracking-tight sm:text-5xl">
-                  Find <span className="text-lime-400">Players</span>
+                  Find <span className="text-orange-400">Players</span>
                 </h1>
 
                 <p className="mt-3 text-sm leading-6 text-slate-300 sm:text-base">
@@ -249,12 +260,12 @@ export default function FindPlayersPage() {
 
               <div className="hidden gap-3 sm:flex">
                 <div className="min-w-[135px] rounded-2xl border border-white/10 bg-black/40 p-4 backdrop-blur-md">
-                  <Users className="mb-3 h-6 w-6 text-lime-400" />
+                  <Users className="mb-3 h-6 w-6 text-orange-400" />
                   <p className="text-2xl font-black">{filteredPlayers.length}</p>
                   <p className="text-xs text-slate-400">Players shown</p>
                 </div>
                 <div className="min-w-[135px] rounded-2xl border border-white/10 bg-black/40 p-4 backdrop-blur-md">
-                  <Activity className="mb-3 h-6 w-6 text-lime-400" />
+                  <Activity className="mb-3 h-6 w-6 text-orange-400" />
                   <p className="text-2xl font-black">Nearby</p>
                   <p className="text-xs text-slate-400">Player discovery</p>
                 </div>
@@ -269,7 +280,7 @@ export default function FindPlayersPage() {
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               placeholder="Search players, teams or sports..."
-              className="h-12 w-full rounded-xl border border-white/10 bg-[#101c19] pl-11 pr-4 text-sm text-white outline-none focus:border-lime-400/50"
+              className="h-12 w-full rounded-xl border border-white/10 bg-[#182238] pl-11 pr-4 text-sm text-white outline-none focus:border-orange-400/50"
             />
           </div>
 
@@ -282,8 +293,8 @@ export default function FindPlayersPage() {
                   onClick={() => setActiveSport(sport)}
                   className={`shrink-0 rounded-full border px-5 py-2.5 text-xs font-bold transition ${
                     activeSport === sport
-                      ? "border-lime-400 bg-lime-400 text-black shadow-lg shadow-lime-400/10"
-                      : "border-white/10 bg-[#101c19] text-slate-300 hover:border-lime-400/40"
+                      ? "border-orange-400 bg-orange-400 text-black shadow-lg shadow-orange-400/10"
+                      : "border-white/10 bg-[#182238] text-slate-300 hover:border-orange-400/40"
                   }`}
                 >
                   {sport === "Football" && "⚽ "}
@@ -296,15 +307,15 @@ export default function FindPlayersPage() {
           </section>
 
           {/* FILTER PANEL */}
-          <section className="rounded-2xl border border-white/10 bg-[#0c1916] p-4">
+          <section className="rounded-2xl border border-white/10 bg-[#131C2E] p-4">
             <div className="mb-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <SlidersHorizontal className="h-4 w-4 text-lime-400" />
+                <SlidersHorizontal className="h-4 w-4 text-orange-400" />
                 <h2 className="text-sm font-bold">Find your ideal player</h2>
               </div>
               <button
                 onClick={resetFilters}
-                className="text-xs font-semibold text-lime-400 hover:text-lime-300"
+                className="text-xs font-semibold text-orange-400 hover:text-orange-300"
               >
                 Reset filters
               </button>
@@ -312,17 +323,17 @@ export default function FindPlayersPage() {
 
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-4">
               <div className="col-span-2 flex items-center gap-2 rounded-xl border border-white/[0.07] bg-white/[0.025] px-3 py-2.5 text-xs text-slate-400 lg:col-span-1">
-                <ShieldCheck className="h-4 w-4 shrink-0 text-lime-400" />
+                <ShieldCheck className="h-4 w-4 shrink-0 text-orange-400" />
                 Discover players and connect
               </div>
               <div className="col-span-2 lg:col-span-1">
                 <select
                   value={distanceFilter}
                   onChange={e => setDistanceFilter(e.target.value)}
-                  className="w-full rounded-xl border border-white/[0.07] bg-white/[0.025] px-3 py-2.5 text-xs text-white outline-none focus:border-lime-400/50"
+                  className="w-full rounded-xl border border-white/[0.07] bg-white/[0.025] px-3 py-2.5 text-xs text-white outline-none focus:border-orange-400/50"
                 >
                   {DISTANCES.map(d => (
-                    <option key={d} value={d} className="bg-[#101c19]">{d}</option>
+                    <option key={d} value={d} className="bg-[#182238]">{d}</option>
                   ))}
                 </select>
               </div>
@@ -338,7 +349,7 @@ export default function FindPlayersPage() {
                 <div>
                   <h2 className="text-xl font-bold">
                     Players Near You
-                    <span className="ml-2 text-sm font-medium text-lime-400">
+                    <span className="ml-2 text-sm font-medium text-orange-400">
                       ({filteredPlayers.length})
                     </span>
                   </h2>
@@ -350,7 +361,7 @@ export default function FindPlayersPage() {
                 <select
                   value={sortBy}
                   onChange={e => setSortBy(e.target.value)}
-                  className="h-10 rounded-xl border border-white/10 bg-[#101c19] px-3 text-xs text-white outline-none focus:border-lime-400/50"
+                  className="h-10 rounded-xl border border-white/10 bg-[#182238] px-3 text-xs text-white outline-none focus:border-orange-400/50"
                 >
                   <option>Nearest</option>
                   <option>Highest Rated</option>
@@ -365,7 +376,7 @@ export default function FindPlayersPage() {
               </div>
 
               {filteredPlayers.length === 0 && (
-                <div className="rounded-2xl border border-dashed border-white/15 bg-[#0c1916] px-6 py-16 text-center">
+                <div className="rounded-2xl border border-dashed border-white/15 bg-[#131C2E] px-6 py-16 text-center">
                   <Users className="mx-auto mb-4 h-12 w-12 text-slate-500" />
                   <h3 className="text-lg font-bold">No players found</h3>
                   <p className="mt-2 text-sm text-slate-400">
@@ -373,7 +384,7 @@ export default function FindPlayersPage() {
                   </p>
                   <Button
                     onClick={resetFilters}
-                    className="mt-5 bg-lime-400 font-bold text-black hover:bg-lime-300"
+                    className="mt-5 bg-orange-400 font-bold text-black hover:bg-orange-300"
                   >
                     Reset Filters
                   </Button>
@@ -385,10 +396,10 @@ export default function FindPlayersPage() {
             <aside className="space-y-5">
 
               {/* QUICK ACTIONS */}
-              <Card className="rounded-2xl border-white/10 bg-[#0c1916]">
+              <Card className="rounded-2xl border-white/10 bg-[#131C2E]">
                 <CardContent className="p-5">
                   <div className="mb-4 flex items-center gap-2">
-                    <Zap className="h-5 w-5 text-lime-400" />
+                    <Zap className="h-5 w-5 text-orange-400" />
                     <h3 className="font-bold">Quick Actions</h3>
                   </div>
 
@@ -413,13 +424,13 @@ export default function FindPlayersPage() {
               </Card>
 
               {/* UPCOMING GAMES */}
-              <Card className="rounded-2xl border-white/10 bg-[#0c1916]">
+              <Card className="rounded-2xl border-white/10 bg-[#131C2E]">
                 <CardContent className="p-5">
                   <div className="mb-4 flex items-center justify-between">
                     <h3 className="text-sm font-bold">Community Games</h3>
                     <Link
                       href="/dashboard/open-games"
-                      className="text-xs font-semibold text-lime-400"
+                      className="text-xs font-semibold text-orange-400"
                     >
                       View all <ArrowRight className="ml-1 inline h-3 w-3" />
                     </Link>
@@ -427,7 +438,7 @@ export default function FindPlayersPage() {
 
                   <div className="space-y-4">
                     {(openGames || []).slice(0, 3).map((g: any) => (
-                      <Link key={g.id} href="/dashboard/open-games" className="block rounded-xl border border-white/[0.06] bg-white/[0.025] p-3 hover:border-lime-400/30 transition">
+                      <Link key={g.id} href="/dashboard/open-games" className="block rounded-xl border border-white/[0.06] bg-white/[0.025] p-3 hover:border-orange-400/30 transition">
                         <p className="text-xs font-bold text-white truncate">{g.facility?.name || "Open Game"}</p>
                         <p className="text-[10px] text-slate-400 mt-1">{g.facility?.city || ""} · {g.spotsLeft ?? 0} spots left</p>
                       </Link>
@@ -440,12 +451,12 @@ export default function FindPlayersPage() {
               </Card>
 
               {/* COMMUNITY PROMO */}
-              <div className="relative overflow-hidden rounded-2xl border border-lime-400/20 bg-gradient-to-br from-[#183820] to-[#08150e] p-5">
-                <div className="absolute -right-10 -top-10 h-36 w-36 rounded-full bg-lime-400/10 blur-3xl" />
+              <div className="relative overflow-hidden rounded-2xl border border-orange-400/20 bg-gradient-to-br from-[#183820] to-[#08150e] p-5">
+                <div className="absolute -right-10 -top-10 h-36 w-36 rounded-full bg-orange-400/10 blur-3xl" />
 
                 <div className="relative">
-                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-lime-400/10">
-                    <UserPlus className="h-6 w-6 text-lime-400" />
+                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-orange-400/10">
+                    <UserPlus className="h-6 w-6 text-orange-400" />
                   </div>
 
                   <h3 className="text-lg font-black">
@@ -458,7 +469,7 @@ export default function FindPlayersPage() {
                     Build your team, invite friends and discover new players around you.
                   </p>
 
-                  <Button asChild className="mt-5 w-full bg-lime-400 font-bold text-black hover:bg-lime-300">
+                  <Button asChild className="mt-5 w-full bg-orange-400 font-bold text-black hover:bg-orange-300">
                     <Link href="/dashboard/teams">
                       Create Your Team <ArrowRight className="ml-2 h-4 w-4" />
                     </Link>
@@ -469,10 +480,10 @@ export default function FindPlayersPage() {
           </div>
 
           {/* BOTTOM BANNER */}
-          <section className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-lime-400/20 bg-gradient-to-r from-[#17351d] to-[#0b1911] p-5 sm:p-7">
+          <section className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-orange-400/20 bg-gradient-to-r from-[#17351d] to-[#0b1911] p-5 sm:p-7">
             <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-lime-400/10">
-                <Trophy className="h-7 w-7 text-lime-400" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-orange-400/10">
+                <Trophy className="h-7 w-7 text-orange-400" />
               </div>
               <div>
                 <h3 className="font-bold">Ready for your next match?</h3>
@@ -482,7 +493,7 @@ export default function FindPlayersPage() {
               </div>
             </div>
 
-            <Button asChild className="bg-lime-400 font-bold text-black hover:bg-lime-300">
+            <Button asChild className="bg-orange-400 font-bold text-black hover:bg-orange-300">
               <Link href="/dashboard/open-games">
                 Explore Open Games <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
@@ -511,7 +522,7 @@ function FilterSelect({
   return (
     <div className="min-w-0 rounded-xl border border-white/[0.07] bg-white/[0.025] px-3 py-2">
       <div className="mb-1 flex items-center gap-2 text-[10px] text-slate-500">
-        <span className="text-lime-400">{icon}</span>
+        <span className="text-orange-400">{icon}</span>
         {label}
       </div>
 
@@ -521,7 +532,7 @@ function FilterSelect({
         className="w-full cursor-pointer bg-transparent text-xs font-semibold text-white outline-none"
       >
         {options.map(option => (
-          <option key={option} value={option} className="bg-[#101c19]">
+          <option key={option} value={option} className="bg-[#182238]">
             {option}
           </option>
         ))}
@@ -542,10 +553,10 @@ function QuickAction({
   return (
     <Link
       href={href}
-      className="flex items-center justify-between rounded-xl border border-white/[0.07] bg-white/[0.025] p-3 transition hover:border-lime-400/30 hover:bg-lime-400/[0.04]"
+      className="flex items-center justify-between rounded-xl border border-white/[0.07] bg-white/[0.025] p-3 transition hover:border-orange-400/30 hover:bg-orange-400/[0.04]"
     >
       <div className="flex items-center gap-3">
-        <span className="text-lime-400">{icon}</span>
+        <span className="text-orange-400">{icon}</span>
         <span className="text-xs font-medium text-slate-300">{label}</span>
       </div>
       <ChevronRight className="h-4 w-4 text-slate-500" />

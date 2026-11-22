@@ -79,7 +79,7 @@ export function BookingModal({ facility, courtId, date, slot, onClose }: Booking
         // Offline payment - booking confirmed immediately
         toast({ title: "Booking Confirmed!", description: "Your booking has been confirmed. Payment to be collected at venue." })
         onClose()
-        router.push(`/dashboard/bookings`)
+        router.push(`/search`)
       }
     },
     onError: (error) => {
@@ -184,7 +184,7 @@ export function BookingModal({ facility, courtId, date, slot, onClose }: Booking
           clearInterval(interval)
           toast({ title: "Success", description: "Booking confirmed!" })
           onClose()
-          router.push(`/dashboard/bookings`)
+          router.push(`/search`)
         } else if (data.status === "FAILED") {
           clearInterval(interval)
           setError("Payment failed. Please try again.")
@@ -207,7 +207,7 @@ export function BookingModal({ facility, courtId, date, slot, onClose }: Booking
           if (verifyData.status === "SUCCEEDED") {
             toast({ title: "Success", description: "Booking confirmed!" })
             onClose()
-            router.push(`/dashboard/bookings`)
+            router.push(`/search`)
             return
           }
         } catch (e) {
@@ -215,7 +215,7 @@ export function BookingModal({ facility, courtId, date, slot, onClose }: Booking
         }
         toast({ title: "Payment processing", description: "Your payment is being verified. Check your bookings for status." })
         onClose()
-        router.push(`/dashboard/bookings`)
+        router.push(`/search`)
       }
     }, 3000)
   }
@@ -260,12 +260,9 @@ export function BookingModal({ facility, courtId, date, slot, onClose }: Booking
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
       <div className="bg-[#111a22] rounded-2xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto border border-white/10">
-        <div className="p-4 border-b border-white/10 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-white">Confirm Booking</h2>
-          <button onClick={handleClose} className="p-1 hover:bg-white/5 rounded-lg text-slate-400" disabled={isLoading}>
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+         <div className="p-4 border-b border-white/10 flex items-center justify-between">
+           <h2 className="text-xl font-bold text-white">Confirm Booking</h2>
+         </div>
         <div className="p-4 space-y-4">
           <div className="p-4 bg-[#17222d] rounded-xl space-y-3 border border-white/[0.08]">
             <div className="flex justify-between items-center">

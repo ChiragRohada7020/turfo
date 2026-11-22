@@ -1,0 +1,11 @@
+{
+  "name": "Strikora",
+  "short_name": "Strikora",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#070d12",
+  "theme_color": "#f97316",
+  "icons": [
+    { "src": "/favicon.ico", "sizes": "any", "type": "image/x-icon" }
+  ]
+}

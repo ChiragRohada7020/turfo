@@ -256,9 +256,9 @@ export default function BookingsPage() {
             <Menu className="h-5 w-5" />
           </button>
           <div className="ml-auto" />
-          <button aria-label="Notifications" className="relative rounded-full border border-white/10 bg-[#121b24] p-2.5 text-slate-300">
+          <Link href="/notifications" aria-label="Notifications" className="relative rounded-full border border-white/10 bg-[#121b24] p-2.5 text-slate-300">
             <Bell className="h-4 w-4" />
-          </button>
+          </Link>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="flex shrink-0 items-center gap-2 rounded-xl p-1.5 hover:bg-white/5">
@@ -298,16 +298,12 @@ export default function BookingsPage() {
                 <h1 className="text-3xl font-black tracking-tight sm:text-4xl">
                   My <span className="text-orange-400">Bookings</span>
                 </h1>
-                <p className="mt-2 max-w-lg text-sm text-slate-400">
-                  Manage your reservations, organize your team and invite
-                  players to join your game.
-                </p>
               </div>
 
               <Link href={isOwner ? "/dashboard/facilities" : "/search"}>
                  <Button className="h-12 rounded-xl bg-orange-400 px-5 font-bold text-black shadow-lg shadow-orange-400/10 hover:bg-orange-300">
                    <Plus className="mr-2 h-5 w-5" />
-                   {isOwner ? "Book Offline" : "Book a Turf"}
+                   {isOwner ? "Book Offline" : "Book a Slot"}
                  </Button>
                </Link>
             </div>
@@ -355,11 +351,8 @@ export default function BookingsPage() {
           <div className="mb-6">
             <div className="mb-3 flex items-center justify-between gap-3">
               <div>
-                <h2 className="text-lg font-bold">{isOwner ? "Facility bookings" : "Your reservations"}</h2>
-                 <p className="text-xs text-slate-500">
-                   {isOwner ? "Bookings for your facilities are shown here." : "Only bookings made by your account are shown here."}
-                 </p>
-              </div>
+                 <h2 className="text-lg font-bold">{isOwner ? "Facility bookings" : "Your reservations"}</h2>
+               </div>
               <span className="hidden rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs text-slate-400 sm:inline-flex">
                 {bookings.length} shown
               </span>
@@ -449,7 +442,7 @@ export default function BookingsPage() {
                                   {booking.court?.name || "Facility booking"}
                                 </p>
 
-                                <div className="mt-4 grid gap-3 text-sm text-slate-400 sm:grid-cols-2">
+                                <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm text-slate-400">
                                   <div className="flex items-center gap-2">
                                     <CalendarDays className="h-4 w-4 shrink-0 text-orange-400" />
                                     <span>{formatDate(booking.startTime)}</span>
@@ -651,6 +644,22 @@ export default function BookingsPage() {
                                     Mark attendance
                                   </Button>
                                 )}
+
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-11 flex-1 rounded-lg border-blue-500/25 bg-blue-500/[0.04] px-4 text-xs font-semibold text-blue-400 hover:bg-blue-500/10 lg:w-full"
+                                onClick={() => {
+                                  const f = booking.facility
+                                  const url = f?.latitude && f?.longitude
+                                    ? `https://www.google.com/maps/search/?api=1&query=${f.latitude},${f.longitude}`
+                                    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((f?.address || "") + " " + (f?.city || "") + " " + (f?.state || ""))}`
+                                  window.open(url, "_blank")
+                                }}
+                              >
+                                <MapPin className="mr-2 h-4 w-4" />
+                                Directions
+                              </Button>
 
                               {(booking.status === "PENDING" ||
                                 booking.status === "CONFIRMED") &&

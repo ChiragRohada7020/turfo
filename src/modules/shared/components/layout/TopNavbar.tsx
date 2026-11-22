@@ -33,10 +33,10 @@ export function TopNavbar({ onMenuClick, showLocation = false, location = "Pacho
       )}
       {searchSlot}
       <div className="ml-auto" />
-      <button aria-label="Notifications" className="relative rounded-full border border-white/10 bg-[#121b24] p-2.5 text-slate-300">
+      <Link href="/notifications" aria-label="Notifications" className="relative rounded-full border border-white/10 bg-[#121b24] p-2.5 text-slate-300">
         <Bell className="h-4 w-4" />
         {(unreadNotifications?.total ?? 0) > 0 && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500" />}
-      </button>
+      </Link>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button className="flex shrink-0 items-center gap-2 rounded-xl p-1.5 hover:bg-white/5">

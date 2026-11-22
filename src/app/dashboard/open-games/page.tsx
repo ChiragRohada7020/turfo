@@ -107,7 +107,7 @@ export default function OpenGamesPage() {
   if (status === "loading") {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#070d12]">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-lime-400 border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-orange-400 border-t-transparent" />
       </div>
     )
   }
@@ -115,14 +115,14 @@ export default function OpenGamesPage() {
   if (!session) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#06100e] px-4 text-white">
-        <Card className="w-full max-w-md border-white/10 bg-[#101c19] text-white">
+        <Card className="w-full max-w-md border-white/10 bg-[#182238] text-white">
           <CardContent className="p-8 text-center">
-            <Gamepad2 className="mx-auto mb-4 h-12 w-12 text-lime-400" />
+            <Gamepad2 className="mx-auto mb-4 h-12 w-12 text-orange-400" />
             <h1 className="text-2xl font-bold">Join the Game</h1>
             <p className="mt-2 text-sm text-slate-400">
               Sign in to discover and join open games.
             </p>
-            <Button asChild className="mt-6 w-full bg-lime-400 font-bold text-black hover:bg-lime-300">
+            <Button asChild className="mt-6 w-full bg-orange-400 font-bold text-black hover:bg-orange-300">
               <Link href="/auth/login?callbackUrl=/dashboard/open-games">
                 Sign In
               </Link>
@@ -152,19 +152,19 @@ export default function OpenGamesPage() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search games, turfs or players..."
-                className="h-10 rounded-full border-white/10 bg-white/[0.04] pl-11 text-sm text-white placeholder:text-slate-500 focus:border-lime-400/50"
+                className="h-10 rounded-full border-white/10 bg-white/[0.04] pl-11 text-sm text-white placeholder:text-slate-500 focus:border-orange-400/50"
               />
             </div>
           </div>
 
           <div className="flex items-center gap-3">
-            <Activity className="h-5 w-5 text-lime-400" />
+            <Activity className="h-5 w-5 text-orange-400" />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="flex shrink-0 items-center gap-2 rounded-xl p-1.5 hover:bg-white/5">
                   <Avatar className="h-9 w-9 border border-white/10">
                     <AvatarImage src={session.user?.image || ""} />
-                    <AvatarFallback className="bg-lime-400/20 text-lime-400">
+                    <AvatarFallback className="bg-orange-400/20 text-orange-400">
                       {session.user?.name?.[0] || "U"}
                     </AvatarFallback>
                   </Avatar>
@@ -187,8 +187,8 @@ export default function OpenGamesPage() {
         <main className="mx-auto max-w-[1700px] space-y-7 p-4 sm:p-6 xl:p-8">
 
           {/* HERO BANNER */}
-          <section className="relative overflow-hidden rounded-3xl border border-white/10 bg-[#10251a]">
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_75%_50%,rgba(132,204,22,0.24),transparent_45%),linear-gradient(110deg,#07150f_10%,#12351d_70%,#07120f)]" />
+          <section className="relative overflow-hidden rounded-3xl border border-white/10 bg-[#17233A]">
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_75%_50%,rgba(249,115,22,0.22),transparent_55%),linear-gradient(110deg,rgba(11,16,32,0.92),rgba(32,37,65,0.72),rgba(11,16,32,0.88))]" />
 
             <div className="absolute inset-0 opacity-20"
               style={{
@@ -199,24 +199,19 @@ export default function OpenGamesPage() {
 
             <div className="relative grid items-center gap-6 p-6 sm:p-9 lg:grid-cols-[1fr_auto]">
               <div>
-                <Badge className="mb-4 border-lime-400/20 bg-lime-400/10 text-lime-400">
+                <Badge className="mb-4 border-orange-400/20 bg-orange-400/10 text-orange-400">
                   <Zap className="mr-1 h-3 w-3" />
                   JOIN THE ACTION
                 </Badge>
 
                 <h1 className="text-4xl font-black tracking-tight sm:text-5xl">
-                  Open <span className="text-lime-400">Games</span>
+                  Open <span className="text-orange-400">Games</span>
                 </h1>
-
-                <p className="mt-3 max-w-lg text-sm leading-6 text-slate-300 sm:text-base">
-                  Find players, join exciting matches and never play alone.
-                  Your next game is waiting for you.
-                </p>
 
                 <div className="mt-6 flex flex-wrap gap-3">
                   <Button
                     onClick={() => document.getElementById("game-list")?.scrollIntoView({ behavior: "smooth" })}
-                    className="h-11 rounded-xl bg-lime-400 px-6 font-bold text-black hover:bg-lime-300"
+                    className="h-11 rounded-xl bg-orange-400 px-6 font-bold text-black hover:bg-orange-300"
                   >
                     Explore Games <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
@@ -231,12 +226,12 @@ export default function OpenGamesPage() {
 
               <div className="hidden gap-3 sm:flex">
                 <div className="min-w-[135px] rounded-2xl border border-white/10 bg-black/20 p-4 backdrop-blur-md">
-                  <Users className="mb-3 h-6 w-6 text-lime-400" />
+                  <Users className="mb-3 h-6 w-6 text-orange-400" />
                   <p className="text-2xl font-black">{openGames?.length || 0}</p>
                   <p className="text-xs text-slate-400">Open Games</p>
                 </div>
                 <div className="min-w-[135px] rounded-2xl border border-white/10 bg-black/20 p-4 backdrop-blur-md">
-                  <Zap className="mb-3 h-6 w-6 text-lime-400" />
+                  <Zap className="mb-3 h-6 w-6 text-orange-400" />
                   <p className="text-2xl font-black">{totalSpots}</p>
                   <p className="text-xs text-slate-400">Available Spots</p>
                 </div>
@@ -251,22 +246,22 @@ export default function OpenGamesPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search games or turfs..."
-              className="h-12 rounded-xl border-white/10 bg-[#101c19] pl-11 text-white"
+              className="h-12 rounded-xl border-white/10 bg-[#182238] pl-11 text-white"
             />
           </div>
 
           {/* FILTER BAR */}
           <section id="game-list">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex gap-2 overflow-x-auto pb-2">
-                {["All Games", "Football", "Cricket", "Badminton"].map((filter) => (
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <div className="flex gap-2 overflow-x-auto pb-2 justify-center">
+                {["All Games", "Football", "Cricket", "Badminton", "PS Games"].map((filter) => (
                   <button
                     key={filter}
                     onClick={() => setActiveFilter(filter)}
-                    className={`whitespace-nowrap rounded-full border px-4 py-2.5 text-xs font-semibold transition ${
+                    className={`inline-flex items-center justify-center whitespace-nowrap rounded-full border px-4 py-2.5 text-xs font-semibold transition text-center ${
                       activeFilter === filter
-                        ? "border-lime-400 bg-lime-400 text-black"
-                        : "border-white/10 bg-[#101c19] text-slate-300 hover:border-lime-400/40"
+                        ? "border-orange-400 bg-orange-400 text-black"
+                        : "border-white/10 bg-[#182238] text-slate-300 hover:border-orange-400/40"
                     }`}
                   >
                     {filter === "All Games" ? "⚽ " : ""}
@@ -275,10 +270,7 @@ export default function OpenGamesPage() {
                 ))}
               </div>
 
-              <span className="text-xs text-slate-500">
-                {games.length} games found
-              </span>
-            </div>
+              </div>
           </section>
 
           {/* CONTENT GRID */}
@@ -288,11 +280,8 @@ export default function OpenGamesPage() {
             <section className="min-w-0">
               <div className="mb-4 flex items-center justify-between">
                 <div>
-                  <h2 className="text-xl font-bold">Games Near You</h2>
-                  <p className="mt-1 text-xs text-slate-500">
-                    Join players and enjoy your favourite sport.
-                  </p>
-                </div>
+                   <h2 className="text-xl font-bold">Games Near You</h2>
+                 </div>
               </div>
 
               {isLoading ? (
@@ -323,21 +312,21 @@ export default function OpenGamesPage() {
                     return (
                       <Card
                         key={game.id}
-                        className="group overflow-hidden rounded-2xl border-white/[0.09] bg-[#0c1916] transition-all duration-300 hover:-translate-y-1 hover:border-lime-400/40 hover:shadow-[0_15px_40px_rgba(0,0,0,0.3)]"
+                        className="group overflow-hidden rounded-2xl border-white/[0.09] bg-[#131C2E] transition-all duration-300 hover:-translate-y-1 hover:border-orange-400/40 hover:shadow-[0_15px_40px_rgba(0,0,0,0.3)]"
                       >
                         <CardContent className="p-0">
 
                           {/* IMAGE */}
                           <div className="relative h-40 overflow-hidden bg-[#17271e]">
                             <img
-                              src={game.facility?.images?.[0] || "/placeholder.svg"}
+                              src={game.court?.images?.[0] || game.facility?.images?.[0] || "/placeholder.svg"}
                               alt={game.facility?.name || "Turf"}
                               className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
                             />
 
                             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-black/20" />
 
-                            <Badge className="absolute left-3 top-3 border border-lime-400/30 bg-lime-400 text-black shadow-lg">
+                            <Badge className="absolute left-3 top-3 border border-orange-400/30 bg-orange-400 text-black shadow-lg">
                               {spotsLeft > 0
                                 ? `${spotsLeft} spots left`
                                 : "Fully booked"}
@@ -353,7 +342,7 @@ export default function OpenGamesPage() {
                                 </h3>
                               </div>
                               <div className="rounded-xl border border-white/20 bg-black/50 px-3 py-2 text-right backdrop-blur-md">
-                                <p className="text-lg font-black text-lime-400">
+                                <p className="text-lg font-black text-orange-400">
                                   {formatCurrency(game.totalPrice)}
                                 </p>
                                 <p className="text-[10px] text-slate-300">Total price</p>
@@ -378,19 +367,19 @@ export default function OpenGamesPage() {
                             {/* DATE AND LOCATION */}
                             <div className="grid grid-cols-2 gap-3">
                               <div className="flex items-center gap-2 text-xs text-slate-400">
-                                <CalendarDays className="h-4 w-4 shrink-0 text-lime-400" />
+                                <CalendarDays className="h-4 w-4 shrink-0 text-orange-400" />
                                 <span>{formatDate(game.startTime)}</span>
                               </div>
 
                               <div className="flex items-center gap-2 text-xs text-slate-400">
-                                <Clock3 className="h-4 w-4 shrink-0 text-lime-400" />
+                                <Clock3 className="h-4 w-4 shrink-0 text-orange-400" />
                                 <span>
                                   {formatTime(game.startTime)} - {formatTime(game.endTime)}
                                 </span>
                               </div>
 
                               <div className="col-span-2 flex items-center gap-2 text-xs text-slate-400">
-                                <MapPin className="h-4 w-4 shrink-0 text-lime-400" />
+                                <MapPin className="h-4 w-4 shrink-0 text-orange-400" />
                                 <span>
                                   {game.court?.name
                                     ? `${game.court.name}, `
@@ -404,17 +393,17 @@ export default function OpenGamesPage() {
                             <div className="rounded-xl border border-white/[0.07] bg-white/[0.025] p-3">
                               <div className="mb-2 flex items-center justify-between">
                                 <span className="flex items-center gap-2 text-xs font-semibold">
-                                  <Users className="h-4 w-4 text-lime-400" />
+                                  <Users className="h-4 w-4 text-orange-400" />
                                   Players joined
                                 </span>
-                                <span className="text-xs font-bold text-lime-400">
+                                <span className="text-xs font-bold text-orange-400">
                                   {currentPlayers}/{totalPlayers}
                                 </span>
                               </div>
 
                               <div className="h-2 overflow-hidden rounded-full bg-white/10">
                                 <div
-                                  className="h-full rounded-full bg-gradient-to-r from-lime-500 to-emerald-400 transition-all"
+                                  className="h-full rounded-full bg-gradient-to-r from-orange-500 to-orange-400 transition-all"
                                   style={{ width: `${progress}%` }}
                                 />
                               </div>
@@ -423,7 +412,7 @@ export default function OpenGamesPage() {
                                 <div className="flex -space-x-2">
                                   <Avatar className="h-7 w-7 border-2 border-[#0c1916]">
                                     <AvatarImage src={game.user?.image || ""} />
-                                    <AvatarFallback className="bg-lime-400/20 text-[10px] text-lime-400">
+                                    <AvatarFallback className="bg-orange-400/20 text-[10px] text-orange-400">
                                       {game.user?.name?.[0] || "H"}
                                     </AvatarFallback>
                                   </Avatar>
@@ -449,8 +438,8 @@ export default function OpenGamesPage() {
                             {/* HOST */}
                             <div className="flex items-center justify-between border-t border-white/[0.07] pt-3">
                               <div className="flex items-center gap-2">
-                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-lime-400/10">
-                                  <User className="h-4 w-4 text-lime-400" />
+                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-orange-400/10">
+                                  <User className="h-4 w-4 text-orange-400" />
                                 </div>
                                 <div>
                                   <p className="text-[10px] text-slate-500">Hosted by</p>
@@ -466,7 +455,7 @@ export default function OpenGamesPage() {
                                 </Badge>
                               ) : (
                                 <span className="flex items-center gap-1 text-[10px] text-slate-500">
-                                  <ShieldCheck className="h-3.5 w-3.5 text-lime-400" />
+                                  <ShieldCheck className="h-3.5 w-3.5 text-orange-400" />
                                   Host profile
                                 </span>
                               )}
@@ -497,7 +486,7 @@ export default function OpenGamesPage() {
                               </Button>
                             ) : spotsLeft > 0 ? (
                               <Button
-                                className="h-10 w-full bg-lime-400 font-bold text-black shadow-[0_5px_20px_rgba(163,230,53,0.12)] hover:bg-lime-300"
+                                className="h-10 w-full bg-orange-400 font-bold text-black shadow-[0_5px_20px_rgba(249,115,22,0.12)] hover:bg-orange-300"
                                 onClick={() => joinBooking.mutate({ bookingId: game.id })}
                                 disabled={joinBooking.isPending}
                               >
@@ -520,15 +509,15 @@ export default function OpenGamesPage() {
                   })}
                 </div>
               ) : (
-                <div className="rounded-3xl border border-dashed border-white/10 bg-[#0c1916] px-6 py-16 text-center">
-                  <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-lime-400/10">
-                    <Gamepad2 className="h-8 w-8 text-lime-400" />
+                <div className="rounded-3xl border border-dashed border-white/10 bg-[#131C2E] px-6 py-16 text-center">
+                  <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-orange-400/10">
+                    <Gamepad2 className="h-8 w-8 text-orange-400" />
                   </div>
                   <h3 className="text-xl font-bold">No Open Games Found</h3>
                   <p className="mx-auto mt-2 max-w-sm text-sm text-slate-400">
                     No matches are available for your search. Be the first to create a game!
                   </p>
-                  <Button asChild className="mt-6 bg-lime-400 font-bold text-black hover:bg-lime-300">
+                  <Button asChild className="mt-6 bg-orange-400 font-bold text-black hover:bg-orange-300">
                     <Link href="/search">
                       <Plus className="mr-2 h-4 w-4" /> Book a Turf
                     </Link>
@@ -541,19 +530,19 @@ export default function OpenGamesPage() {
             <aside className="space-y-5">
 
               {/* QUICK STATS */}
-              <Card className="rounded-2xl border-white/10 bg-[#0c1916]">
+              <Card className="rounded-2xl border-white/10 bg-[#131C2E]">
                 <CardContent className="p-4">
                   <h3 className="mb-4 font-bold">Open Games Stats</h3>
 
                   <div className="grid grid-cols-2 gap-3">
                     <div className="rounded-xl border border-white/[0.07] bg-white/[0.025] p-3">
-                      <Users className="mb-3 h-5 w-5 text-lime-400" />
+                      <Users className="mb-3 h-5 w-5 text-orange-400" />
                       <p className="text-2xl font-black">{openGames?.length || 0}</p>
                       <p className="text-[11px] text-slate-400">Open Games</p>
                     </div>
 
                     <div className="rounded-xl border border-white/[0.07] bg-white/[0.025] p-3">
-                      <Zap className="mb-3 h-5 w-5 text-lime-400" />
+                      <Zap className="mb-3 h-5 w-5 text-orange-400" />
                       <p className="text-2xl font-black">{totalSpots}</p>
                       <p className="text-[11px] text-slate-400">Spots Available</p>
                     </div>
@@ -574,10 +563,10 @@ export default function OpenGamesPage() {
               </Card>
 
               {/* HOW IT WORKS */}
-              <Card className="overflow-hidden rounded-2xl border-lime-400/20 bg-gradient-to-br from-[#142d1c] to-[#0b1712]">
+              <Card className="overflow-hidden rounded-2xl border-orange-400/20 bg-gradient-to-br from-[#142d1c] to-[#0b1712]">
                 <CardContent className="p-5">
                   <div className="mb-4 flex items-center gap-2">
-                    <ShieldCheck className="h-5 w-5 text-lime-400" />
+                    <ShieldCheck className="h-5 w-5 text-orange-400" />
                     <h3 className="font-bold">How Open Games Work</h3>
                   </div>
 
@@ -589,7 +578,7 @@ export default function OpenGamesPage() {
                       "Play and meet new friends"
                     ].map((item, i) => (
                       <div key={item} className="flex items-center gap-3">
-                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-lime-400/15 text-xs font-bold text-lime-400">
+                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-orange-400/15 text-xs font-bold text-orange-400">
                           {i + 1}
                         </div>
                         <p className="text-xs text-slate-300">{item}</p>
@@ -600,13 +589,13 @@ export default function OpenGamesPage() {
               </Card>
 
               {/* CREATE GAME */}
-              <Card className="overflow-hidden rounded-2xl border-white/10 bg-[#0c1916]">
+              <Card className="overflow-hidden rounded-2xl border-white/10 bg-[#131C2E]">
                 <CardContent className="relative p-5">
-                  <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-lime-400/10 blur-3xl" />
+                  <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-orange-400/10 blur-3xl" />
 
                   <div className="relative">
-                    <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-lime-400/10">
-                      <Users className="h-6 w-6 text-lime-400" />
+                    <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-orange-400/10">
+                      <Users className="h-6 w-6 text-orange-400" />
                     </div>
 
                     <h3 className="text-lg font-bold">Create Your Own Game</h3>
@@ -614,7 +603,7 @@ export default function OpenGamesPage() {
                       Book a turf, open your match to other players and build your team.
                     </p>
 
-                    <Button asChild className="mt-5 h-11 w-full bg-lime-400 font-bold text-black hover:bg-lime-300">
+                    <Button asChild className="mt-5 h-11 w-full bg-orange-400 font-bold text-black hover:bg-orange-300">
                       <Link href="/search">
                         <Plus className="mr-2 h-4 w-4" />
                         Book & Host Game
@@ -628,10 +617,10 @@ export default function OpenGamesPage() {
           </div>
 
           {/* BOTTOM BANNER */}
-          <section className="flex flex-wrap items-center justify-between gap-4 overflow-hidden rounded-2xl border border-lime-400/20 bg-gradient-to-r from-[#15351c] via-[#102319] to-[#07140e] p-5 sm:p-7">
+          <section className="flex flex-wrap items-center justify-between gap-4 overflow-hidden rounded-2xl border border-orange-400/20 bg-gradient-to-r from-[#15351c] via-[#102319] to-[#07140e] p-5 sm:p-7">
             <div className="flex items-center gap-4">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-lime-400/10">
-                <Trophy className="h-8 w-8 text-lime-400" />
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-400/10">
+                <Trophy className="h-8 w-8 text-orange-400" />
               </div>
               <div>
                 <h3 className="text-lg font-bold">Ready for the next challenge?</h3>
@@ -641,7 +630,7 @@ export default function OpenGamesPage() {
               </div>
             </div>
 
-            <Button asChild className="bg-lime-400 font-bold text-black hover:bg-lime-300">
+            <Button asChild className="bg-orange-400 font-bold text-black hover:bg-orange-300">
               <Link href="/tournaments">
                 Explore Tournaments <ArrowRight className="ml-2 h-4 w-4" />
               </Link>

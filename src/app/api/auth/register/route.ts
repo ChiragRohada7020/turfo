@@ -7,7 +7,7 @@ import { sendWelcomeEmail } from "@/lib/email/service"
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { name, email, password, phone, role, phoneVerified } = body
+    const { name, email, password, phone, role, phoneVerified, referralCode } = body
 
     if (!email || !password) {
       return NextResponse.json({ error: "Email and password are required" }, { status: 400 })
@@ -65,6 +65,28 @@ export async function POST(request: NextRequest) {
         isVerified: isAutoVerified,
       },
     })
+
+    // Generate referral code
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { referralCode: `REF${user.id.slice(-6).toUpperCase()}` },
+    })
+
+    // Handle referral
+    if (referralCode && userRole === Role.PLAYER) {
+      const referrer = await prisma.user.findUnique({ where: { referralCode: String(referralCode).trim().toUpperCase() } })
+      if (referrer && referrer.id !== user.id) {
+          await prisma.$transaction(async (tx) => {
+            await tx.referral.create({
+              data: { referrerId: referrer.id, refereeId: user.id, code: String(referralCode).trim().toUpperCase(), rewardPoints: 1000 },
+            })
+            await tx.user.update({ where: { id: user.id }, data: { referredById: referrer.id } })
+            const { creditPoints } = await import("@/lib/tasks/reward")
+            await creditPoints({ userId: referrer.id, points: 1000, description: "Referral reward", referenceId: `referral:${user.id}`, idempotencyKey: `referral:${user.id}`, type: "EARNED" }, tx)
+            await tx.referral.update({ where: { refereeId: user.id }, data: { status: "REWARDED", completedAt: new Date(), rewardedAt: new Date() } })
+          })
+      }
+    }
 
     // TODO: Send welcome email via SendGrid
     // TODO: Send welcome SMS via MSG91 if phone provided

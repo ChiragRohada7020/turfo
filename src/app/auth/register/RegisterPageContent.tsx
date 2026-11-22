@@ -23,6 +23,7 @@ const registerSchema = z.object({
   confirmPassword: z.string(),
   phone: z.string().min(10, "Phone number is required"),
   role: z.enum(["PLAYER", "OWNER", "SPONSOR"]).default("PLAYER"),
+  referralCode: z.string().optional(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
@@ -57,6 +58,7 @@ export default function RegisterPageContent() {
       confirmPassword: "",
       phone: "",
       role: defaultRole,
+      referralCode: searchParams.get("ref") || "",
     },
   })
 
@@ -94,7 +96,8 @@ export default function RegisterPageContent() {
           password: data.password,
           phone: verifiedPhone || data.phone,
           role: data.role,
-          phoneVerified: true,
+           phoneVerified: true,
+           referralCode: data.referralCode || searchParams.get("ref") || undefined,
         }),
       })
 
@@ -363,8 +366,20 @@ export default function RegisterPageContent() {
                 </Select>
               </div>
 
+              <div className="space-y-2">
+                <Label htmlFor="referralCode" className="text-slate-700 font-semibold">Referral Code (Optional)</Label>
+                <div className="relative">
+                  <Gift className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <Input
+                    id="referralCode"
+                    placeholder="Enter referral code"
+                    className="pl-10 bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-orange-500 focus:ring-orange-500"
+                    {...register("referralCode")}
+                  />
+                </div>
+              </div>
+
               <Button
-                type="submit"
                 className="w-full h-12 bg-orange-500 font-bold text-white hover:bg-orange-600 rounded-xl shadow-lg shadow-orange-500/20"
                 disabled={isLoading || sendOTP.isPending}
               >

@@ -16,23 +16,19 @@ import { trpc } from "@/lib/trpc"
 import { Sidebar } from "@/components/layout/Sidebar"
 
 
-function getSportCards(facility: any): { sport: string; price: number; courtName: string }[] {
-  const cards: { sport: string; price: number; courtName: string }[] = []
-  const seen = new Set<string>()
+function getSportCards(facility: any): { sport: string; price: number; courtName: string; courtId: string }[] {
+  const cards: { sport: string; price: number; courtName: string; courtId: string }[] = []
   facility.courts?.forEach((court: any) => {
-    if (!seen.has(court.sportType)) {
-      seen.add(court.sportType)
-      const price = court.pricingRules?.length > 0
-        ? Math.min(...court.pricingRules.map((p: any) => p.pricePerHour))
-        : null
-      cards.push({ sport: court.sportType, price: price || 0, courtName: court.name })
-    }
+    const price = court.pricingRules?.length > 0
+      ? Math.min(...court.pricingRules.map((p: any) => p.pricePerHour))
+      : (facility.minPrice || 0)
+    cards.push({ sport: court.sportType, price: price || 0, courtName: court.name, courtId: court.id })
   })
   // Fallback to facility sportTypes if no courts
   if (cards.length === 0 && facility.sportTypes?.length > 0) {
     const price = facility.minPrice || 0
     facility.sportTypes.forEach((sport: string) => {
-      cards.push({ sport, price, courtName: facility.name })
+      cards.push({ sport, price, courtName: facility.name, courtId: "" })
     })
   }
   return cards
@@ -85,21 +81,21 @@ export default function SearchPageContent() {
 
   if (!session) {
     return (
-      <div className="min-h-screen bg-[#F7F8FC] text-[#171A2B] flex items-center justify-center px-4 py-12">
+      <div className="min-h-screen bg-[#0B1020] text-white flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
             <Link href="/" className="inline-flex items-center gap-2.5">
               <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#171A2B] text-lg font-black text-white shadow-lg">
                 S
               </span>
-              <span className="text-2xl font-black tracking-[-0.06em] text-[#171A2B]">
+              <span className="text-2xl font-black tracking-[-0.06em] text-white">
                 strikora<span className="text-orange-500">.</span>
               </span>
             </Link>
             <p className="text-slate-500 mt-2 text-sm">Book · Play · Compete</p>
           </div>
 
-          <Card className="bg-white border border-slate-200 rounded-3xl shadow-xl shadow-slate-900/5">
+          <Card className="bg-[#131C2E] border border-white/10 rounded-3xl shadow-xl shadow-slate-900/5">
             <CardContent className="p-6 sm:p-8 text-center">
               <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-500 text-white">
                 <CalendarDays className="h-6 w-6" />
@@ -137,22 +133,22 @@ export default function SearchPageContent() {
             <ChevronDown className="h-4 w-4 text-slate-500" />
           </div>
           <div className="ml-auto" />
-          <button aria-label="Notifications" className="relative rounded-full border border-white/10 bg-[#121b24] p-2.5 text-slate-300">
+          <Link href="/notifications" aria-label="Notifications" className="relative rounded-full border border-white/10 bg-[#121b24] p-2.5 text-slate-300">
             <Bell className="h-4 w-4" />
             {(unreadNotifications?.total ?? 0) > 0 && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500" />}
-          </button>
+          </Link>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="flex shrink-0 items-center gap-2 rounded-xl p-1.5 hover:bg-white/5">
+              <button className="flex shrink-0 items-center gap-2 rounded-xl p-1.5 hover:bg-[#131C2E]/5">
                 <Avatar className="h-9 w-9 border border-white/10">
                   <AvatarImage src={session.user?.image || ""} alt={session.user?.name || "User"} />
-                  <AvatarFallback className="bg-lime-400 font-bold text-black">{(session.user?.name || "U")[0]?.toUpperCase()}</AvatarFallback>
+                  <AvatarFallback className="bg-orange-400 font-bold text-black">{(session.user?.name || "U")[0]?.toUpperCase()}</AvatarFallback>
                 </Avatar>
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="border-white/10 bg-[#111a22] text-white">
               <DropdownMenuItem>{session.user?.email || "Account"}</DropdownMenuItem>
-              <DropdownMenuSeparator className="bg-white/10" />
+              <DropdownMenuSeparator className="bg-[#131C2E]/10" />
               <DropdownMenuItem onClick={() => signOut({ callbackUrl: "/" })}>
                 <LogOut className="mr-2 h-4 w-4" /> Sign Out
               </DropdownMenuItem>
@@ -162,58 +158,27 @@ export default function SearchPageContent() {
 
         <main className="mx-auto max-w-[1800px] space-y-6 p-4 sm:p-6 xl:p-8">
           {/* Hero */}
-          <section className="relative mb-6 overflow-hidden rounded-3xl border border-white/10 bg-[#10251a]">
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_75%_50%,rgba(34,197,94,0.2),transparent_55%),linear-gradient(110deg,#07150f,#12351d_60%,#07120f)]" />
+          <section className="relative mb-6 overflow-hidden rounded-3xl border border-white/10 bg-[#17233A]">
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_75%_50%,rgba(249,115,22,0.22),transparent_55%),linear-gradient(110deg,rgba(11,16,32,0.92),rgba(32,37,65,0.72),rgba(11,16,32,0.88))]" />
             <div className="absolute inset-0 opacity-20 bg-[linear-gradient(90deg,transparent_49%,rgba(255,255,255,0.08)_50%,transparent_51%)]" />
             <div className="relative flex flex-wrap items-center justify-between gap-6 p-6 sm:p-9">
               <div>
-                <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-lime-400">
+                <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-orange-400">
                   <CalendarDays className="h-4 w-4" /> Book a Game
                 </div>
                 <h1 className="text-3xl font-black tracking-tight sm:text-4xl">
-                  Find & <span className="text-lime-400">Book</span> Turfs
+                  Find & <span className="text-orange-400">Book</span> Turfs
                 </h1>
-                <p className="mt-2 text-sm text-slate-300 sm:text-base">
-                  Find, compare and book the best turfs near you.
-                </p>
               </div>
               <div className="hidden gap-3 sm:flex">
                 <div className="min-w-[120px] rounded-2xl border border-white/10 bg-black/20 p-4 backdrop-blur-md">
-                  <MapPin className="mb-2 h-5 w-5 text-lime-400" />
+                  <MapPin className="mb-2 h-5 w-5 text-orange-400" />
                   <p className="text-xl font-black">{city || "Your location"}</p>
                   <p className="text-[10px] text-slate-400">Your location</p>
                 </div>
               </div>
             </div>
           </section>
-
-          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-            <div>
-              <h2 className="text-xl font-bold">Available Turfs</h2>
-              <p className="mt-1 text-sm text-slate-400">Find, compare and book the best turfs near you</p>
-            </div>
-            <div className="flex items-center gap-2 text-xs font-medium text-slate-400">
-              <div className="flex items-center gap-1">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-green-600 text-black font-bold">1</span>
-                <span>Select Turf</span>
-              </div>
-              <ChevronRight className="h-4 w-4" />
-              <div className="flex items-center gap-1 opacity-30">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full border border-white/10 text-white font-bold">2</span>
-                <span>Choose Slot</span>
-              </div>
-              <ChevronRight className="h-4 w-4 opacity-30" />
-              <div className="flex items-center gap-1 opacity-30">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full border border-white/10 text-white font-bold">3</span>
-                <span>Confirm & Pay</span>
-              </div>
-              <ChevronRight className="h-4 w-4 opacity-30" />
-              <div className="flex items-center gap-1 opacity-30">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full border border-white/10 text-white font-bold">4</span>
-                <span>Booking Confirmed</span>
-              </div>
-            </div>
-          </div>
 
           {/* Search Bar */}
           <div className="mb-4 flex items-center gap-3">
@@ -223,10 +188,10 @@ export default function SearchPageContent() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search turfs, sports, or locations..."
-                className="h-10 w-full rounded-xl border border-white/10 bg-[#121b24] pl-10 pr-4 text-sm text-white outline-none placeholder:text-slate-500 focus:border-lime-400/50"
+                className="h-10 w-full rounded-xl border border-white/10 bg-[#121b24] pl-10 pr-4 text-sm text-white outline-none placeholder:text-slate-500 focus:border-orange-400/50"
               />
             </div>
-            <button className="px-4 py-2 rounded-xl bg-lime-400 text-black font-bold text-sm hover:bg-lime-300 transition shrink-0">
+            <button className="px-4 py-2 rounded-xl bg-orange-400 text-black font-bold text-sm hover:bg-orange-300 transition shrink-0">
               Search
             </button>
           </div>
@@ -239,20 +204,13 @@ export default function SearchPageContent() {
                   onClick={() => setActiveFilter(sport)}
                   className={
                     activeFilter === sport
-                      ? "shrink-0 rounded-full border border-lime-400 bg-lime-400 text-black px-4 py-2 text-xs font-semibold transition"
+                      ? "shrink-0 rounded-full border border-orange-400 bg-orange-400 text-black px-4 py-2 text-xs font-semibold transition"
                       : "shrink-0 rounded-full border border-white/10 bg-[#111a22] text-slate-300 px-4 py-2 text-xs font-semibold transition hover:border-white/20 hover:text-white"
                   }
                 >
                   {sport}
                 </button>
               ))}
-            </div>
-          </div>
-
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-bold">{filteredTurfs.length} Games Found{city ? " in " + city : ""}</h2>
-              <p className="mt-1 text-xs text-slate-500">Showing 1-{Math.min(filteredTurfs.length, 12)}</p>
             </div>
           </div>
 
@@ -272,21 +230,28 @@ export default function SearchPageContent() {
                 </div>
                 <div className="flex gap-3 overflow-x-auto pb-2 sm:grid sm:grid-cols-2 lg:grid-cols-3">
                   {sportCards.map((card, idx) => (
-                    <div key={idx} className="min-w-[220px] shrink-0 group overflow-hidden rounded-xl border-white/10 bg-[#111a22] transition hover:-translate-y-1 hover:border-lime-400/30 sm:min-w-0">
-                      <div className="relative h-24 overflow-hidden bg-[#1a3027]">
-                        {facility.images?.[0] ? <Image src={facility.images[0]} alt={facility.name} fill sizes="200px" className="object-cover transition duration-500 group-hover:scale-105" /> : null}
+                    <div key={idx} onClick={() => { window.location.href = "/facility/" + facility.id }} className="min-w-[280px] shrink-0 group overflow-hidden rounded-2xl border-white/10 bg-[#111a22] transition hover:-translate-y-1 hover:border-orange-400/30 sm:min-w-0 cursor-pointer">
+                      <div className="relative h-40 overflow-hidden bg-[#1a3027]">
+                        {facility.images?.[0] ? <Image src={facility.images[0]} alt={facility.name} fill sizes="400px" className="object-cover object-center transition duration-500 group-hover:scale-105" /> : null}
                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                        <div className="absolute top-2 left-2 px-2 py-1 rounded bg-lime-400 text-black text-xs font-bold">{card.sport.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()).toLowerCase().replace(/\b\w/g, (c: string) => c.toUpperCase())}</div>
+                        <div className="absolute top-2 left-2 px-2 py-1 rounded bg-orange-400 text-black text-xs font-bold">{card.sport.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()).toLowerCase().replace(/\b\w/g, (c: string) => c.toUpperCase())}</div>
                       </div>
-                      <div className="p-3">
-                        <p className="text-xs text-slate-400">{card.courtName}</p>
-                        <div className="mt-2 flex items-center justify-between">
-                          {card.price ? <p className="font-bold text-lime-300">{formatCurrency(card.price)}<span className="text-xs font-normal text-slate-500"> /hr</span></p> : null}
-                          <Button asChild size="sm" className="rounded-lg bg-lime-400 font-bold text-black hover:bg-lime-300">
-                            <Link href={"/facility/" + facility.id + "?sport=" + encodeURIComponent(card.sport)} replace>
-                              Book Now
-                            </Link>
-                          </Button>
+                      <div className="p-4">
+                        <p className="text-sm text-slate-400">{card.courtName}</p>
+                        <div className="mt-3 flex items-center justify-between">
+                          {card.price ? <p className="text-lg font-bold text-lime-300">{formatCurrency(card.price)}<span className="text-xs font-normal text-slate-500"> /hr</span></p> : null}
+                          <div className="flex gap-2">
+                            <Button asChild size="sm" className="rounded-lg bg-blue-500 font-bold text-white hover:bg-blue-400" onClick={(e) => e.stopPropagation()}>
+                              <a href={facility.latitude && facility.longitude ? `https://www.google.com/maps/dir/?api=1&destination=${facility.latitude},${facility.longitude}` : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent((facility.address || "") + ", " + (facility.city || ""))}`} target="_blank" rel="noopener noreferrer">
+                                <MapPin className="h-4 w-4" />
+                              </a>
+                            </Button>
+                            <Button asChild size="sm" className="rounded-lg bg-orange-400 font-bold text-black hover:bg-orange-300 px-6" onClick={(e) => e.stopPropagation()}>
+                              <Link href={"/facility/" + facility.id + "?sport=" + encodeURIComponent(card.sport) + "&court=" + card.courtId + "&book=1"} replace>
+                                Book
+                              </Link>
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     </div>

@@ -19,22 +19,23 @@ export default function NotificationsPage() {
   if (!session) return <div className="p-8 text-white">Sign in required</div>
 
   return (
-    <div className="min-h-screen bg-[#070d12] text-white">
+    <div className="min-h-screen bg-[#0B1020] text-white">
       <Sidebar session={session} mobileOpen={sidebarOpen} onMobileOpenChange={setSidebarOpen} />
-      <div className="md:pl-[262px] p-6">
+      <div className="min-h-screen md:pl-[262px]">
         <TopNavbar onMenuClick={() => setSidebarOpen(true)} />
+        <div className="p-6">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold flex items-center gap-2"><Bell className="h-6 w-6 text-lime-400" /> Notifications</h1>
+          <h1 className="text-2xl font-bold flex items-center gap-2"><Bell className="h-6 w-6 text-orange-400" /> Notifications</h1>
           <Button variant="outline" className="border-white/10 text-white" onClick={() => markAll.mutate()} disabled={markAll.isPending}>
             Mark all read
           </Button>
         </div>
         <div className="space-y-3">
-          {data?.notifications?.map((n: any) => (
-            <Card key={n.id} className={`border-white/10 ${n.isRead ? "bg-[#111a22]" : "bg-[#17222d] border-lime-400/30"}`}>
+          {[...(data?.notifications || [])].sort((a: any, b: any) => Number(a.isRead)-Number(b.isRead) || new Date(b.createdAt).getTime()-new Date(a.createdAt).getTime()).map((n: any) => (
+            <Card key={n.id} className={`border-white/10 ${n.isRead ? "bg-[#131C2E]" : "bg-[#182238] border-orange-400/30"}`}>
               <CardContent className="p-4 flex items-start justify-between gap-4">
                 <div className="flex gap-3">
-                  <div className={`mt-1 h-2 w-2 rounded-full ${n.isRead ? "bg-slate-500" : "bg-lime-400"}`} />
+                  <div className={`mt-1 h-2 w-2 rounded-full ${n.isRead ? "bg-slate-500" : "bg-orange-400"}`} />
                   <div>
                     <p className="font-bold text-white">{n.title}</p>
                     <p className="text-sm text-slate-300 mt-1">{n.message}</p>
@@ -42,7 +43,7 @@ export default function NotificationsPage() {
                   </div>
                 </div>
                 {!n.isRead && (
-                  <Button size="sm" className="bg-lime-400 text-black font-bold shrink-0" onClick={() => markRead.mutate({ id: n.id })} disabled={markRead.isPending}>
+                  <Button size="sm" className="bg-orange-400 text-black font-bold shrink-0" onClick={() => markRead.mutate({ id: n.id })} disabled={markRead.isPending}>
                     <CheckCircle2 className="h-4 w-4 mr-1" /> Read
                   </Button>
                 )}
@@ -55,6 +56,7 @@ export default function NotificationsPage() {
               <p>No notifications yet.</p>
             </div>
           )}
+        </div>
         </div>
       </div>
     </div>

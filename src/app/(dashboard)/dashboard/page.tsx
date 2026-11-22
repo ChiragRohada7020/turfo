@@ -160,10 +160,10 @@ export default function DashboardPage() {
             <ChevronDown className="h-4 w-4 text-slate-500" />
           </div>
           <div className="ml-auto" />
-          <button aria-label="Notifications" className="relative rounded-full border border-white/10 bg-[#182238] p-2.5 text-slate-300">
+          <Link href="/notifications" aria-label="Notifications" className="relative rounded-full border border-white/10 bg-[#182238] p-2.5 text-slate-300">
             <Bell className="h-4 w-4" />
             {(unreadNotifications?.total ?? 0) > 0 && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500" />}
-          </button>
+          </Link>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="flex shrink-0 items-center gap-2 rounded-xl p-1.5 hover:bg-white/5">
@@ -262,9 +262,6 @@ function PlayerDashboard({ session, upcoming, myBooking, isLoading, setQrBooking
             <h1 className="text-3xl font-black tracking-tight sm:text-4xl">
               Hi {firstName}! <span className="text-orange-400">👋</span>
             </h1>
-            <p className="mt-2 text-sm text-slate-300 sm:text-base">
-              Book your next match, find players and stay in the game!
-            </p>
           </div>
           <div className="hidden gap-3 sm:flex">
             <div className="min-w-[120px] rounded-2xl border border-white/10 bg-black/20 p-4 backdrop-blur-md">
@@ -281,13 +278,15 @@ function PlayerDashboard({ session, upcoming, myBooking, isLoading, setQrBooking
         </div>
       </section>
 
-      <section className="mb-6 grid grid-cols-2 gap-3 xl:grid-cols-4">
-        <QuickAction href="/search" title="Book a Turf" subtitle="Find & book slots" icon={CalendarDays} primary />
-        <QuickAction href="/find-players" title="Find Players" subtitle="Join or create a match" icon={Users} />
-        <QuickAction href="/dashboard/teams" title="Create Team" subtitle="Build your squad" icon={ShieldCheck} />
-        <QuickAction href="/tournaments" title="Tournaments" subtitle="Register & compete" icon={Trophy} />
+      <section className="mb-6 space-y-3">
+        <QuickAction href="/search" title="Book a Slot" subtitle="Find & book slots" icon={CalendarDays} primary />
+        <div className="grid grid-cols-2 gap-3">
+          <QuickAction href="/dashboard/open-games" title="Open Games" subtitle="Join a match" icon={Users} />
+          <QuickAction href="/dashboard/bookings" title="My Bookings" subtitle="View bookings" icon={Ticket} />
+        </div>
       </section>
 
+{isLoading || myBooking ? (
       <Card className="mb-6 overflow-hidden rounded-2xl border-white/10 bg-[#131C2E]">
         <CardHeader className="flex flex-row items-center justify-between px-5 pb-3 pt-4">
           <div className="flex items-center gap-3">
@@ -301,7 +300,7 @@ function PlayerDashboard({ session, upcoming, myBooking, isLoading, setQrBooking
         <CardContent className="px-5 pb-5">
           {isLoading ? (
             <div className="h-32 animate-pulse rounded-xl bg-white/5" />
-          ) : myBooking ? (
+          ) : (
             <div className="grid gap-4 rounded-xl border border-white/[0.08] bg-[#1B2940] p-4 sm:grid-cols-[190px_minmax(0,1fr)_auto] sm:items-center">
               <div className="relative h-32 overflow-hidden rounded-lg bg-[#29364D] sm:h-[120px]">
                 <Image src="/placeholder.svg" alt="Booked turf" fill sizes="200px" className="object-cover" />
@@ -339,29 +338,25 @@ function PlayerDashboard({ session, upcoming, myBooking, isLoading, setQrBooking
                 </Button>
               </div>
             </div>
-          ) : (
-            <div className="flex flex-col gap-3 rounded-xl border border-white/[0.08] bg-[#1B2940] p-5 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="font-semibold">Your next game starts here</p>
-                <p className="mt-1 text-sm text-slate-400">Book a turf to see your confirmed booking details here.</p>
-              </div>
-              <Button asChild className="bg-orange-400 font-bold text-black hover:bg-orange-300"><Link href="/search">Book a Turf</Link></Button>
+          )}
+          {myBooking && (
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+              <span className="text-xs text-slate-500">Manage your reservation and entry pass in My Bookings.</span>
+              <Button asChild variant="outline" size="sm" className="border-white/10 bg-transparent text-white hover:bg-white/5 hover:text-white">
+                <Link href="/dashboard/bookings">View booking details <ChevronRight className="ml-1 h-4 w-4" /></Link>
+              </Button>
             </div>
           )}
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-            <span className="text-xs text-slate-500">Manage your reservation and entry pass in My Bookings.</span>
-            <Button asChild variant="outline" size="sm" className="border-white/10 bg-transparent text-white hover:bg-white/5 hover:text-white">
-              <Link href="/dashboard/bookings">View booking details <ChevronRight className="ml-1 h-4 w-4" /></Link>
-            </Button>
-          </div>
         </CardContent>
       </Card>
+    ) : (
+      null
+    )}
 
       <section>
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 className="text-xl font-bold">Explore Turfs Near You</h2>
-            <p className="mt-1 text-xs text-slate-500">Find a ground for your next game</p>
+            <h2 className="text-xl font-bold">Explore Sports</h2>
           </div>
           <Link href="/search" className="text-sm font-semibold text-orange-300">View All <ChevronRight className="inline h-4 w-4" /></Link>
         </div>
@@ -372,12 +367,12 @@ function PlayerDashboard({ session, upcoming, myBooking, isLoading, setQrBooking
             ))
           ) : nearbyTurfs.length > 0 ? (
             nearbyTurfs.map((turf: any) => (
-            <Card key={turf.id} className="group overflow-hidden rounded-2xl border-white/[0.09] bg-[#131C2E] transition-all duration-300 hover:-translate-y-1 hover:border-orange-400/40 hover:shadow-xl hover:shadow-black/20">
-              <div className="relative h-32 overflow-hidden bg-[#25344B]">
-                <Image src={turf.images?.[0] || "/placeholder.svg"} alt={turf.name} fill sizes="(max-width: 640px) 100vw, 33vw" className="object-cover transition duration-500 group-hover:scale-105" />
+            <Card key={turf.id} onClick={() => { window.location.href = "/facility/" + turf.id }} className="group overflow-hidden rounded-2xl border-white/[0.09] bg-[#131C2E] transition-all duration-300 hover:-translate-y-1 hover:border-orange-400/40 hover:shadow-xl hover:shadow-black/20 cursor-pointer">
+              <div className="relative h-40 overflow-hidden bg-[#25344B]">
+                <Image src={turf.images?.[0] || "/placeholder.svg"} alt={turf.name} fill sizes="(max-width: 640px) 100vw, 33vw" className="object-cover object-center transition duration-500 group-hover:scale-105" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
               </div>
-              <CardContent className="p-3.5">
+              <CardContent className="p-4">
                 <div className="flex items-start justify-between gap-2">
                   <h3 className="font-bold">{turf.name}</h3>
                   <span className="shrink-0 text-xs font-semibold text-amber-300">★ {turf.avgRating ? turf.avgRating.toFixed(1) : "New"} <span className="text-slate-500">({turf.reviewCount ?? 0})</span></span>
@@ -388,7 +383,18 @@ function PlayerDashboard({ session, upcoming, myBooking, isLoading, setQrBooking
                 </div>
                 <div className="mt-4 flex items-center justify-between">
                   {turf.minPrice ? <p className="font-bold text-orange-300">{formatINR(turf.minPrice)}<span className="text-xs font-normal text-slate-500"> /hour</span></p> : <span />}
-                  <Button asChild size="sm" className="rounded-lg bg-orange-400 font-bold text-black hover:bg-orange-300"><Link href={"/facility/" + turf.id}>Book Now <ChevronRight className="ml-1 h-3.5 w-3.5" /></Link></Button>
+                  <div className="flex gap-2">
+                    <Button asChild size="sm" className="rounded-lg bg-blue-500 font-bold text-white hover:bg-blue-400" onClick={(e) => e.stopPropagation()}>
+                      <a href={turf.latitude && turf.longitude ? `https://www.google.com/maps/dir/?api=1&destination=${turf.latitude},${turf.longitude}` : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent((turf.address || "") + ", " + (turf.city || ""))}`} target="_blank" rel="noopener noreferrer">
+                        <MapPin className="h-4 w-4" />
+                      </a>
+                    </Button>
+                    <Button asChild size="sm" className="rounded-lg bg-orange-400 font-bold text-black hover:bg-orange-300 px-6" onClick={(e) => e.stopPropagation()}>
+                      <Link href={"/facility/" + turf.id + "?book=1"}>
+                        Book
+                      </Link>
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -427,9 +433,6 @@ function OwnerDashboard({ session, myFacilities }: any) {
             <h1 className="text-3xl font-black tracking-tight sm:text-4xl">
               Welcome, {firstName}! <span className="text-orange-400">👋</span>
             </h1>
-            <p className="mt-2 text-sm text-slate-300 sm:text-base">
-              Manage your facilities, bookings and revenue.
-            </p>
           </div>
           <div className="hidden gap-3 sm:flex">
             <div className="min-w-[120px] rounded-2xl border border-white/10 bg-black/20 p-4 backdrop-blur-md">
@@ -511,7 +514,7 @@ function OwnerDashboard({ session, myFacilities }: any) {
                     <p className="text-sm font-semibold text-white">{b.court?.name || "Court"} · {b.facility?.name}</p>
                     <p className="text-xs text-slate-400">{new Date(b.startTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} - {new Date(b.endTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</p>
                   </div>
-                  <Badge className={b.status === "COMPLETED" ? "bg-green-500/10 text-green-300" : "bg-orange-400/10 text-orange-300"}>{b.status}</Badge>
+                  <Badge className={b.status === "COMPLETED" ? "bg-green-500/10 text-green-300" : b.status === "CANCELLED" ? "bg-red-500/10 text-red-300" : b.status === "CONFIRMED" ? "bg-emerald-500/10 text-emerald-300" : "bg-orange-400/10 text-orange-300"}>{b.status}</Badge>
                 </div>
               ))}
             </div>
@@ -580,14 +583,17 @@ function Brand() {
 }
 
 function Sidebar({ items, active, onNavigate }: { items: any[]; active: (href: string) => boolean; onNavigate?: () => void }) {
+  const { data: unlockData } = trpc.tasks.isUnlocked.useQuery()
+  const unlocked = !!unlockData?.unlocked
   return (
     <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto px-4 py-6">
-      {items.map((item: any) => (
-        item.locked ? (
-          <div key={item.name} aria-disabled="true" className="flex items-center gap-3 rounded-xl px-4 py-3.5 text-sm font-medium text-slate-500 opacity-50 cursor-not-allowed">
+      {items.map((item: any) => {
+        const isLocked = item.locked && !unlocked
+        return isLocked ? (
+          <Link key={item.name} href={item.href} onClick={onNavigate} className="flex items-center gap-3 rounded-xl px-4 py-3.5 text-sm font-medium text-slate-500 opacity-60 transition hover:opacity-80">
             <item.icon className="h-[18px] w-[18px]" />{item.name}
             <Lock className="ml-auto h-3.5 w-3.5" />
-          </div>
+          </Link>
         ) : (
         <Link key={item.name} href={item.href} onClick={onNavigate} className={cn(
           "flex items-center gap-3 rounded-xl px-4 py-3.5 text-sm font-medium transition",
@@ -597,7 +603,7 @@ function Sidebar({ items, active, onNavigate }: { items: any[]; active: (href: s
           {item.badge && <span className="ml-auto text-[10px] font-bold text-slate-400">{item.badge}</span>}
         </Link>
         )
-      ))}
+      })}
     </nav>
   )
 }
@@ -609,7 +615,7 @@ function InviteFriends() {
       <p className="text-base font-bold">Invite Friends</p>
       <p className="mt-1 text-sm font-semibold text-amber-300">Earn rewards</p>
       <p className="mt-1 text-xs leading-5 text-slate-400">for each friend who books!</p>
-      <Button asChild size="sm" className="mt-3 rounded-xl bg-orange-400 font-bold text-black hover:bg-orange-300"><Link href="/dashboard/teams">Invite Now <ChevronRight className="ml-1 h-3.5 w-3.5" /></Link></Button>
+      <Button asChild size="sm" className="mt-3 rounded-xl bg-orange-400 font-bold text-black hover:bg-orange-300"><Link href="/dashboard/referrals">Invite Now <ChevronRight className="ml-1 h-3.5 w-3.5" /></Link></Button>
     </div>
   )
 }
@@ -618,7 +624,7 @@ function QuickAction({ href, title, subtitle, icon: Icon, primary = false }: { h
   return (
     <Link href={href} className={cn("flex min-h-[88px] items-center gap-3 rounded-2xl border p-4 transition hover:-translate-y-1 hover:shadow-lg", primary ? "border-orange-400/30 bg-gradient-to-br from-[#29234A] to-[#17182E] hover:border-orange-400/50" : "border-white/10 bg-[#131C2E] hover:border-orange-400/30 hover:bg-[#10231a]")}>
       <div className={cn("flex h-12 w-12 shrink-0 items-center justify-center rounded-xl", primary ? "bg-orange-400/10 text-orange-400" : "bg-white/[0.06] text-slate-300")}><Icon className="h-6 w-6" /></div>
-      <div className="min-w-0"><p className="text-sm font-bold">{title}</p><p className="mt-1 text-xs text-slate-400">{subtitle}</p></div>
+      <div className="min-w-0"><p className="text-sm font-bold">{title}</p></div>
       <ChevronRight className="ml-auto h-4 w-4 shrink-0 text-slate-500" />
     </Link>
   )

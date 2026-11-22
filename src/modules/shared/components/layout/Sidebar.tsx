@@ -89,7 +89,7 @@ export function Sidebar({ session, extra, mobileOpen, onMobileOpenChange }: Side
               className={cn(
                 "flex items-center gap-3 rounded-xl px-4 py-3.5 text-sm font-medium transition",
                 active(item.href)
-                  ? "bg-green-600 text-white shadow-lg shadow-green-950/30"
+                  ? "bg-gradient-to-r from-orange-500 to-orange-400 text-white shadow-lg shadow-orange-950/30"
                   : "text-slate-300 hover:bg-white/[0.06] hover:text-white"
               )}
             >
@@ -159,7 +159,7 @@ export function Sidebar({ session, extra, mobileOpen, onMobileOpenChange }: Side
               className={cn(
                 "flex items-center gap-3 rounded-xl px-4 py-3.5 text-sm font-medium transition",
                 active(item.href)
-                  ? "bg-green-600 text-white shadow-lg shadow-green-950/30"
+                  ? "bg-gradient-to-r from-orange-500 to-orange-400 text-white shadow-lg shadow-orange-950/30"
                   : "text-slate-300 hover:bg-white/[0.06] hover:text-white"
               )}
             >

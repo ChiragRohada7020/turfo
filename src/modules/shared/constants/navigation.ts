@@ -29,12 +29,12 @@ export const PLAYER_NAV: NavItem[] = [
   { name: "My Bookings", href: "/dashboard/bookings", icon: Ticket },
   { name: "Open Games", href: "/dashboard/open-games", icon: Users },
   { name: "Offers & Rewards", href: "/offers", icon: Gift },
-  { name: "Find Players", href: "/find-players", icon: Users },
-  { name: "Teams", href: "/dashboard/teams", icon: ShieldCheck },
-  { name: "Tournaments", href: "/tournaments", icon: Trophy },
   { name: "Notifications", href: "/notifications", icon: Bell },
   { name: "Settings", href: "/dashboard/settings", icon: Settings },
-  { name: "Support", href: "/help", icon: ShieldCheck },
+  { name: "Support", href: "/support", icon: ShieldCheck },
+  { name: "Find Players", href: "/find-players", icon: Users, locked: true },
+  { name: "Teams", href: "/dashboard/teams", icon: ShieldCheck, locked: true },
+  { name: "Tournaments", href: "/tournaments", icon: Trophy, locked: true },
 ]
 
 export const OWNER_NAV: NavItem[] = [
@@ -43,14 +43,14 @@ export const OWNER_NAV: NavItem[] = [
   { name: "Add Facility", href: "/dashboard/facilities/new", icon: CalendarDays },
   { name: "Bookings", href: "/dashboard/bookings", icon: Ticket },
   { name: "Verify Booking", href: "/dashboard/verify", icon: QrCode },
+  { name: "Notifications", href: "/notifications", icon: Bell },
+  { name: "Settings", href: "/dashboard/settings", icon: Settings },
+  { name: "Support", href: "/support", icon: ShieldCheck },
   { name: "Payouts", href: "/dashboard/payouts", icon: Wallet, locked: true },
   { name: "Analytics", href: "/dashboard/analytics", icon: Trophy, locked: true },
   { name: "Promotions", href: "/dashboard/promotions", icon: TrendingUp, locked: true },
   { name: "Campaigns", href: "/dashboard/campaigns", icon: Gift, locked: true },
   { name: "Offers & Rewards", href: "/offers", icon: Gift, locked: true },
-  { name: "Notifications", href: "/notifications", icon: Bell },
-  { name: "Settings", href: "/dashboard/settings", icon: Settings },
-  { name: "Support", href: "/help", icon: ShieldCheck },
 ]
 
 export const SPONSOR_NAV: NavItem[] = [
@@ -59,7 +59,7 @@ export const SPONSOR_NAV: NavItem[] = [
   { name: "Verify Coupon", href: "/dashboard/verify-offer", icon: QrCode },
   { name: "Notifications", href: "/notifications", icon: Bell },
   { name: "Settings", href: "/dashboard/settings", icon: Settings },
-  { name: "Support", href: "/help", icon: ShieldCheck },
+  { name: "Support", href: "/support", icon: ShieldCheck },
 ]
 
 export const ADMIN_NAV: NavItem[] = [
@@ -69,7 +69,7 @@ export const ADMIN_NAV: NavItem[] = [
   { name: "Payouts", href: "/admin?tab=payouts", icon: Wallet },
   { name: "Pending Owners", href: "/admin?tab=pending", icon: ShieldCheck },
   { name: "Settings", href: "/admin?tab=settings", icon: Settings },
-  { name: "Support", href: "/help", icon: ShieldCheck },
+  { name: "Support", href: "/support", icon: ShieldCheck },
 ]
 
 export function getNavForRole(role?: string): NavItem[] {

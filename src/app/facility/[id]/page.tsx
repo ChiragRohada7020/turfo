@@ -55,6 +55,8 @@ function FacilityDetailInner() {
   const { data: session } = useSession()
   const facilityId = params.id as string
   const sportParam = (searchParams.get("sport") || "").toUpperCase().replace(/ /g, "_")
+  const courtParam = searchParams.get("court") || ""
+  const bookMode = searchParams.get("book") === "1"
 
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [selectedCourtId, setSelectedCourtId] = useState<string | null>(null)
@@ -90,8 +92,8 @@ const { data: availability, isLoading: availabilityLoading, refetch: refetchAvai
   }, [refetchAvailability])
 
   const courts = useMemo(
-    () => (facility?.courts || []).filter((c: any) => !sportParam || c.sportType === sportParam),
-    [facility, sportParam]
+    () => facility?.courts || [],
+    [facility]
   )
   const images = facility?.images || []
 
@@ -133,10 +135,12 @@ const { data: availability, isLoading: availabilityLoading, refetch: refetchAvai
   }
 
   useEffect(() => {
-    if (courts.length > 0 && !selectedCourtId) {
+    if (courtParam && courts.some((c: any) => c.id === courtParam)) {
+      setSelectedCourtId(courtParam)
+    } else if (courts.length > 0 && !selectedCourtId) {
       setSelectedCourtId(courts[0].id)
     }
-  }, [courts, selectedCourtId])
+  }, [courts, selectedCourtId, courtParam])
 
   useEffect(() => {
     setSelectedSlot(null)
@@ -148,6 +152,19 @@ const { data: availability, isLoading: availabilityLoading, refetch: refetchAvai
       <div className="min-h-screen bg-[#070d12] flex items-center justify-center px-4 text-white">
         <div className="max-w-md p-8 bg-[#111a22] border border-white/10 rounded-2xl text-center">
           <h1 className="text-2xl font-bold mb-4">Facility Not Found</h1>
+          <Link href="/search"><Button>Back to Search</Button></Link>
+        </div>
+      </div>
+    )
+  }
+
+  const isOwnerOrAdmin = session?.user?.role === "OWNER" || session?.user?.role === "ADMIN"
+  if (!facility.owner?.isVerified && !isOwnerOrAdmin) {
+    return (
+      <div className="min-h-screen bg-[#070d12] flex items-center justify-center px-4 text-white">
+        <div className="max-w-md p-8 bg-[#111a22] border border-white/10 rounded-2xl text-center">
+          <h1 className="text-2xl font-bold mb-4">Facility Not Available</h1>
+          <p className="text-sm text-slate-400 mb-4">This facility is not yet verified and is not available for booking.</p>
           <Link href="/search"><Button>Back to Search</Button></Link>
         </div>
       </div>
@@ -201,6 +218,8 @@ const { data: availability, isLoading: availabilityLoading, refetch: refetchAvai
         <div className="px-4 py-6 md:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             <main className="lg:col-span-7 space-y-6">
+              {!bookMode && (
+                <>
               {/* Image Gallery */}
               <div className="relative group rounded-2xl overflow-hidden border border-white/10 bg-[#080f15]">
                 <div className="relative h-[420px] w-full">
@@ -235,6 +254,8 @@ const { data: availability, isLoading: availabilityLoading, refetch: refetchAvai
                           </button>
                         </>
                       )}
+
+
                     </>
                   ) : (
                     <div className="h-full flex items-center justify-center"><span className="text-6xl">🏟️</span></div>
@@ -256,25 +277,25 @@ const { data: availability, isLoading: availabilityLoading, refetch: refetchAvai
                     ))}
                   </div>
                 )}
-              </div>
+               </div>
+                </>
+              )}
 
-              <h1 className="text-3xl font-bold tracking-tight">{facility.name}</h1>
+              {!bookMode && (
+                <>
+                <h1 className="text-3xl font-bold tracking-tight">{facility.name}</h1>
 
-              <div className="flex items-center gap-4 text-sm text-slate-400">
-                <a
-                  href={facility.latitude && facility.longitude ? `https://www.google.com/maps/dir/?api=1&destination=${facility.latitude},${facility.longitude}` : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(facility.address + ", " + facility.city)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 hover:text-lime-400 transition-colors"
-                >
-                  <MapPin className="w-4 h-4" /> {facility.address}, {facility.city}
-                  <span className="ml-1 text-xs text-lime-400">(Directions)</span>
-                </a>
-                <span className="w-px h-4 bg-white/20"></span>
-                <span className="flex items-center gap-1"><Clock className="w-4 h-4" /> Open: 6:00 AM – 12:00 AM</span>
-                <span className="w-px h-4 bg-white/20"></span>
-                <span className="flex items-center gap-1"><Star className="w-4 h-4 fill-yellow-400 text-yellow-400" /><span className="font-medium">{avgRating.toFixed(1)}</span> ({reviewCount} reviews)</span>
-              </div>
+                <div className="flex flex-wrap items-center gap-3 mt-2">
+                <Button asChild size="sm" className="rounded-lg bg-orange-400 font-bold text-black hover:bg-orange-300">
+                  <a href={(facility.owner?.latitude && facility.owner?.longitude) ? `https://www.google.com/maps/dir/?api=1&destination=${facility.owner.latitude},${facility.owner.longitude}` : (facility.latitude && facility.longitude ? `https://www.google.com/maps/dir/?api=1&destination=${facility.latitude},${facility.longitude}` : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent((facility.address || "") + ", " + (facility.city || ""))}`)} target="_blank" rel="noopener noreferrer">
+                    <MapPin className="mr-1.5 h-4 w-4" /> Directions
+                  </a>
+                </Button>
+                  <span className="flex items-center gap-1 text-sm text-slate-400"><Clock className="w-4 h-4" /> Open: 6:00 AM – 12:00 AM</span>
+                  <span className="flex items-center gap-1 text-sm text-slate-400"><Star className="w-4 h-4 fill-yellow-400 text-yellow-400" /><span className="font-medium">{avgRating.toFixed(1)}</span> ({reviewCount} reviews)</span>
+                </div>
+               </>
+             )}
 
               {/* Available Sports */}
               <div>
@@ -303,33 +324,38 @@ const { data: availability, isLoading: availabilityLoading, refetch: refetchAvai
                 </div>
               </div>
 
-              {/* Court Info Row */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 rounded-xl border border-white/10 bg-[#080f15]">
-                <div className="text-center">
-                  <p className="text-xs text-slate-500">Courts</p>
-                  <p className="font-semibold text-white">{courts.length} Courts</p>
-                </div>
-                <div className="text-center border-l border-white/10 pl-4">
-                  <p className="text-xs text-slate-500">Court Size</p>
-                  <p className="font-semibold text-white">{selectedCourt?.dimensions || "—"}</p>
-                </div>
-                <div className="text-center border-l border-white/10 pl-4">
-                  <p className="text-xs text-slate-500">Surface</p>
-                  <p className="font-semibold text-white">{selectedCourt?.surfaceType?.replace(/_/g, " ") || "—"}</p>
-                </div>
-                <div className="text-center border-l border-white/10 pl-4">
-                  <p className="text-xs text-slate-500">Game Type</p>
-                  <p className="font-semibold text-white">Singles / Doubles</p>
-                </div>
-              </div>
+               {/* Court Info Row */}
+               {!bookMode && (
+                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 rounded-xl border border-white/10 bg-[#080f15]">
+                   <div className="text-center">
+                     <p className="text-xs text-slate-500">Courts</p>
+                     <p className="font-semibold text-white">{courts.length} Courts</p>
+                   </div>
+                   <div className="text-center border-l border-white/10 pl-4">
+                     <p className="text-xs text-slate-500">Court Size</p>
+                     <p className="font-semibold text-white">{selectedCourt?.dimensions || "—"}</p>
+                   </div>
+                   <div className="text-center border-l border-white/10 pl-4">
+                     <p className="text-xs text-slate-500">Surface</p>
+                     <p className="font-semibold text-white">{selectedCourt?.surfaceType?.replace(/_/g, " ") || "—"}</p>
+                   </div>
+                   <div className="text-center border-l border-white/10 pl-4">
+                     <p className="text-xs text-slate-500">Game Type</p>
+                     <p className="font-semibold text-white">Singles / Doubles</p>
+                   </div>
+                 </div>
+               )}
 
-              {/* About */}
-              <div>
-                <h2 className="text-sm font-bold text-white mb-3">About This Turf</h2>
-                <p className="text-sm text-slate-400 leading-relaxed">
-                  {facility.description || `Premium multi-sport turf with dedicated ${sportLabel} courts, professional lighting, clean amenities, and a great playing experience.`}
-                </p>
-              </div>
+
+              {!bookMode && (
+                <>
+               {/* About */}
+               <div className="hidden">
+                 <h2 className="text-sm font-bold text-white mb-3">About This Turf</h2>
+                 <p className="text-sm text-slate-400 leading-relaxed">
+                   {facility.description || `Premium multi-sport turf with dedicated ${sportLabel} courts, professional lighting, clean amenities, and a great playing experience.`}
+                 </p>
+               </div>
 
               {/* Amenities */}
               <div>
@@ -345,12 +371,14 @@ const { data: availability, isLoading: availabilityLoading, refetch: refetchAvai
                     )
                   })}
                 </div>
-              </div>
+               </div>
+                </>
+              )}
 
-              {/* Courts grid */}
+                {/* Courts grid */}
               <div>
                 <h2 className="text-sm font-bold text-white mb-3">Select Court</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="flex gap-3 overflow-x-auto pb-2">
                   {courts.map((court: any) => {
                     const active = selectedCourtId === court.id
                     return (
@@ -358,7 +386,7 @@ const { data: availability, isLoading: availabilityLoading, refetch: refetchAvai
                         key={court.id}
                         onClick={() => { setSelectedCourtId(court.id); setSelectedSlot(null) }}
                         className={cn(
-                          "flex items-center gap-3 rounded-xl border p-3 text-left transition",
+                          "shrink-0 w-64 flex items-center gap-3 rounded-xl border p-3 text-left transition",
                           active
                             ? "border-lime-400 bg-[#080f15]"
                             : "border-white/10 bg-[#080f15]/50 hover:border-white/20"
@@ -379,29 +407,17 @@ const { data: availability, isLoading: availabilityLoading, refetch: refetchAvai
                   })}
                 </div>
               </div>
-            </main>
+
+
+             </main>
 
             <aside className="lg:col-span-5">
               <div className="sticky top-5">
                 <Card className="bg-[#080f15] border border-white/10 overflow-hidden">
                   <CardContent className="p-4">
-                    <div className="flex items-center justify-between mb-4">
-                      <div>
-                        <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                          <span className="w-6 h-6 rounded-full bg-lime-400 text-[#070d12] flex items-center justify-center text-xs font-bold">🏓</span>
-                          Book {sportLabel}
-                        </h2>
-                        <p className="text-xs text-lime-400 font-semibold">{facility.name}</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-slate-400">{sportLabel}</span>
-                        <X className="w-4 h-4 text-slate-400 cursor-pointer hover:text-white" />
-                      </div>
-                    </div>
 
                     {/* Select Date */}
                     <div className="mb-4">
-                      <p className="text-xs font-bold text-slate-400 uppercase mb-2">Select Date</p>
                       <div className="flex items-center justify-between mb-2">
                         <button
                           onClick={() => goDay(-7)}
@@ -456,103 +472,61 @@ const { data: availability, isLoading: availabilityLoading, refetch: refetchAvai
 ) : availability?.isBlocked ? (
   <p className="text-slate-400 text-sm">{availability.note || "No slots available on this date."}</p>
 ) : (
-  <div className="space-y-3">
-    <p className="text-xs text-slate-400">
-      {!selectedSlot?.start ? "Select a start time (booked slots shown in red)" : !selectedSlot?.end ? "Now select an end time" : "Slot selected"}
-    </p>
-    <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-1.5">
-      {Array.from({ length: 33 }, (_, i) => {
-        const h = Math.floor((6 * 60 + i * 30) / 60)
-        const m = (6 * 60 + i * 30) % 60
-        const time = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`
-        if (h > 22) return null
-
-        const isStartSelected = selectedSlot?.start === time
-        const isEndSelected = selectedSlot?.end === time
-        const isInRange = selectedSlot?.start && selectedSlot?.end && time > selectedSlot.start && time < selectedSlot.end
-        const isBooked = !availability?.slots?.some((s: any) => s.startTime <= time && s.endTime > time) && !availability?.slots?.some((s: any) => s.startTime === time)
-        // Check if this time falls within any booked slot
-        const bookedSlot = availability?.slots ? null : null
-
-        // Determine if this time is in a booked range
-        // The availability API returns available slots; if a slot is not available, it's booked
-        const isAvailableTime = availability?.slots?.some((s: any) => s.startTime <= time && s.endTime > time) ?? false
-
-        // For start selection: show all times, booked ones red
-        // For end selection: show times after start
-        const canSelectAsStart = !selectedSlot?.start || selectedSlot.start === time
-        const canSelectAsEnd = selectedSlot?.start && time > selectedSlot.start
-
-        // Check if this time is in a booked range
-        const isInBookedRange = !availability?.slots?.some((s: any) => s.startTime <= time && s.endTime > time)
-
-        // Check if selecting this as end time would overlap a booked slot
-        let wouldOverlapBooked = false
-        if (selectedSlot?.start && time > selectedSlot.start) {
-          const startMins = parseInt(selectedSlot.start.split(":")[0]) * 60 + parseInt(selectedSlot.start.split(":")[1])
-          const endMins = parseInt(time.split(":")[0]) * 60 + parseInt(time.split(":")[1])
-          // Check all 30-min intervals between start and end
-          for (let m = startMins + 30; m < endMins; m += 30) {
-            const hh = String(Math.floor(m / 60)).padStart(2, "0")
-            const mm = String(m % 60).padStart(2, "0")
-            const t = `${hh}:${mm}`
-            if (!availability?.slots?.some((s: any) => s.startTime <= t && s.endTime > t)) {
-              const slotExists = availability?.slots?.some((s: any) => s.startTime === t || (s.startTime < t && s.endTime > t))
-              if (!slotExists) {
-                wouldOverlapBooked = true
-                break
-              }
-            }
-          }
+   <div className="space-y-3">
+     <div id="slot-grid" className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-1.5">
+      {(() => {
+        const ot = facility?.openTime || "06:00"
+        const ct = facility?.closeTime || "22:00"
+        const [oh, om] = ot.split(":").map(Number)
+        const [ch, cm] = ct.split(":").map(Number)
+        const s = oh * 60 + om
+        let e = ch * 60 + cm
+        if (e <= s) e += 24 * 60
+        const times = []
+        for (let m = s; m < e; m += 30) {
+          const hh = String(Math.floor((m % 1440) / 60)).padStart(2, "0")
+          const mm = String(m % 60).padStart(2, "0")
+          times.push(`${hh}:${mm}`)
         }
-
-        let bgClass = "border-white/10 text-white hover:border-lime-400/50 active:bg-white/5"
-        if (isStartSelected || isEndSelected) {
-          bgClass = "bg-lime-400 border-lime-400 text-[#070d12] font-bold"
-        } else if (isInRange) {
-          bgClass = "bg-lime-400/20 border-lime-400/30 text-lime-300"
-        } else if (selectedSlot?.start && wouldOverlapBooked) {
-          bgClass = "border-red-500/50 text-red-400 bg-red-500/10 cursor-not-allowed"
-        } else if (!isAvailableTime && !selectedSlot?.start) {
-          bgClass = "border-red-500/50 text-red-400 bg-red-500/10 cursor-not-allowed"
-        } else if (selectedSlot?.start && time <= selectedSlot.start) {
-          bgClass = "border-white/5 text-slate-600 cursor-not-allowed opacity-40"
-        } else if (!isOwner && selectedSlot?.start && (() => {
-          const startMins = parseInt(selectedSlot.start.split(":")[0]) * 60 + parseInt(selectedSlot.start.split(":")[1])
-          const endMins = parseInt(time.split(":")[0]) * 60 + parseInt(time.split(":")[1])
-          return (endMins - startMins) > 60
-        })()) {
-          bgClass = "border-white/5 text-slate-600 cursor-not-allowed opacity-40"
-        }
-
-        const isDisabled = selectedSlot?.start
-          ? (time <= selectedSlot.start || wouldOverlapBooked || (!isOwner && (() => {
-              const startMins = parseInt(selectedSlot.start.split(":")[0]) * 60 + parseInt(selectedSlot.start.split(":")[1])
-              const endMins = parseInt(time.split(":")[0]) * 60 + parseInt(time.split(":")[1])
-              return (endMins - startMins) > 60
-            })()))
-          : !isAvailableTime
-
-        return (
-          <button
-            key={time}
-            onClick={() => {
-              if (!selectedSlot?.start) {
-                // Selecting start time
-                if (!isAvailableTime) return
-                setSelectedSlot({ start: time, end: "", price: getPriceForTime(time) })
-              } else if (time > selectedSlot.start && !wouldOverlapBooked) {
-                // Selecting end time
-                setSelectedSlot({ ...selectedSlot, end: time })
-              }
-            }}
-            disabled={isDisabled}
-            className={cn("rounded-lg border px-1 py-2 text-[11px] font-medium transition min-h-[36px]", bgClass)}
-          >
-            {time}
-          </button>
-        )
-      })}
+         return times.map((time) => {
+           const isStartSelected = selectedSlot?.start === time
+           const isEndSelected = selectedSlot?.end === time
+           const isInRange = selectedSlot?.start && selectedSlot?.end && time > selectedSlot.start && time < selectedSlot.end
+           const isBooked = !availability?.slots?.some((s: any) => s.startTime <= time && s.endTime > time) && !availability?.slots?.some((s: any) => s.startTime === time)
+           const isAvailableTime = availability?.slots?.some((s: any) => s.startTime <= time && s.endTime > time) ?? false
+           const canSelectAsStart = !selectedSlot?.start || selectedSlot.start === time
+           const canSelectAsEnd = selectedSlot?.start && time > selectedSlot.start
+           const isInBookedRange = !availability?.slots?.some((s: any) => s.startTime <= time && s.endTime > time)
+           let wouldOverlapBooked = false
+           if (selectedSlot?.start && time > selectedSlot.start) {
+             const startMins = parseInt(selectedSlot.start.split(":")[0]) * 60 + parseInt(selectedSlot.start.split(":")[1])
+             const endMins = parseInt(time.split(":")[0]) * 60 + parseInt(time.split(":")[1])
+             for (let m = startMins + 30; m < endMins; m += 30) {
+               const hh = String(Math.floor(m / 60)).padStart(2, "0")
+               const mm = String(m % 60).padStart(2, "0")
+               const t = `${hh}:${mm}`
+               if (!availability?.slots?.some((s: any) => s.startTime <= t && s.endTime > t)) {
+                 const slotExists = availability?.slots?.some((s: any) => s.startTime === t || (s.startTime < t && s.endTime > t))
+                 if (!slotExists) { wouldOverlapBooked = true; break }
+               }
+             }
+           }
+           let bgClass = "border-white/10 text-white hover:border-lime-400/50 active:bg-white/5"
+           if (isStartSelected || isEndSelected) bgClass = "bg-lime-400 border-lime-400 text-[#070d12] font-bold"
+           else if (isInRange) bgClass = "bg-lime-400/20 border-lime-400/30 text-lime-300"
+           else if (selectedSlot?.start && wouldOverlapBooked) bgClass = "border-red-500/50 text-red-400 bg-red-500/10 cursor-not-allowed"
+           else if (!isAvailableTime && !selectedSlot?.start) bgClass = "border-red-500/50 text-red-400 bg-red-500/10 cursor-not-allowed"
+           else if (selectedSlot?.start && time <= selectedSlot.start) bgClass = "border-white/5 text-slate-600 cursor-not-allowed opacity-40"
+           else if (!isOwner && selectedSlot?.start && (() => { const sm2 = parseInt(selectedSlot.start.split(":")[0]) * 60 + parseInt(selectedSlot.start.split(":")[1]); const em2 = parseInt(time.split(":")[0]) * 60 + parseInt(time.split(":")[1]); return (em2 - sm2) > 60 })()) bgClass = "border-white/5 text-slate-600 cursor-not-allowed opacity-40"
+           const isDisabled = selectedSlot?.start ? (time <= selectedSlot.start || wouldOverlapBooked || (!isOwner && (() => { const sm2 = parseInt(selectedSlot.start.split(":")[0]) * 60 + parseInt(selectedSlot.start.split(":")[1]); const em2 = parseInt(time.split(":")[0]) * 60 + parseInt(time.split(":")[1]); return (em2 - sm2) > 60 })())) : !isAvailableTime
+           return (
+             <button key={time} onClick={() => { if (!selectedSlot?.start) { if (!isAvailableTime) return; setSelectedSlot({ start: time, end: "", price: (facility?.minPrice || 0) }); } else if (time > selectedSlot.start && !wouldOverlapBooked) { setSelectedSlot({ ...selectedSlot, end: time }) } }} disabled={isDisabled} className={cn("rounded-lg border px-1 py-2 text-[11px] font-medium transition min-h-[36px]", bgClass)}>
+               {time}
+             </button>
+           )
+         })
+      })()
+      }
     </div>
     {selectedSlot?.start && selectedSlot?.end && (
       <div className="p-3 bg-[#17222d] rounded-lg border border-white/10">
@@ -608,7 +582,7 @@ const { data: availability, isLoading: availabilityLoading, refetch: refetchAvai
                         </div>
                         <div className="flex justify-between text-sm">
                           <span className="text-slate-400">Time</span>
-                          <span className="text-white">{selectedSlot ? `${selectedSlot.start} – ${selectedSlot.end} (1 hour)` : "—"}</span>
+                          <span className="text-white">{selectedSlot ? `${selectedSlot.start} – ${selectedSlot.end} (${(() => { const [sh,sm]=selectedSlot.start.split(":").map(Number); const [eh,em]=selectedSlot.end.split(":").map(Number); const mins=(eh*60+em)-(sh*60+sm); return `${mins} min` })()})` : "—"}</span>
                         </div>
                         <div className="flex justify-between text-sm">
                           <span className="text-slate-400">Court</span>
@@ -619,36 +593,33 @@ const { data: availability, isLoading: availabilityLoading, refetch: refetchAvai
                           <span className="text-lime-400">₹{slotPrice}</span>
                         </div>
                       </div>
+                       <Button
+                         className="w-full bg-lime-400 font-bold text-black hover:bg-lime-300 mt-4"
+                         onClick={() => {
+                           if (!selectedSlot?.start || !selectedSlot?.end) {
+                             document.getElementById("slot-grid")?.scrollIntoView({ behavior: "smooth", block: "center" })
+                             return
+                           }
+                           setShowBookingModal(true)
+                         }}
+                       >
+                        Book Now →
+                      </Button>
+                    </div>
+
+                    <div className="fixed bottom-0 left-0 right-0 z-30 md:hidden bg-[#070d12]/95 backdrop-blur border-t border-white/10 p-3">
                       <Button
-                        className="w-full bg-lime-400 font-bold text-black hover:bg-lime-300 mt-4"
-                        disabled={!selectedSlot?.start || !selectedSlot?.end}
+                        className="w-full bg-lime-400 font-bold text-black hover:bg-lime-300"
                         onClick={() => {
+                          if (!selectedSlot?.start || !selectedSlot?.end) {
+                            document.getElementById("slot-grid")?.scrollIntoView({ behavior: "smooth", block: "center" })
+                            return
+                          }
                           setShowBookingModal(true)
                         }}
                       >
                         Book Now →
                       </Button>
-                    </div>
-
-                    {/* Mobile sticky bottom bar */}
-                    <div className="fixed bottom-0 left-0 right-0 z-30 md:hidden bg-[#070d12]/95 backdrop-blur border-t border-white/10 p-3 pl-14">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="text-xs text-slate-400">Selected</p>
-                          <p className="text-sm font-bold text-white truncate">
-                            {selectedSlot ? `${selectedSlot.start} – ${selectedSlot.end}` : "Pick a slot"}
-                          </p>
-                        </div>
-<Button
-                          className="w-full bg-lime-400 font-bold text-black hover:bg-lime-300 mt-4"
-                          disabled={!selectedSlot?.start || !selectedSlot?.end}
-                          onClick={() => {
-                            setShowBookingModal(true)
-                          }}
-                        >
-                          Book Now →
-                        </Button>
-                      </div>
                     </div>
                   </CardContent>
                 </Card>
