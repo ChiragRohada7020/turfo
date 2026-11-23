@@ -42,7 +42,7 @@ export const OWNER_NAV: NavItem[] = [
   { name: "My Facilities", href: "/dashboard/facilities", icon: Building2 },
   { name: "Add Facility", href: "/dashboard/facilities/new", icon: CalendarDays },
   { name: "Bookings", href: "/dashboard/bookings", icon: Ticket },
-  { name: "Verify Booking", href: "/dashboard/verify", icon: QrCode },
+  { name: "Verify Booking", href: "/dashboard/verify?scan=1", icon: QrCode },
   { name: "Notifications", href: "/notifications", icon: Bell },
   { name: "Settings", href: "/dashboard/settings", icon: Settings },
   { name: "Support", href: "/support", icon: ShieldCheck },

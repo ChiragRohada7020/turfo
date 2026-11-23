@@ -368,6 +368,10 @@ export const appRouter = createTRPCRouter({
         const user = await prisma.user.findUnique({ where: { id: ctx.session.user.id } })
         if (!user) throw new TRPCError({ code: "UNAUTHORIZED", message: "Session expired. Please log in again." })
 
+         // For now, owners can create only one facility
+         const existingFacility = await prisma.facility.findFirst({ where: { ownerId: ctx.session.user.id } })
+         if (existingFacility) throw new TRPCError({ code: "FORBIDDEN", message: "You can only create one facility. Edit your existing facility instead." })
+
          if (user.bookingBanUntil && user.bookingBanUntil > new Date() && user.role !== "OWNER" && user.role !== "ADMIN") {
           throw new TRPCError({ code: "FORBIDDEN", message: `You cannot book until ${user.bookingBanUntil.toLocaleString()} due to a recent no-show.` })
         }
@@ -651,19 +655,46 @@ export const appRouter = createTRPCRouter({
           sportType: z.nativeEnum(SportType).optional(),
           surfaceType: z.nativeEnum(SurfaceType).optional(),
           capacity: z.number().optional(),
-          dimensions: z.string().optional(),
-          images: z.array(z.string()).optional(),
+           dimensions: z.string().optional(),
+           images: z.array(z.string()).optional(),
+           pricePerHour: z.number().optional(),
           isActive: z.boolean().optional(),
         })
       )
       .mutation(async ({ ctx, input }) => {
-        const { id, ...data } = input
-        const court = await prisma.court.findFirst({
-          where: { id, facility: { ownerId: ctx.session.user.id } },
-        })
-        if (!court) throw new Error("Court not found or access denied")
+         const { id, pricePerHour, ...data } = input
+         const court = await prisma.court.findFirst({
+           where: { id, facility: { ownerId: ctx.session.user.id } },
+         })
+         if (!court) throw new Error("Court not found or access denied")
 
-        return prisma.court.update({ where: { id }, data })
+         const updated = await prisma.court.update({ where: { id }, data })
+
+         // Update pricing rule if pricePerHour provided
+         if (input.pricePerHour) {
+           const facility = await prisma.facility.findUnique({ where: { id: court.facilityId } })
+           const existingRule = await prisma.pricingRule.findFirst({ where: { courtId: id } })
+           if (existingRule) {
+             await prisma.pricingRule.update({ where: { id: existingRule.id }, data: { pricePerHour: input.pricePerHour, startTime: facility?.openTime || existingRule.startTime, endTime: facility?.closeTime || existingRule.endTime } })
+           } else {
+             await prisma.pricingRule.create({
+               data: {
+                 facilityId: court.facilityId,
+                 courtId: id,
+                 name: "Standard Rate",
+                 dayOfWeek: [0,1,2,3,4,5,6],
+                 startTime: facility?.openTime || "06:00",
+                 endTime: facility?.closeTime || "22:00",
+                 pricePerHour: input.pricePerHour,
+                 minDuration: 30,
+                 maxDuration: 1440,
+                 isActive: true,
+               },
+             })
+           }
+         }
+
+         return updated
       }),
 
     delete: ownerProcedure
@@ -731,7 +762,7 @@ export const appRouter = createTRPCRouter({
           where: { id: input.courtId },
           select: { facilityId: true },
         })
-        const pricingRules = await prisma.pricingRule.findMany({
+        let pricingRules = await prisma.pricingRule.findMany({
           where: {
             isActive: true,
             OR: [
@@ -741,6 +772,17 @@ export const appRouter = createTRPCRouter({
           },
         })
 
+        // Fallback: if no pricing rules, use facility open/close times with default price
+        if (pricingRules.length === 0 && court?.facilityId) {
+          const fac = await prisma.facility.findUnique({ where: { id: court.facilityId }, select: { openTime: true, closeTime: true } })
+          pricingRules = [{
+            dayOfWeek: [0,1,2,3,4,5,6],
+            startTime: fac?.openTime || "06:00",
+            endTime: fac?.closeTime || "22:00",
+            pricePerHour: 500,
+          }] as any
+        }
+
         const bookings = await prisma.booking.findMany({
           where: {
             courtId: input.courtId,
@@ -749,11 +791,15 @@ export const appRouter = createTRPCRouter({
           },
         })
 
+        // Prefer court-specific pricing rules
+        const courtSpecificRules = pricingRules.filter((r: any) => r.courtId === input.courtId)
+        const rulesToUse = courtSpecificRules.length > 0 ? courtSpecificRules : pricingRules
+
         // Generate available slots based on availability and pricing rules
         const slots = generateAvailableSlots(
           availability.startTime,
           availability.endTime,
-          pricingRules,
+          rulesToUse,
           bookings,
           date
         )
@@ -1075,7 +1121,23 @@ export const appRouter = createTRPCRouter({
           })
         }, { isolationLevel: "Serializable" })
 
-        // Create payment record (offline payment - no gateway) - skip for owner bookings
+        // Create notification for facility owner
+        try {
+          const facility = await prisma.facility.findUnique({ where: { id: facilityId }, select: { ownerId: true, name: true } })
+          if (facility?.ownerId && facility.ownerId !== ctx.session.user.id) {
+            await prisma.notification.create({
+              data: {
+                userId: facility.ownerId,
+                type: "BOOKING_CONFIRMED",
+                title: "New Booking",
+                message: `New booking for ${facility.name} on ${startTime.toLocaleString()}`,
+                data: { bookingId: booking.id, facilityId },
+              },
+            })
+          }
+        } catch (e) {
+          console.error("Failed to create owner notification:", e)
+        }
         let paymentRecord = null
         if (!isOwnerBooking) {
         const paymentRecordTmp = await prisma.payment.create({
@@ -3526,11 +3588,12 @@ const istDate = new Date(date.getTime() + istOffset)
     const timeStr = `${String(Math.floor(slotStart / 60)).padStart(2, "0")}:${String(slotStart % 60).padStart(2, "0")}`
 
     const matchingRules = pricingRules.filter(
-      (r) =>
+      (r: any) =>
         r.dayOfWeek.includes(dayOfWeek) &&
         r.startTime <= timeStr &&
         r.endTime > timeStr
     )
+
     // Prefer the most specific (narrowest time window) rule
     const rule = matchingRules.sort((a: any, b: any) => {
       const aDur = (parseInt(a.endTime.split(":")[0]) * 60 + parseInt(a.endTime.split(":")[1])) - (parseInt(a.startTime.split(":")[0]) * 60 + parseInt(a.startTime.split(":")[1]))

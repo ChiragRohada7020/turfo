@@ -232,6 +232,7 @@ export default function AddFacilityPage() {
           surfaceType: newCourt.surfaceType as any,
           capacity: Number(newCourt.capacity) || 10,
           images: newCourt.images || [],
+          pricePerHour: Number(newCourt.pricePerHour) || undefined,
         })
       } else {
         await createCourt.mutateAsync({
@@ -672,9 +673,9 @@ export default function AddFacilityPage() {
               <p className="mt-1 text-xs text-slate-500">Set different prices for different times and days</p>
             </CardHeader>
             <CardContent className="space-y-4 p-5">
-              {facility?.pricingRules && facility.pricingRules.length > 0 && (
-                <div className="space-y-2">
-                  {facility.pricingRules.map((r: any) => (
+               {facility?.pricingRules && facility.pricingRules.filter((r: any) => !r.courtId).length > 0 && (
+                 <div className="space-y-2">
+                   {facility.pricingRules.filter((r: any) => !r.courtId).map((r: any) => (
                     <div key={r.id} className="flex items-center justify-between rounded-xl border border-white/10 bg-[#121b24] px-4 py-3">
                       <div>
                         <p className="text-sm font-bold text-white">{r.name}</p>

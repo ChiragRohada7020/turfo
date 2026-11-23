@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, Suspense } from "react"
 import { useSession } from "next-auth/react"
+import { useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -14,6 +15,14 @@ import { TopNavbar } from "@/modules/shared/components/layout/TopNavbar"
 import { Html5Qrcode } from "html5-qrcode"
 
 export default function VerifyBookingPage() {
+  return (
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center bg-[#0B1020]"><div className="h-8 w-8 animate-spin rounded-full border-2 border-orange-400 border-t-transparent" /></div>}>
+      <VerifyBookingInner />
+    </Suspense>
+  )
+}
+
+function VerifyBookingInner() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const { data: session, status } = useSession()
   const [code, setCode] = useState("")
@@ -24,6 +33,12 @@ export default function VerifyBookingPage() {
   const [showConfirm, setShowConfirm] = useState(false)
   const [verifiedBooking, setVerifiedBooking] = useState<any>(null)
   const scannerRef = useRef<Html5Qrcode | null>(null)
+  const searchParams = useSearchParams()
+  const autoScan = searchParams.get("scan") === "1"
+
+  useEffect(() => {
+    if (autoScan) setScanning(true)
+  }, [autoScan])
 
   const handleVerify = async (verificationCode: string) => {
     if (!verificationCode.trim()) {
@@ -162,7 +177,7 @@ export default function VerifyBookingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0B1020] text-white">
+    <div className="min-h-screen bg-[#070d12] text-white">
       <Sidebar session={session} mobileOpen={sidebarOpen} onMobileOpenChange={setSidebarOpen} />
       <div className="min-h-screen md:pl-[262px]">
         <TopNavbar onMenuClick={() => setSidebarOpen(true)} />
@@ -176,7 +191,7 @@ export default function VerifyBookingPage() {
           <div className="flex gap-2 mb-4">
             <Button
               variant={scanning ? "default" : "outline"}
-              className={scanning ? "bg-orange-400 text-black" : "border-white/10 text-white"}
+              className={scanning ? "bg-orange-500 text-white" : "border-white/10 text-white"}
               onClick={scanning ? stopScanner : startScanner}
             >
               <Camera className="w-4 h-4 mr-2" />
@@ -212,7 +227,7 @@ export default function VerifyBookingPage() {
                     onKeyDown={(e) => e.key === "Enter" && handleVerify(code)}
                   />
                   <Button
-                    className="bg-orange-400 font-bold text-black hover:bg-orange-300"
+                    className="bg-orange-500 font-bold text-white hover:bg-orange-400"
                     onClick={() => handleVerify(code)}
                     disabled={loading}
                   >

@@ -2,7 +2,8 @@
 
 import { useSession, signOut } from "next-auth/react"
 import Link from "next/link"
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
+import { useToast } from "@/hooks/use-toast"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Bell, ChevronDown, Menu, MapPin } from "lucide-react"
@@ -17,7 +18,17 @@ interface TopNavbarProps {
 
 export function TopNavbar({ onMenuClick, showLocation = false, location = "Pachora, Maharashtra", searchSlot }: TopNavbarProps) {
   const { data: session } = useSession()
-  const { data: unreadNotifications } = trpc.notifications.list.useQuery({ isRead: false, limit: 1 })
+  const { toast } = useToast()
+  const { data: unreadNotifications } = trpc.notifications.list.useQuery({ isRead: false, limit: 1 }, { refetchInterval: 10000 })
+  const prevCount = useRef(0)
+  useEffect(() => {
+    const count = unreadNotifications?.total ?? 0
+    if (count > prevCount.current && prevCount.current !== 0) {
+      const latest = unreadNotifications?.notifications?.[0]
+      toast({ title: latest?.title || "New Notification", description: latest?.message || "You have a new notification" })
+    }
+    prevCount.current = count
+  }, [unreadNotifications])
 
   return (
     <header className="sticky top-0 z-20 flex h-[64px] items-center gap-3 border-b border-white/[0.08] bg-[#080f15]/95 px-4 backdrop-blur-xl sm:px-6">

@@ -100,10 +100,9 @@ const { data: availability, isLoading: availabilityLoading, refetch: refetchAvai
   const selectedCourt = courts.find((c: any) => c.id === selectedCourtId) || courts[0]
   // Calculate price based on selected time (dynamic pricing)
   const getPriceForTime = (timeStr: string) => {
-    const rules = [
-      ...(selectedCourt?.pricingRules || []),
-      ...(facility?.pricingRules || []),
-    ]
+    const rules = selectedCourt?.pricingRules?.length > 0
+      ? selectedCourt.pricingRules
+      : (facility?.pricingRules || [])
     if (rules.length === 0) {
       return facility?.minPrice ?? 0
     }
@@ -518,9 +517,20 @@ const { data: availability, isLoading: availabilityLoading, refetch: refetchAvai
            else if (!isAvailableTime && !selectedSlot?.start) bgClass = "border-red-500/50 text-red-400 bg-red-500/10 cursor-not-allowed"
            else if (selectedSlot?.start && time <= selectedSlot.start) bgClass = "border-white/5 text-slate-600 cursor-not-allowed opacity-40"
            else if (!isOwner && selectedSlot?.start && (() => { const sm2 = parseInt(selectedSlot.start.split(":")[0]) * 60 + parseInt(selectedSlot.start.split(":")[1]); const em2 = parseInt(time.split(":")[0]) * 60 + parseInt(time.split(":")[1]); return (em2 - sm2) > 60 })()) bgClass = "border-white/5 text-slate-600 cursor-not-allowed opacity-40"
-           const isDisabled = selectedSlot?.start ? (time <= selectedSlot.start || wouldOverlapBooked || (!isOwner && (() => { const sm2 = parseInt(selectedSlot.start.split(":")[0]) * 60 + parseInt(selectedSlot.start.split(":")[1]); const em2 = parseInt(time.split(":")[0]) * 60 + parseInt(time.split(":")[1]); return (em2 - sm2) > 60 })())) : !isAvailableTime
+            const isDisabled = selectedSlot?.start ? (time < selectedSlot.start || wouldOverlapBooked || (!isOwner && (() => { const sm2 = parseInt(selectedSlot.start.split(":")[0]) * 60 + parseInt(selectedSlot.start.split(":")[1]); const em2 = parseInt(time.split(":")[0]) * 60 + parseInt(time.split(":")[1]); return (em2 - sm2) > 60 })())) : !isAvailableTime
            return (
-             <button key={time} onClick={() => { if (!selectedSlot?.start) { if (!isAvailableTime) return; setSelectedSlot({ start: time, end: "", price: (facility?.minPrice || 0) }); } else if (time > selectedSlot.start && !wouldOverlapBooked) { setSelectedSlot({ ...selectedSlot, end: time }) } }} disabled={isDisabled} className={cn("rounded-lg border px-1 py-2 text-[11px] font-medium transition min-h-[36px]", bgClass)}>
+                <button key={time} onClick={() => { 
+                  if (selectedSlot?.start === time) { 
+                    setSelectedSlot(null); 
+                    return; 
+                  } 
+                  if (!selectedSlot?.start) { 
+                    if (!isAvailableTime) return; 
+                    setSelectedSlot({ start: time, end: "", price: getPriceForTime(time) }); 
+                  } else if (time > selectedSlot.start && !wouldOverlapBooked) { 
+                    setSelectedSlot({ ...selectedSlot, end: time }) 
+                  } 
+                }} disabled={isDisabled} className={cn("rounded-lg border px-1 py-2 text-[11px] font-medium transition min-h-[36px]", bgClass)}>
                {time}
              </button>
            )

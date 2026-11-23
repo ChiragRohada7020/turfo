@@ -28,6 +28,7 @@ import {
   TrendingUp,
   Trophy,
   Users,
+  QrCode,
   Wallet,
   Lock,
   X,
@@ -360,29 +361,29 @@ function PlayerDashboard({ session, upcoming, myBooking, isLoading, setQrBooking
           </div>
           <Link href="/search" className="text-sm font-semibold text-orange-300">View All <ChevronRight className="inline h-4 w-4" /></Link>
         </div>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="flex gap-4 overflow-x-auto pb-2 sm:flex-nowrap md:flex-nowrap lg:flex-nowrap">
           {isLoadingTurfs ? (
             [1, 2, 3].map((item) => (
               <div key={item} className="h-48 animate-pulse rounded-2xl border border-white/5 bg-[#131C2E]" />
             ))
           ) : nearbyTurfs.length > 0 ? (
             nearbyTurfs.map((turf: any) => (
-            <Card key={turf.id} onClick={() => { window.location.href = "/facility/" + turf.id }} className="group overflow-hidden rounded-2xl border-white/[0.09] bg-[#131C2E] transition-all duration-300 hover:-translate-y-1 hover:border-orange-400/40 hover:shadow-xl hover:shadow-black/20 cursor-pointer">
-              <div className="relative h-40 overflow-hidden bg-[#25344B]">
-                <Image src={turf.images?.[0] || "/placeholder.svg"} alt={turf.name} fill sizes="(max-width: 640px) 100vw, 33vw" className="object-cover object-center transition duration-500 group-hover:scale-105" />
+            <Card key={turf.id} onClick={() => { window.location.href = "/facility/" + turf.id }} className="shrink-0 group overflow-hidden rounded-2xl border-white/[0.09] bg-[#131C2E] transition-all duration-300 hover:-translate-y-1 hover:border-orange-400/40 hover:shadow-xl hover:shadow-black/20 cursor-pointer w-[290px]">
+              <div className="relative h-48 overflow-hidden bg-[#25344B]">
+                <Image src={turf.images?.[0] || "/placeholder.svg"} alt={turf.name} fill sizes="(max-width: 800px) 100vw" className="object-cover object-center transition duration-500 group-hover:scale-105" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
               </div>
               <CardContent className="p-4">
                 <div className="flex items-start justify-between gap-2">
-                  <h3 className="font-bold">{turf.name}</h3>
+                  <h3 className="font-bold text-lg">{turf.name}</h3>
                   <span className="shrink-0 text-xs font-semibold text-amber-300">★ {turf.avgRating ? turf.avgRating.toFixed(1) : "New"} <span className="text-slate-500">({turf.reviewCount ?? 0})</span></span>
                 </div>
-                <p className="mt-1 flex items-center gap-1 text-xs text-slate-500"><MapPin className="h-3 w-3" />{turf.city}{turf.state ? `, ${turf.state}` : ""}</p>
+                <p className="mt-2 flex items-center gap-1 text-sm text-slate-400"><MapPin className="h-3 w-3" />{turf.city}{turf.state ? `, ${turf.state}` : ""}</p>
                 <div className="mt-3 flex flex-wrap gap-1.5">
                   {(turf.sportTypes || []).slice(0, 2).map((sport: string) => <Badge key={sport} className="bg-white/[0.07] text-[10px] text-slate-300 hover:bg-white/[0.07]">{sport}</Badge>)}
                 </div>
                 <div className="mt-4 flex items-center justify-between">
-                  {turf.minPrice ? <p className="font-bold text-orange-300">{formatINR(turf.minPrice)}<span className="text-xs font-normal text-slate-500"> /hour</span></p> : <span />}
+                  {turf.minPrice ? <p className="font-bold text-lg text-orange-300">{formatINR(turf.minPrice)}<span className="text-xs font-normal text-slate-500"> /hour</span></p> : <span />}
                   <div className="flex gap-2">
                     <Button asChild size="sm" className="rounded-lg bg-blue-500 font-bold text-white hover:bg-blue-400" onClick={(e) => e.stopPropagation()}>
                       <a href={turf.latitude && turf.longitude ? `https://www.google.com/maps/dir/?api=1&destination=${turf.latitude},${turf.longitude}` : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent((turf.address || "") + ", " + (turf.city || ""))}`} target="_blank" rel="noopener noreferrer">
@@ -451,8 +452,9 @@ function OwnerDashboard({ session, myFacilities }: any) {
 
       <section className="mb-6 grid grid-cols-2 gap-3 xl:grid-cols-4">
         <QuickAction href="/dashboard/facilities" title="My Facilities" subtitle={(myFacilities?.length || 0) + " listed"} icon={Building2} primary />
-        <QuickAction href="/dashboard/facilities" title="Book Offline" subtitle="Book your turf for offline players" icon={CalendarDays} />
+        <QuickAction href={myFacilities?.[0]?.id ? `/facility/${myFacilities[0].id}?book=1` : "/dashboard/facilities"} title="Book Offline" subtitle="Book your turf for offline players" icon={CalendarDays} />
         <QuickAction href="/dashboard/bookings" title="Today's Bookings" subtitle={(todayBookings?.total || 0) + " today"} icon={Ticket} />
+        <QuickAction href="/dashboard/verify?scan=1" title="Scan QR" subtitle="Verify bookings" icon={QrCode} />
 
       </section>
 

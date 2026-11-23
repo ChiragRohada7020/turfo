@@ -42,7 +42,7 @@ import { OpenGameModal } from "@/components/booking/OpenGameModal"
 const filters = [
   { label: "All Bookings", value: "all" },
   { label: "My Bookings", value: "MY" },
-  { label: "Confirmed", value: "CONFIRMED" },
+  { label: "Pending", value: "CONFIRMED" },
   { label: "Completed", value: "COMPLETED" },
   { label: "Cancelled", value: "CANCELLED" },
 ]
@@ -51,7 +51,7 @@ export default function BookingsPage() {
   const { data: session, status } = useSession()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
-  const [statusFilter, setStatusFilter] = useState("all")
+  const [statusFilter, setStatusFilter] = useState("CONFIRMED")
   const [cancelModalOpen, setCancelModalOpen] = useState(false)
   const [cancelBookingId, setCancelBookingId] = useState<string | null>(null)
   const [cancelBookingName, setCancelBookingName] = useState("")
@@ -175,8 +175,8 @@ export default function BookingsPage() {
               Sign In
             </Button>
           </Link>
-        </div>
-      </div>
+                                </div>
+                              </div>
     )
   }
 
@@ -184,6 +184,9 @@ export default function BookingsPage() {
   const bookings = statusFilter === "MY" ? rawBookings.filter((b: any) => b.userId === session?.user?.id) : rawBookings
 
   const getStatusStyle = (status: string) => {
+    if (isOwner && status === "CONFIRMED") {
+      return "bg-amber-500/10 text-amber-400 border-amber-500/20"
+    }
     switch (status) {
       case "CONFIRMED":
         return "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
@@ -308,14 +311,14 @@ export default function BookingsPage() {
                </Link>
             </div>
           </div>
-           {isOwner && (
-             <div className="mb-7 grid grid-cols-2 gap-3 lg:grid-cols-4">
-               <OverviewCard label="Total" value={bookings.length} icon={<CalendarDays />} color="text-orange-400" />
-               <OverviewCard label="Confirmed" value={bookings.filter((b: any) => b.status === "CONFIRMED").length} icon={<ShieldCheck />} color="text-emerald-400" />
-               <OverviewCard label="Pending" value={bookings.filter((b: any) => b.status === "PENDING").length} icon={<AlertCircle />} color="text-amber-400" />
-               <OverviewCard label="Cancelled" value={bookings.filter((b: any) => b.status === "CANCELLED").length} icon={<XCircle />} color="text-red-400" />
-             </div>
-           )}
+            {isOwner && (
+              <div className="mb-7 grid grid-cols-2 gap-3 lg:grid-cols-4">
+                <OverviewCard label="Total Completed" value={bookings.filter((b: any) => b.status === "COMPLETED").length} icon={<CheckCircle2 />} color="text-green-400" />
+                <OverviewCard label="Today Completed" value={bookings.filter((b: any) => b.status === "COMPLETED" && new Date(b.startTime).toDateString() === new Date().toDateString()).length} icon={<CalendarDays />} color="text-blue-400" />
+                <OverviewCard label="Pending" value={bookings.filter((b: any) => b.status === "CONFIRMED" || b.status === "PENDING").length} icon={<AlertCircle />} color="text-amber-400" />
+                <OverviewCard label="Total Players" value={new Set(bookings.map((b: any) => b.userId)).size} icon={<Users />} color="text-orange-400" />
+              </div>
+            )}
 
            {/* Booking overview */}
            {!isOwner && (
@@ -408,7 +411,7 @@ export default function BookingsPage() {
                             <div className="mb-4 flex flex-wrap items-center gap-2">
                               <Badge className={`gap-1.5 rounded-full border px-3 py-1 ${getStatusStyle(booking.status)}`}>
                                 {getStatusIcon(booking.status)}
-                                {booking.status}
+                                {isOwner && booking.status === "CONFIRMED" ? "Pending" : booking.status}
                               </Badge>
 
                               {booking.isPublic && (
@@ -424,17 +427,7 @@ export default function BookingsPage() {
                             </div>
 
                             <div className="flex flex-col gap-4 sm:flex-row">
-                              {/* Turf image placeholder */}
-                              <div className="flex h-28 w-full shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-gradient-to-br from-[#2a1f3d] to-[#0f1220] sm:w-36">
-                                <div className="text-center">
-                                  <Trophy className="mx-auto h-8 w-8 text-orange-400/80" />
-                                  <span className="mt-2 block text-[10px] font-semibold uppercase tracking-widest text-orange-400/70">
-                                    Turf booking
-                                  </span>
-                                </div>
-                              </div>
-
-                              <div className="min-w-0 flex-1">
+                               <div className="min-w-0 flex-1">
                                 <h3 className="truncate text-xl font-bold text-white sm:text-2xl">
                                   {booking.facility?.name || "Turf booking"}
                                 </h3>
@@ -459,19 +452,40 @@ export default function BookingsPage() {
                                   </div>
                                   <div className="flex items-center gap-2">
                                     <Users className="h-4 w-4 shrink-0 text-orange-400" />
-                                    <span>
-                                      {participantCount > 0
-                                        ? `${participantCount} players`
-                                        : "Player details"}
-                                    </span>
+                                     <span>
+                                       {booking.user?.name || "Player"}
+                                     </span>
                                   </div>
                                 </div>
 
-                                {booking.status !== "CANCELLED" && booking.status !== "COMPLETED" && (
-                                  <div className="mt-3">
-                                    <TimeRemaining startTime={booking.startTime} />
-                                  </div>
-                                )}
+                                 {booking.status !== "CANCELLED" && booking.status !== "COMPLETED" && (
+                                   <div className="mt-3">
+                                     <TimeRemaining startTime={booking.startTime} />
+                                   </div>
+                                 )}
+
+                                  {!isOwner && (
+                                    <div className="mt-3 flex flex-wrap gap-2">
+                                      <Button asChild size="sm" className="border-white/10 text-white bg-blue-500 hover:bg-blue-400">
+                                        <a href={booking.facility?.latitude && booking.facility?.longitude ? `https://www.google.com/maps/dir/?api=1&destination=${booking.facility.latitude},${booking.facility.longitude}` : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent((booking.facility?.address || "") + ", " + (booking.facility?.city || ""))}`} target="_blank" rel="noopener noreferrer">
+                                          <MapPin className="mr-1.5 h-3.5 w-3.5" /> Location
+                                        </a>
+                                      </Button>
+                                    </div>
+                                  )}
+
+                                  {isOwner && booking.user && (
+                                    <div className="mt-3 flex flex-wrap gap-2">
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="border-white/10 text-white hover:bg-white/5"
+                                        onClick={() => toast({ title: "Player Details", description: `${booking.user.name || "N/A"} | ${booking.user.email || "N/A"} | ${booking.user.phone || "N/A"}` })}
+                                      >
+                                        <Users className="mr-1.5 h-3.5 w-3.5" /> Player Details
+                                      </Button>
+                                    </div>
+                                  )}
                               </div>
                             </div>
 
@@ -645,36 +659,22 @@ export default function BookingsPage() {
                                   </Button>
                                 )}
 
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-11 flex-1 rounded-lg border-blue-500/25 bg-blue-500/[0.04] px-4 text-xs font-semibold text-blue-400 hover:bg-blue-500/10 lg:w-full"
-                                onClick={() => {
-                                  const f = booking.facility
-                                  const url = f?.latitude && f?.longitude
-                                    ? `https://www.google.com/maps/search/?api=1&query=${f.latitude},${f.longitude}`
-                                    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((f?.address || "") + " " + (f?.city || "") + " " + (f?.state || ""))}`
-                                  window.open(url, "_blank")
-                                }}
-                              >
-                                <MapPin className="mr-2 h-4 w-4" />
-                                Directions
-                              </Button>
-
-                              {(booking.status === "PENDING" ||
-                                booking.status === "CONFIRMED") &&
-                                (session?.user?.role === "ADMIN" || booking.userId === session?.user?.id) && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="h-11 flex-1 rounded-lg border-red-500/25 bg-red-500/[0.04] px-4 text-xs font-semibold text-red-400 hover:bg-red-500/10 lg:w-full"
-                                  onClick={() => handleCancel(booking)}
-                                  disabled={cancelBooking.isPending}
-                                >
-                                  <XCircle className="mr-2 h-4 w-4" />
-                                  Cancel booking
-                                </Button>
-                              )}
+                               {(booking.status === "PENDING" ||
+                                 booking.status === "CONFIRMED") &&
+                                 (isOwner || session?.user?.role === "ADMIN" || booking.userId === session?.user?.id) && (
+                                 <>
+                                   <Button
+                                     variant="outline"
+                                     size="sm"
+                                     className="h-11 flex-1 rounded-lg border-red-500/25 bg-red-500/[0.04] px-4 text-xs font-semibold text-red-400 hover:bg-red-500/10 lg:w-full"
+                                     onClick={() => handleCancel(booking)}
+                                     disabled={cancelBooking.isPending}
+                                   >
+                                     <XCircle className="mr-2 h-4 w-4" />
+                                     Cancel booking
+                                   </Button>
+                                 </>
+                               )}
                             </div>
                           </div>
                         </div>
