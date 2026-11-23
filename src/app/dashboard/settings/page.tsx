@@ -263,8 +263,23 @@ export default function SettingsPage() {
                          }, (err: any) => toast({ title: "Error", description: err?.message || "Could not get location", variant: "destructive" }), { enableHighAccuracy: false, maximumAge: 60000, timeout: 15000 })
                       }}>
                         <MapPin className="h-4 w-4 mr-2" /> Use My Location
-                      </Button>
-                    </div>
+                       </Button>
+                       <Button
+                         type="button"
+                         variant="outline"
+                         className="border-red-500/30 text-red-400 hover:bg-red-500/10"
+                         onClick={() => {
+                           setForm({ ...form, latitude: "", longitude: "" })
+                           updateProfile.mutateAsync({ latitude: null as any, longitude: null as any }).then(() => {
+                             toast({ title: "Location removed", description: "Pinned location cleared." })
+                           }).catch(() => {
+                             toast({ title: "Error", description: "Failed to remove location", variant: "destructive" })
+                           })
+                         }}
+                       >
+                         Remove Location
+                       </Button>
+                     </div>
                   </div>
                    <div className="flex gap-2">
                      <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([form.address, form.city, form.state, form.postalCode].filter(Boolean).join(", "))}`} target="_blank" rel="noopener noreferrer" className="text-sm text-orange-400 hover:underline">Open in Google Maps</a>
