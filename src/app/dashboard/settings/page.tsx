@@ -277,7 +277,7 @@ export default function SettingsPage() {
                             const a = data?.address || {}
                             updatedForm = {
                               ...updatedForm,
-                              address: [a.house_number, a.road, a.neighbourhood, a.suburb, a.city_district].filter(Boolean).join(", ") || updatedForm.address,
+                              address: [a.house_number, a.road, a.neighbourhood, a.suburb, a.city_district, a.city, a.state, a.postcode].filter(Boolean).join(", ") || data?.display_name || updatedForm.address,
                               city: (a.city || a.town || a.village || updatedForm.city || "").normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
                               state: a.state || updatedForm.state,
                               postalCode: a.postcode || updatedForm.postalCode,
@@ -323,7 +323,15 @@ export default function SettingsPage() {
                    <div className="flex gap-2">
                      <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([form.address, form.city, form.state, form.postalCode].filter(Boolean).join(", "))}`} target="_blank" rel="noopener noreferrer" className="text-sm text-orange-400 hover:underline">Open in Google Maps</a>
                     {form.latitude && form.longitude && (
-                      <a href={`https://www.google.com/maps/search/?api=1&query=${form.latitude},${form.longitude}`} target="_blank" rel="noopener noreferrer" className="text-sm text-slate-400 hover:underline">View saved pin</a>
+                      <>
+                        <a href={`https://www.google.com/maps/search/?api=1&query=${form.latitude},${form.longitude}`} target="_blank" rel="noopener noreferrer" className="text-sm text-slate-400 hover:underline">View saved pin</a>
+                        <iframe
+                          title="Saved location"
+                          src={`https://www.google.com/maps?q=${form.latitude},${form.longitude}&z=16&output=embed`}
+                          className="w-full h-48 rounded-xl border border-white/[0.08] mt-2"
+                          loading="lazy"
+                        />
+                      </>
                     )}
                   </div>
                   <p className="text-xs text-slate-500">This location will be used as default for new facilities you create.</p>
