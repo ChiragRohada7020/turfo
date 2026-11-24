@@ -194,10 +194,6 @@ export default function SettingsPage() {
                   <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="bg-white/5 border border-white/10 text-white rounded-xl focus:border-orange-400/50 focus:ring-orange-400/30" />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-slate-300">Email</Label>
-                  <Input value={profile?.email || ""} disabled className="bg-[#182238] border-white/[0.08] text-slate-400" />
-                </div>
-                <div className="space-y-2">
                   <Label className="text-slate-300">Phone</Label>
                   <Input value={form.phone} disabled className="bg-[#182238] border-white/[0.08] text-slate-400" />
                 </div>
@@ -329,30 +325,6 @@ export default function SettingsPage() {
                   <p className="text-xs text-slate-500">This location will be used as default for new facilities you create.</p>
                 </CardContent>
               </Card>
-            <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl">
-              <CardHeader>
-                <CardTitle className="text-lg font-bold flex items-center gap-2">
-                  <User className="h-5 w-5 text-orange-400" /> Change Password
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label className="text-slate-300">Current Password</Label>
-                  <Input type="password" value={passwordForm.currentPassword} onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })} className="bg-white/5 border border-white/10 text-white rounded-xl focus:border-orange-400/50 focus:ring-orange-400/30" />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-slate-300">New Password</Label>
-                  <Input type="password" value={passwordForm.newPassword} onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })} className="bg-white/5 border border-white/10 text-white rounded-xl focus:border-orange-400/50 focus:ring-orange-400/30" />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-slate-300">Confirm Password</Label>
-                  <Input type="password" value={passwordForm.confirmPassword} onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })} className="bg-white/5 border border-white/10 text-white rounded-xl focus:border-orange-400/50 focus:ring-orange-400/30" />
-                </div>
-                <Button type="button" onClick={handlePasswordChange} className="w-full bg-white/10 text-white hover:bg-white/20" disabled={isLoading}>
-                  {isLoading ? "Changing..." : "Change Password"}
-                </Button>
-              </CardContent>
-            </Card>
 
             <Button type="submit" className="w-full bg-orange-400 font-bold text-black hover:bg-orange-300" disabled={isLoading}>
               {isLoading ? "Saving..." : "Save Settings"}
