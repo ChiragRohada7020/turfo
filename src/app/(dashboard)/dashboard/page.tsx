@@ -302,10 +302,7 @@ function PlayerDashboard({ session, upcoming, myBooking, isLoading, setQrBooking
           {isLoading ? (
             <div className="h-32 animate-pulse rounded-xl bg-white/5" />
           ) : (
-            <div className="grid gap-4 rounded-xl border border-white/[0.08] bg-[#1B2940] p-4 sm:grid-cols-[190px_minmax(0,1fr)_auto] sm:items-center">
-              <div className="relative h-32 overflow-hidden rounded-lg bg-[#29364D] sm:h-[120px]">
-                <Image src="/placeholder.svg" alt="Booked turf" fill sizes="200px" className="object-cover" />
-              </div>
+            <div className="grid gap-4 rounded-xl border border-white/[0.08] bg-[#1B2940] p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
               <div className="min-w-0">
                 <h3 className="text-lg font-bold">{myBooking.facility?.name || "Your booked turf"}</h3>
                 <p className="mt-1 flex items-center gap-1.5 text-sm text-slate-400"><MapPin className="h-4 w-4" />{myBooking.facility?.address || myBooking.facility?.city || "Location not available"}</p>
