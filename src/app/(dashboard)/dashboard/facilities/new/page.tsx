@@ -337,23 +337,19 @@ export default function AddFacilityPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="city" className="text-slate-300">City *</Label>
-                <Select onValueChange={(v) => setValue("city", v)} disabled={!selectedState || cityLoading}>
-                  <SelectTrigger className="h-10 rounded-xl border border-white/10 bg-[#182238] text-white focus:border-orange-400/50">
-                    <SelectValue placeholder={cityLoading ? "Loading cities..." : "Select city"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {cityOptions.map((c) => (
-                      <SelectItem key={c} value={c}>{c}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {cityOptions.length === 0 && selectedState && !cityLoading && (
-                  <Input
-                    placeholder="Enter city manually"
-                    className="h-10 rounded-xl border border-white/10 bg-[#182238] text-white placeholder:text-slate-500 focus:border-orange-400/50"
-                    onChange={(e) => setValue("city", e.target.value)}
-                  />
-                )}
+                <Input
+                  id="city"
+                  list="facility-city-options"
+                  placeholder={cityLoading ? "Loading cities..." : "Type or select city"}
+                  className="h-10 rounded-xl border border-white/10 bg-[#182238] text-white placeholder:text-slate-500 focus:border-orange-400/50"
+                  {...register("city")}
+                  disabled={!selectedState || cityLoading}
+                />
+                <datalist id="facility-city-options">
+                  {cityOptions.map((c) => (
+                    <option key={c} value={c} />
+                  ))}
+                </datalist>
                 {errors.city && <p className="text-sm text-red-400">{errors.city.message}</p>}
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

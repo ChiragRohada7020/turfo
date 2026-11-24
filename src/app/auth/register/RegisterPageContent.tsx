@@ -377,23 +377,20 @@ export default function RegisterPageContent() {
 
               <div className="space-y-2">
                 <Label htmlFor="city" className="text-slate-700 font-semibold">City</Label>
-                <Select onValueChange={(v) => setValue("city", v)} value={watch("city")} disabled={!selectedState || cityLoading}>
-                  <SelectTrigger className="bg-white border-slate-200 text-slate-900">
-                    <SelectValue placeholder={cityLoading ? "Loading cities..." : "Select city"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {cityOptions.map((c) => (
-                      <SelectItem key={c} value={c}>{c}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {cityOptions.length === 0 && selectedState && !cityLoading && (
-                  <Input
-                    placeholder="Enter city manually"
-                    className="bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-orange-500 focus:ring-orange-500"
-                    onChange={(e) => setValue("city", e.target.value)}
-                  />
-                )}
+                <Input
+                  id="city"
+                  list="city-options"
+                  placeholder={cityLoading ? "Loading cities..." : "Type or select city"}
+                  className="bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-orange-500 focus:ring-orange-500"
+                  value={watch("city") || ""}
+                  onChange={(e) => setValue("city", e.target.value)}
+                  disabled={!selectedState || cityLoading}
+                />
+                <datalist id="city-options">
+                  {cityOptions.map((c) => (
+                    <option key={c} value={c} />
+                  ))}
+                </datalist>
               </div>
 
               <div className="space-y-2">

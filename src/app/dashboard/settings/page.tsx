@@ -248,19 +248,19 @@ export default function SettingsPage() {
                     </div>
                     <div className="space-y-2">
                       <Label className="text-slate-300">City</Label>
-                      <Select value={form.city} onValueChange={(v) => setForm({ ...form, city: v })} disabled={!form.state || cityLoading}>
-                        <SelectTrigger className="bg-[#182238] border-white/[0.08] text-white">
-                          <SelectValue placeholder={cityLoading ? "Loading cities..." : "Select city"} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {cityOptions.map((c) => (
-                            <SelectItem key={c} value={c}>{c}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {cityOptions.length === 0 && form.state && !cityLoading && (
-                        <Input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} placeholder="Enter city manually" className="bg-[#182238] border-white/[0.08] text-white" />
-                      )}
+                      <Input
+                        list="settings-city-options"
+                        value={form.city}
+                        onChange={(e) => setForm({ ...form, city: e.target.value })}
+                        placeholder={cityLoading ? "Loading cities..." : "Type or select city"}
+                        disabled={!form.state || cityLoading}
+                        className="bg-[#182238] border-white/[0.08] text-white"
+                      />
+                      <datalist id="settings-city-options">
+                        {cityOptions.map((c) => (
+                          <option key={c} value={c} />
+                        ))}
+                      </datalist>
                     </div>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
