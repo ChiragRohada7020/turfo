@@ -29,6 +29,7 @@ import { Sidebar } from "@/modules/shared/components/layout/Sidebar"
 
 export default function OpenGamesPage() {
   const { data: session, status } = useSession()
+  const { data: profile } = trpc.auth.getProfile.useQuery()
   const [search, setSearch] = useState("")
   const [activeFilter, setActiveFilter] = useState("All Games")
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -43,6 +44,9 @@ export default function OpenGamesPage() {
       keepPreviousData: true,
     }
   )
+
+  const cityFilter = profile?.city
+  const filteredOpenGames = (openGames || []).filter((g: any) => !cityFilter || g.facility?.city === cityFilter)
 
   const joinBooking = trpc.bookings.joinBooking.useMutation({
     onSuccess: () => {
