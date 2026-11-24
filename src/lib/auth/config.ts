@@ -4,6 +4,10 @@ import GoogleProvider from "next-auth/providers/google"
 import { PrismaAdapter } from "@auth/prisma-adapter"
 import bcrypt from "bcryptjs"
 import { PrismaClient } from "@prisma/client"
+import { verifyWhatsAppOTP } from "@/lib/whatsapp/service"
+import { authyo } from "@/lib/authyo/service"
+
+const verifiedPhones = new Map<string, number>()
 
 const authPrisma = new PrismaClient({
   datasources: {
@@ -55,6 +59,89 @@ export const authOptions: NextAuthOptions = {
           role: user.role,
           image: user.avatarUrl,
         }
+      },
+    }),
+    CredentialsProvider({
+      id: "phone",
+      name: "phone",
+      credentials: {
+        phone: { label: "Phone", type: "text" },
+        otp: { label: "OTP", type: "text" },
+        name: { label: "Name", type: "text" },
+        state: { label: "State", type: "text" },
+        city: { label: "City", type: "text" },
+        referralCode: { label: "Referral Code", type: "text" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.phone || !credentials?.otp) throw new Error("Invalid credentials")
+        const normalizedPhone = credentials.phone.startsWith("+91")
+          ? credentials.phone
+          : credentials.phone.startsWith("91")
+          ? `+${credentials.phone}`
+          : `+91${credentials.phone.replace(/\D/g, "").slice(-10)}`
+        const otp = credentials.otp.trim()
+
+        const isRegistration = !!credentials.name
+
+        if (!isRegistration) {
+          // verify OTP
+          try {
+            await verifyWhatsAppOTP(normalizedPhone, otp)
+          } catch (e) {
+            try {
+              await authyo.verifyOTP(normalizedPhone, otp)
+            } catch (e2) {
+              throw new Error("Invalid OTP")
+            }
+          }
+          verifiedPhones.set(normalizedPhone, Date.now() + 5 * 60 * 1000)
+
+          const user = await authPrisma.user.findFirst({ where: { phone: normalizedPhone } })
+          if (!user) throw new Error("NEW_USER")
+          if (user.role === "OWNER" && !user.isVerified) {
+            throw new Error("Your owner account is pending admin verification.")
+          }
+          return { id: user.id, email: user.email, name: user.name, role: user.role, image: user.avatarUrl }
+        }
+
+        // registration mode: phone must be verified
+        const expiry = verifiedPhones.get(normalizedPhone)
+        if (!expiry || expiry < Date.now()) throw new Error("Phone not verified")
+        verifiedPhones.delete(normalizedPhone)
+
+        const existing = await authPrisma.user.findFirst({ where: { phone: normalizedPhone } })
+        if (existing) {
+          return { id: existing.id, email: existing.email, name: existing.name, role: existing.role, image: existing.avatarUrl }
+        }
+
+        const userRole = "PLAYER"
+        const user = await authPrisma.user.create({
+          data: {
+            name: credentials.name?.trim() || null,
+            email: `${normalizedPhone.replace(/\D/g, "")}@phone.local`,
+            passwordHash: await bcrypt.hash(Math.random().toString(36), 12),
+            phone: normalizedPhone,
+            role: userRole as any,
+            isPhoneVerified: true,
+            isVerified: true,
+            city: credentials.city?.trim() || null,
+            state: credentials.state?.trim() || null,
+          },
+        })
+        await authPrisma.user.update({ where: { id: user.id }, data: { referralCode: `REF${user.id.slice(-6).toUpperCase()}` } })
+
+        // referral handling
+        if (credentials.referralCode) {
+          const referrer = await authPrisma.user.findUnique({ where: { referralCode: credentials.referralCode.trim().toUpperCase() } })
+          if (referrer && referrer.id !== user.id) {
+            await authPrisma.$transaction(async (tx) => {
+              await tx.referral.create({ data: { referrerId: referrer.id, refereeId: user.id, code: credentials.referralCode!.trim().toUpperCase(), rewardPoints: 1000 } })
+              await tx.user.update({ where: { id: user.id }, data: { referredById: referrer.id } })
+            })
+          }
+        }
+
+        return { id: user.id, email: user.email, name: user.name, role: user.role, image: user.avatarUrl }
       },
     }),
     GoogleProvider({

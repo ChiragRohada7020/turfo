@@ -1,187 +1,211 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { signIn, getSession } from "next-auth/react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { z } from "zod"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent } from "@/components/ui/card"
-import { Mail, Lock, Eye, EyeOff, Loader2, Trophy, Zap, ShieldCheck } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Loader2, Phone, ShieldCheck } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
+import { trpc } from "@/lib/trpc"
 
-const loginSchema = z.object({
-  email: z.string().min(3, "Email or phone is required"),
-  password: z.string().min(1, "Password is required"),
-})
-
-type LoginForm = z.infer<typeof loginSchema>
+const INDIAN_STATES = ["Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisgarh","Goa","Gujarat","Haryana","Himachal Pradesh","Jharkhand","Karnataka","Kerala","Madhya Pradesh","Maharashtra","Manipur","Meghalaya","Mizoram","Nagaland","Odisha","Punjab","Rajasthan","Sikkim","Tamil Nadu","Telangana","Tripura","Uttar Pradesh","Uttarakhand","West Bengal","Andaman and Nicobar Islands","Chandigarh","Dadra and Nagar Haveli and Daman and Diu","Delhi","Jammu and Kashmir","Ladakh","Lakshadweep","Puducherry"]
 
 export default function LoginPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const callbackUrl = searchParams.get("callbackUrl") || "/dashboard"
-  const [showPassword, setShowPassword] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const [verificationError, setVerificationError] = useState<string | null>(null)
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<LoginForm>({
-    resolver: zodResolver(loginSchema),
+  const [step, setStep] = useState<"phone" | "otp" | "register">("phone")
+  const [phone, setPhone] = useState("")
+  const [otp, setOtp] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
+  const [isNewUser, setIsNewUser] = useState(false)
+
+  const [reg, setReg] = useState({ name: "", state: "", city: "", referralCode: "" })
+  const [cityOptions, setCityOptions] = useState<string[]>([])
+  const [cityLoading, setCityLoading] = useState(false)
+
+  const sendOTP = trpc.auth.sendRegistrationOTP.useMutation({
+    onSuccess: () => {
+      toast({ title: "OTP Sent", description: "Check your phone for the OTP" })
+      setStep("otp")
+    },
+    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   })
 
-  const onSubmit = async (data: LoginForm) => {
+  const handleSendOtp = async () => {
+    if (!phone || phone.length < 10) {
+      toast({ title: "Error", description: "Enter a valid phone number", variant: "destructive" })
+      return
+    }
     setIsLoading(true)
-    setVerificationError(null)
     try {
-      const result = await signIn("credentials", {
-        email: data.email,
-        password: data.password,
-        redirect: false,
-        callbackUrl: callbackUrl,
-      })
-
-      if (result?.error) {
-        setVerificationError(result.error)
-        toast({ title: "Error", description: result.error, variant: "destructive" })
-      } else {
-        toast({ title: "Success", description: "Welcome back!", variant: "success" })
-        const session = await getSession()
-        const role = (session?.user as any)?.role
-        let target = callbackUrl
-        if (role === "SPONSOR") target = "/dashboard/sponsor"
-        else if (role === "OWNER") target = "/dashboard"
-        else if (role === "ADMIN") target = "/admin"
-        window.location.href = result?.url || target
-      }
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : "Something went wrong"
-      setVerificationError(msg)
-      toast({ title: "Error", description: msg, variant: "destructive" })
+      await sendOTP.mutateAsync({ phone, role: "PLAYER" })
     } finally {
       setIsLoading(false)
     }
   }
+
+  const handleVerifyOtp = async () => {
+    setIsLoading(true)
+    try {
+      const result = await signIn("phone", { phone, otp, redirect: false })
+      if (result?.error === "NEW_USER") {
+        setIsNewUser(true)
+        setStep("register")
+        return
+      }
+      if (result?.error) {
+        toast({ title: "Error", description: result.error, variant: "destructive" })
+        return
+      }
+      const session = await getSession()
+      const role = (session?.user as any)?.role
+      let target = callbackUrl
+      if (role === "SPONSOR") target = "/dashboard/sponsor"
+      else if (role === "OWNER") target = "/dashboard"
+      else if (role === "ADMIN") target = "/admin"
+      window.location.href = result?.url || target
+    } catch (e: any) {
+      toast({ title: "Error", description: e?.message || "Verification failed", variant: "destructive" })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleRegister = async () => {
+    if (!reg.name) {
+      toast({ title: "Error", description: "Name is required", variant: "destructive" })
+      return
+    }
+    setIsLoading(true)
+    try {
+      const result = await signIn("phone", {
+        phone,
+        otp,
+        name: reg.name,
+        state: reg.state,
+        city: reg.city,
+        referralCode: reg.referralCode,
+        redirect: false,
+      })
+      if (result?.error) {
+        toast({ title: "Error", description: result.error, variant: "destructive" })
+        return
+      }
+      const session = await getSession()
+      const role = (session?.user as any)?.role
+      let target = callbackUrl
+      if (role === "SPONSOR") target = "/dashboard/sponsor"
+      else if (role === "OWNER") target = "/dashboard"
+      else if (role === "ADMIN") target = "/admin"
+      window.location.href = result?.url || target
+    } catch (e: any) {
+      toast({ title: "Error", description: e?.message || "Registration failed", variant: "destructive" })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (!reg.state) { setCityOptions([]); return }
+    setCityLoading(true)
+    fetch(`https://countriesnow.space/api/v0.1/countries/state/cities/q?country=India&state=${encodeURIComponent(reg.state)}`)
+      .then((r) => r.json())
+      .then((d) => {
+        const list = Array.isArray(d?.data) ? d.data : []
+        setCityOptions(list.map((c: string) => (c || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "")))
+      })
+      .catch(() => setCityOptions([]))
+      .finally(() => setCityLoading(false))
+  }, [reg.state])
 
   return (
     <div className="min-h-screen bg-[#F7F8FC] text-[#171A2B] flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2.5">
-            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#171A2B] text-lg font-black text-white shadow-lg">
-              S
-            </span>
-            <span className="text-2xl font-black tracking-[-0.06em] text-[#171A2B]">
-              strikora<span className="text-green-500">.</span>
-            </span>
+            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#171A2B] text-lg font-black text-white shadow-lg">S</span>
+            <span className="text-2xl font-black tracking-[-0.06em] text-[#171A2B]">strikora<span className="text-orange-500">.</span></span>
           </Link>
           <p className="text-slate-500 mt-2 text-sm">Book · Play · Compete</p>
         </div>
 
-        <Card className="bg-white border border-slate-200 rounded-3xl shadow-xl shadow-slate-900/5">
+        <Card className="bg-white border border-slate-200 rounded-3xl shadow-xl">
           <CardContent className="p-6 sm:p-8">
-            <h1 className="text-2xl font-black text-center mb-2 tracking-tight text-black">Welcome Back</h1>
-            <p className="text-slate-500 text-center text-sm mb-6">Sign in to your account to continue</p>
-
-            {verificationError && (
-              <div className="mb-4 p-4 rounded-2xl bg-red-50 border border-red-200">
-                <p className="text-sm text-red-700">{verificationError}</p>
-              </div>
+            {step === "phone" && (
+              <>
+                <h1 className="text-2xl font-black tracking-tight mb-6">Sign In</h1>
+                <div className="space-y-2 mb-4">
+                  <Label htmlFor="phone" className="text-slate-700 font-semibold">Mobile Number</Label>
+                  <Input id="phone" placeholder="9876543210" value={phone} onChange={(e) => setPhone(e.target.value)} className="bg-white border-slate-200 text-slate-900" />
+                </div>
+                <Button className="w-full h-12 bg-orange-500 font-bold text-white" onClick={handleSendOtp} disabled={isLoading}>
+                  {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null} Send OTP
+                </Button>
+              </>
             )}
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-slate-700 font-semibold">Email</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                  <Input
-                    id="email"
-                    type="text"
-                    placeholder="you@example.com"
-                    className="pl-10 bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-green-500 focus:ring-green-500"
-                    {...register("email")}
-                    disabled={isLoading}
-                  />
+
+            {step === "otp" && (
+              <>
+                <h1 className="text-2xl font-black tracking-tight mb-6">Verify OTP</h1>
+                <div className="space-y-2 mb-4">
+                  <Label htmlFor="otp" className="text-slate-700 font-semibold">OTP Code</Label>
+                  <Input id="otp" placeholder="Enter OTP" value={otp} onChange={(e) => setOtp(e.target.value)} className="bg-white border-slate-200 text-slate-900 text-center text-2xl tracking-widest" />
                 </div>
-                {errors.email && <p className="text-sm text-red-500">{errors.email.message}</p>}
-              </div>
+                <Button className="w-full h-12 bg-orange-500 font-bold text-white" onClick={handleVerifyOtp} disabled={isLoading}>
+                  {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null} Verify
+                </Button>
+              </>
+            )}
 
-              <div className="space-y-2">
-                <Label htmlFor="password" className="text-slate-700 font-semibold">Password</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                  <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="••••••••"
-                    className="pl-10 pr-10 bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-green-500 focus:ring-green-500"
-                    {...register("password")}
-                    disabled={isLoading}
-                  />
-                  <button
-                    type="button"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-700"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
+            {step === "register" && (
+              <>
+                <h1 className="text-2xl font-black tracking-tight mb-6">Complete Profile</h1>
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <Label className="text-slate-700 font-semibold">Name</Label>
+                    <Input value={reg.name} onChange={(e) => setReg({ ...reg, name: e.target.value })} className="bg-white border-slate-200 text-slate-900" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-slate-700 font-semibold">State</Label>
+                    <Select value={reg.state} onValueChange={(v) => { setReg({ ...reg, state: v, city: "" }); setCityOptions([]) }}>
+                      <SelectTrigger className="bg-white border-slate-200 text-slate-900"><SelectValue placeholder="Select state" /></SelectTrigger>
+                      <SelectContent>
+                        {INDIAN_STATES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-slate-700 font-semibold">City</Label>
+                    <Input
+                      list="login-city-options"
+                      value={reg.city}
+                      onChange={(e) => setReg({ ...reg, city: e.target.value })}
+                      placeholder="Type or select city"
+                      className="bg-white border-slate-200 text-slate-900"
+                    />
+                    <datalist id="login-city-options">
+                      {cityOptions.map((c) => <option key={c} value={c} />)}
+                    </datalist>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-slate-700 font-semibold">Referral Code (optional)</Label>
+                    <Input value={reg.referralCode} onChange={(e) => setReg({ ...reg, referralCode: e.target.value })} className="bg-white border-slate-200 text-slate-900" />
+                  </div>
                 </div>
-                {errors.password && <p className="text-sm text-red-500">{errors.password.message}</p>}
-              </div>
-
-              <div className="flex items-center justify-between">
-                <label className="flex items-center gap-2 cursor-pointer text-sm text-slate-500">
-                  <input type="checkbox" className="rounded border-slate-300 text-green-500 focus:ring-green-500" />
-                  Remember me
-                </label>
-                <Link href="/auth/forgot-password" className="text-sm text-green-600 hover:underline font-medium">
-                  Forgot password?
-                </Link>
-              </div>
-
-              <Button type="submit" className="w-full h-12 bg-green-500 font-bold text-white hover:bg-green-600 rounded-xl shadow-lg shadow-green-500/20" disabled={isLoading}>
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Signing in...
-                  </>
-                ) : (
-                  "Sign In"
-                )}
-              </Button>
-            </form>
-
-            <div className="mt-6 text-center">
-              <p className="text-sm text-slate-500">
-                Don't have an account?{" "}
-                <Link href="/auth/register" className="text-green-600 hover:underline font-bold">
-                  Create account
-                </Link>
-              </p>
-            </div>
-
-            <div className="mt-4 text-center">
-              <p className="text-xs text-slate-400">
-                By continuing, you agree to our{" "}
-                <Link href="/terms" className="underline hover:text-slate-600">Terms of Service</Link>
-                {" "}and{" "}
-                <Link href="/privacy" className="underline hover:text-slate-600">Privacy Policy</Link>
-              </p>
-            </div>
+                <Button className="w-full h-12 bg-orange-500 font-bold text-white mt-4" onClick={handleRegister} disabled={isLoading}>
+                  {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null} Create Account
+                </Button>
+              </>
+            )}
           </CardContent>
         </Card>
-
-        <div className="mt-6 flex items-center justify-center gap-6 text-xs text-slate-400">
-          <span className="flex items-center gap-1.5"><Zap className="h-3.5 w-3.5 text-green-500" /> Instant booking</span>
-          <span className="flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5 text-green-500" /> Secure login</span>
-          <span className="flex items-center gap-1.5"><Trophy className="h-3.5 w-3.5 text-green-500" /> Tournaments</span>
-        </div>
       </div>
     </div>
   )
