@@ -52,7 +52,8 @@ export default function SearchPageContent() {
         const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&accept-language=en`)
         const data = await res.json()
         const addr = data?.address || {}
-        const city = addr.city || addr.town || addr.village || addr.state_district || addr.county
+        const rawCity = addr.city || addr.town || addr.village || addr.state_district || addr.county
+        const city = rawCity ? rawCity.normalize("NFD").replace(/[\u0300-\u036f]/g, "") : rawCity
         if (city) await updateProfile.mutateAsync({ city })
       } catch {}
     }, () => {})

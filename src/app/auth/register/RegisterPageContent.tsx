@@ -84,7 +84,7 @@ export default function RegisterPageContent() {
       .then((r) => r.json())
       .then((d) => {
         const list = Array.isArray(d?.data) ? d.data : []
-        setCityOptions(list)
+        setCityOptions(list.map((c: string) => (c || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "")))
       })
       .catch(() => setCityOptions([]))
       .finally(() => setCityLoading(false))
@@ -98,7 +98,8 @@ export default function RegisterPageContent() {
         const data = await res.json()
         const addr = data?.address || {}
         const stateName = addr.state
-        const cityName = addr.city || addr.town || addr.village || addr.state_district || addr.county
+        const rawCity = addr.city || addr.town || addr.village || addr.state_district || addr.county
+        const cityName = rawCity ? rawCity.normalize("NFD").replace(/[\u0300-\u036f]/g, "") : rawCity
         const states = ["Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisgarh","Goa","Gujarat","Haryana","Himachal Pradesh","Jharkhand","Karnataka","Kerala","Madhya Pradesh","Maharashtra","Manipur","Meghalaya","Mizoram","Nagaland","Odisha","Punjab","Rajasthan","Sikkim","Tamil Nadu","Telangana","Tripura","Uttar Pradesh","Uttarakhand","West Bengal","Andaman and Nicobar Islands","Chandigarh","Dadra and Nagar Haveli and Daman and Diu","Delhi","Jammu and Kashmir","Ladakh","Lakshadweep","Puducherry"]
         if (stateName && states.includes(stateName)) {
           setSelectedState(stateName)

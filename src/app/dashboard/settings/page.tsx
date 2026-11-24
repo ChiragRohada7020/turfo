@@ -68,7 +68,7 @@ export default function SettingsPage() {
       .then((r) => r.json())
       .then((d) => {
         const list = Array.isArray(d?.data) ? d.data : []
-        setCityOptions(list)
+        setCityOptions(list.map((c: string) => (c || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "")))
       })
       .catch(() => setCityOptions([]))
       .finally(() => setCityLoading(false))
@@ -282,7 +282,7 @@ export default function SettingsPage() {
                             updatedForm = {
                               ...updatedForm,
                               address: [a.road, a.suburb, a.neighbourhood].filter(Boolean).join(", ") || updatedForm.address,
-                              city: a.city || a.town || a.village || updatedForm.city,
+                              city: (a.city || a.town || a.village || updatedForm.city || "").normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
                               state: a.state || updatedForm.state,
                               postalCode: a.postcode || updatedForm.postalCode,
                             }

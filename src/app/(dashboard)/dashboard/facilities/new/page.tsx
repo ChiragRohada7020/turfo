@@ -133,7 +133,7 @@ export default function AddFacilityPage() {
       .then((r) => r.json())
       .then((d) => {
         const list = Array.isArray(d?.data) ? d.data : []
-        setCityOptions(list)
+        setCityOptions(list.map((c: string) => (c || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "")))
       })
       .catch(() => setCityOptions([]))
       .finally(() => setCityLoading(false))
