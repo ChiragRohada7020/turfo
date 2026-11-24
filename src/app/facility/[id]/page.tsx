@@ -134,12 +134,13 @@ const { data: availability, isLoading: availabilityLoading, refetch: refetchAvai
   }
 
   useEffect(() => {
-    if (courtParam && courts.some((c: any) => c.id === courtParam)) {
+    if (courts.length === 0) return
+    if (courtParam && courts.some((c: any) => c.id === courtParam) && !selectedCourtId) {
       setSelectedCourtId(courtParam)
-    } else if (courts.length > 0 && !selectedCourtId) {
+    } else if (!selectedCourtId) {
       setSelectedCourtId(courts[0].id)
     }
-  }, [courts, selectedCourtId, courtParam])
+  }, [courts, courtParam])
 
   useEffect(() => {
     setSelectedSlot(null)
