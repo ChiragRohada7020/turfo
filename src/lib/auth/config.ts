@@ -67,6 +67,7 @@ export const authOptions: NextAuthOptions = {
       credentials: {
         phone: { label: "Phone", type: "text" },
         otp: { label: "OTP", type: "text" },
+        role: { label: "Role", type: "text" },
         name: { label: "Name", type: "text" },
         state: { label: "State", type: "text" },
         city: { label: "City", type: "text" },
@@ -96,7 +97,8 @@ export const authOptions: NextAuthOptions = {
           }
           verifiedPhones.set(normalizedPhone, Date.now() + 5 * 60 * 1000)
 
-          const user = await authPrisma.user.findFirst({ where: { phone: normalizedPhone } })
+          const roleFilter = credentials.role ? (credentials.role as any) : undefined
+          const user = await authPrisma.user.findFirst({ where: { phone: normalizedPhone, ...(roleFilter && { role: roleFilter }) } })
           if (!user) throw new Error("NEW_USER")
           if (user.role === "OWNER" && !user.isVerified) {
             throw new Error("Your owner account is pending admin verification.")
@@ -114,7 +116,7 @@ export const authOptions: NextAuthOptions = {
           return { id: existing.id, email: existing.email, name: existing.name, role: existing.role, image: existing.avatarUrl }
         }
 
-        const userRole = "PLAYER"
+        const userRole = credentials.role === "OWNER" ? "OWNER" : credentials.role === "SPONSOR" ? "SPONSOR" : "PLAYER"
         const user = await authPrisma.user.create({
           data: {
             name: credentials.name?.trim() || null,
@@ -123,7 +125,7 @@ export const authOptions: NextAuthOptions = {
             phone: normalizedPhone,
             role: userRole as any,
             isPhoneVerified: true,
-            isVerified: true,
+            isVerified: userRole !== "OWNER",
             city: credentials.city?.trim() || null,
             state: credentials.state?.trim() || null,
           },

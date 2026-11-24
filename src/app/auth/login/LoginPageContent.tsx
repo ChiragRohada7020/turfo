@@ -22,6 +22,7 @@ export default function LoginPageContent() {
 
   const [step, setStep] = useState<"phone" | "otp" | "register">("phone")
   const [phone, setPhone] = useState("")
+  const [role, setRole] = useState("PLAYER")
   const [otp, setOtp] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [isNewUser, setIsNewUser] = useState(false)
@@ -30,7 +31,7 @@ export default function LoginPageContent() {
   const [cityOptions, setCityOptions] = useState<string[]>([])
   const [cityLoading, setCityLoading] = useState(false)
 
-  const sendOTP = trpc.auth.sendRegistrationOTP.useMutation({
+  const sendOTP = trpc.auth.sendLoginOTP.useMutation({
     onSuccess: () => {
       toast({ title: "OTP Sent", description: "Check your phone for the OTP" })
       setStep("otp")
@@ -45,7 +46,7 @@ export default function LoginPageContent() {
     }
     setIsLoading(true)
     try {
-      await sendOTP.mutateAsync({ phone, role: "PLAYER" })
+      await sendOTP.mutateAsync({ phone })
     } finally {
       setIsLoading(false)
     }
@@ -54,7 +55,7 @@ export default function LoginPageContent() {
   const handleVerifyOtp = async () => {
     setIsLoading(true)
     try {
-      const result = await signIn("phone", { phone, otp, redirect: false })
+      const result = await signIn("phone", { phone, otp, role, redirect: false })
       if (result?.error === "NEW_USER") {
         setIsNewUser(true)
         setStep("register")
@@ -65,11 +66,11 @@ export default function LoginPageContent() {
         return
       }
       const session = await getSession()
-      const role = (session?.user as any)?.role
+      const userRole = (session?.user as any)?.role
       let target = callbackUrl
-      if (role === "SPONSOR") target = "/dashboard/sponsor"
-      else if (role === "OWNER") target = "/dashboard"
-      else if (role === "ADMIN") target = "/admin"
+      if (userRole === "SPONSOR") target = "/dashboard/sponsor"
+      else if (userRole === "OWNER") target = "/dashboard"
+      else if (userRole === "ADMIN") target = "/admin"
       window.location.href = result?.url || target
     } catch (e: any) {
       toast({ title: "Error", description: e?.message || "Verification failed", variant: "destructive" })
@@ -89,6 +90,7 @@ export default function LoginPageContent() {
         phone,
         otp,
         name: reg.name,
+        role,
         state: reg.state,
         city: reg.city,
         referralCode: reg.referralCode,
@@ -99,11 +101,11 @@ export default function LoginPageContent() {
         return
       }
       const session = await getSession()
-      const role = (session?.user as any)?.role
+      const userRole = (session?.user as any)?.role
       let target = callbackUrl
-      if (role === "SPONSOR") target = "/dashboard/sponsor"
-      else if (role === "OWNER") target = "/dashboard"
-      else if (role === "ADMIN") target = "/admin"
+      if (userRole === "SPONSOR") target = "/dashboard/sponsor"
+      else if (userRole === "OWNER") target = "/dashboard"
+      else if (userRole === "ADMIN") target = "/admin"
       window.location.href = result?.url || target
     } catch (e: any) {
       toast({ title: "Error", description: e?.message || "Registration failed", variant: "destructive" })
@@ -141,6 +143,17 @@ export default function LoginPageContent() {
             {step === "phone" && (
               <>
                 <h1 className="text-2xl font-black tracking-tight mb-6">Sign In</h1>
+                <div className="space-y-2 mb-4">
+                  <Label className="text-slate-700 font-semibold">Role</Label>
+                  <Select value={role} onValueChange={setRole}>
+                    <SelectTrigger className="bg-white border-slate-200 text-slate-900"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="PLAYER">Player</SelectItem>
+                      <SelectItem value="OWNER">Owner</SelectItem>
+                      <SelectItem value="SPONSOR">Sponsor</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div className="space-y-2 mb-4">
                   <Label htmlFor="phone" className="text-slate-700 font-semibold">Mobile Number</Label>
                   <Input id="phone" placeholder="9876543210" value={phone} onChange={(e) => setPhone(e.target.value)} className="bg-white border-slate-200 text-slate-900" />

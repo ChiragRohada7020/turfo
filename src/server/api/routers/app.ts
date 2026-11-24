@@ -162,6 +162,30 @@ export const appRouter = createTRPCRouter({
          return { id: user.id, email: user.email, name: user.name, phone: user.phone, avatarUrl: user.avatarUrl, address: user.address, city: user.city, state: user.state, postalCode: user.postalCode, latitude: user.latitude, longitude: user.longitude }
       }),
 
+    // Public OTP endpoints for login (via WhatsApp, falls back to SMS) - no existence check
+    sendLoginOTP: publicProcedure
+      .input(z.object({ phone: z.string() }))
+      .mutation(async ({ input }) => {
+        const digits = input.phone.replace(/\D/g, "")
+        const last10 = digits.slice(-10)
+        const normalizedPhone = `+91${last10}`
+
+        let otpSent = false
+        if (isWhatsAppAuthenticated()) {
+          const result = await sendWhatsAppOTP(normalizedPhone)
+          if (result.type === "success") {
+            otpSent = true
+          } else {
+            console.log("[WhatsApp] OTP send failed, falling back to SMS:", result.message)
+          }
+        }
+        if (!otpSent) {
+          const result = await authyo.sendOTP(normalizedPhone)
+          if (!result.success) throw new Error(result.message)
+        }
+        return { success: true }
+      }),
+
     // Public OTP endpoints for registration (via WhatsApp, falls back to SMS)
     sendRegistrationOTP: publicProcedure
       .input(z.object({ phone: z.string(), email: z.string().email().optional(), role: z.nativeEnum(Role).optional() }))
