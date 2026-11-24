@@ -64,7 +64,7 @@ function FacilityDetailInner() {
   const [activeImageIndex, setActiveImageIndex] = useState(0)
   const [showBookingModal, setShowBookingModal] = useState(false)
 
-  const { data: facility, isLoading: facilityLoading } = trpc.facilities.get.useQuery({ id: facilityId })
+  const { data: facility, isLoading: facilityLoading } = trpc.facilities.get.useQuery({ id: facilityId }, { refetchOnMount: "always" })
   const isOwner = !!session?.user?.id && facility?.ownerId === session.user.id
   const courtForQuery = selectedCourtId || ""
 const { data: availability, isLoading: availabilityLoading, refetch: refetchAvailability } = trpc.courts.availability.useQuery(
