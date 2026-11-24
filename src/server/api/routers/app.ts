@@ -1222,6 +1222,23 @@ export const appRouter = createTRPCRouter({
           })
         }, { isolationLevel: "Serializable" })
 
+        // Credit reward points for player bookings (5 points per hour booked)
+        if (!isOwnerBooking) {
+          try {
+            const { creditPoints } = await import("@/lib/tasks/reward")
+            const rewardPoints = Math.max(1, Math.round((duration / 60) * 5))
+            await creditPoints({
+              userId: ctx.session.user.id,
+              points: rewardPoints,
+              description: `Reward for booking (${duration} min)`,
+              referenceId: booking.id,
+              idempotencyKey: `booking-reward:${booking.id}`,
+            })
+          } catch (e) {
+            console.error("Failed to credit reward points:", e)
+          }
+        }
+
         // Create notification for facility owner + send WhatsApp message
         try {
           const facility = await prisma.facility.findUnique({

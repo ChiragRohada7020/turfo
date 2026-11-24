@@ -89,20 +89,9 @@ export async function analyzePlayer(userId: string): Promise<PlayerSituation> {
 
   const engagementScore = Math.min(100, completedBookings * 5 + Math.max(0, 30 - inactivityDays) * 2 + taskCompletionCount * 3)
 
-  const allSports = [
-    "FOOTBALL",
-    "CRICKET",
-    "BADMINTON",
-    "TENNIS",
-    "BASKETBALL",
-    "VOLLEYBALL",
-    "SWIMMING",
-    "GYM",
-    "PICKLEBALL",
-    "TABLE_TENNIS",
-    "PS_GAMES",
-  ]
-  const sportsToExplore = allSports.filter((s) => !sportCounts[s])
+  const presentSportRows = await prisma.court.findMany({ select: { sportType: true }, distinct: ["sportType"] })
+  const allSports = presentSportRows.map((r: any) => r.sportType).filter(Boolean)
+  const sportsToExplore = allSports.filter((s: string) => !sportCounts[s])
 
   const now = Date.now()
   const firstBooking = bookings.length ? new Date(bookings[bookings.length - 1].createdAt) : null
