@@ -76,11 +76,7 @@ export default function RegisterPageContent() {
     if (!selectedState) { setCityOptions([]); setValue("city", ""); return }
     setValue("state", selectedState)
     setCityLoading(true)
-    fetch("https://countriesnow.space/api/v0.1/countries/state/cities", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ country: "India", state: selectedState }),
-    })
+    fetch(`https://countriesnow.space/api/v0.1/countries/state/cities/q?country=India&state=${encodeURIComponent(selectedState)}`)
       .then((r) => r.json())
       .then((d) => {
         const list = Array.isArray(d?.data) ? d.data : []

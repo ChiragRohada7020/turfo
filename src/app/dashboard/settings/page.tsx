@@ -60,11 +60,7 @@ export default function SettingsPage() {
   useEffect(() => {
     if (!form.state) { setCityOptions([]); return }
     setCityLoading(true)
-    fetch("https://countriesnow.space/api/v0.1/countries/state/cities", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ country: "India", state: form.state }),
-    })
+    fetch(`https://countriesnow.space/api/v0.1/countries/state/cities/q?country=India&state=${encodeURIComponent(form.state)}`)
       .then((r) => r.json())
       .then((d) => {
         const list = Array.isArray(d?.data) ? d.data : []
