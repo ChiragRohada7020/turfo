@@ -65,6 +65,8 @@ export function BookingModal({ facility, courtId, date, slot, onClose }: Booking
 
 
 
+  const utils = trpc.useUtils()
+
   const createBooking = trpc.bookings.create.useMutation({
     onSuccess: (data) => {
       if (data.paymentLink) {
@@ -83,6 +85,9 @@ export function BookingModal({ facility, courtId, date, slot, onClose }: Booking
       } else {
         // Offline payment - booking confirmed immediately
         toast({ title: "Booking Confirmed!", description: "Your booking has been confirmed. Payment to be collected at venue." })
+        utils.bookings.myBookings.invalidate()
+        utils.bookings.ownerBookings.invalidate()
+        utils.bookings.upcoming.invalidate()
         onClose()
         router.push(`/search`)
       }

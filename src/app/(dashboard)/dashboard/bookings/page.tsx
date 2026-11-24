@@ -71,6 +71,7 @@ export default function BookingsPage() {
   }, {
     keepPreviousData: true,
     enabled: !isOwner,
+    refetchOnMount: "always",
   })
   const { data: ownerData, isLoading: ownerLoading, refetch: refetchOwner } = trpc.bookings.ownerBookings.useQuery({
     status:
@@ -81,6 +82,7 @@ export default function BookingsPage() {
   }, {
     keepPreviousData: true,
     enabled: isOwner,
+    refetchOnMount: "always",
   })
 
   const data: any = isOwner ? ownerData : myData
