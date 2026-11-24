@@ -45,7 +45,6 @@ export default function SearchPageContent() {
   const { data: profile } = trpc.auth.getProfile.useQuery()
   const updateProfile = trpc.auth.updateProfile.useMutation()
   useEffect(() => {
-    if (profile?.city) return
     if (typeof navigator === "undefined" || !navigator.geolocation) return
     navigator.geolocation.getCurrentPosition(async (pos) => {
       try {
@@ -53,15 +52,19 @@ export default function SearchPageContent() {
         const data = await res.json()
         const addr = data?.address || {}
         const rawCity = addr.city || addr.town || addr.village || addr.state_district || addr.county
-        const city = rawCity ? rawCity.normalize("NFD").replace(/[\u0300-\u036f]/g, "") : rawCity
-        if (city) await updateProfile.mutateAsync({ city })
+        const detected = rawCity ? rawCity.normalize("NFD").replace(/[\u0300-\u036f]/g, "") : rawCity
+        if (detected) {
+          setGeoCity(detected)
+          await updateProfile.mutateAsync({ city: detected })
+        }
       } catch {}
     }, () => {})
-  }, [profile])
+  }, [])
   const { data: sportTypesData } = trpc.facilities.sportTypes.useQuery()
   const { data: unreadNotifications } = trpc.notifications.list.useQuery({ isRead: false, limit: 1 })
 
-  const city = profile?.city || ""
+  const [geoCity, setGeoCity] = useState("")
+  const city = geoCity || profile?.city || ""
   const sportFilters = ["All Sports", ...(sportTypesData?.map((s: any) => String(s.sport).replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c: string) => c.toUpperCase())) ?? [])]
 
   const { data: facilitiesData } = trpc.facilities.list.useQuery({
@@ -115,7 +118,7 @@ export default function SearchPageContent() {
               <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-500 text-white">
                 <CalendarDays className="h-6 w-6" />
               </div>
-              <h1 className="text-2xl font-black tracking-tight">Book a Game</h1>
+              <h1 className="text-2xl font-black tracking-tight">Book a Game{city ? ` in ${city}` : ""}</h1>
               <p className="mt-2 text-sm text-slate-500">Please sign in to book turfs.</p>
               <Link href="/auth/login?callbackUrl=/search" className="mt-6 w-full">
                 <Button className="w-full h-12 bg-orange-500 font-bold text-white hover:bg-orange-600 rounded-xl shadow-lg shadow-orange-500/20">Sign In</Button>
