@@ -145,6 +145,19 @@ export const appRouter = createTRPCRouter({
            where: { id: ctx.session.user.id },
            data: input,
          })
+         // Sync owner location to their facilities so booking location buttons use the pinned location
+         if (ctx.session.user.role === "OWNER" && (input.latitude !== undefined || input.longitude !== undefined || input.address !== undefined || input.city !== undefined || input.state !== undefined)) {
+           await prisma.facility.updateMany({
+             where: { ownerId: ctx.session.user.id },
+             data: {
+               ...(input.latitude !== undefined && input.latitude !== null && { latitude: input.latitude }),
+               ...(input.longitude !== undefined && input.longitude !== null && { longitude: input.longitude }),
+               ...(input.address !== undefined && { address: input.address }),
+               ...(input.city !== undefined && { city: input.city }),
+               ...(input.state !== undefined && { state: input.state }),
+             },
+           })
+         }
          try { const { trackTaskProgress } = await import("@/lib/rewards/taskProgress"); await trackTaskProgress(ctx.session.user.id, "COMPLETE_PROFILE" as any, 1) } catch (e) { console.error(e) }
          return { id: user.id, email: user.email, name: user.name, phone: user.phone, avatarUrl: user.avatarUrl, address: user.address, city: user.city, state: user.state, postalCode: user.postalCode, latitude: user.latitude, longitude: user.longitude }
       }),
