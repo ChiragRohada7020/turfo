@@ -153,7 +153,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0B1020] text-white">
+    <div className="min-h-screen bg-gradient-to-br from-[#0B1020] via-[#0f172a] to-[#1e293b] text-white">
       <Sidebar session={session} mobileOpen={sidebarOpen} onMobileOpenChange={setSidebarOpen} />
       <div className="md:pl-[262px]">
         <TopNavbar onMenuClick={() => setSidebarOpen(true)} />
@@ -164,7 +164,7 @@ export default function SettingsPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            <Card className="bg-[#131C2E] border-white/[0.08] rounded-2xl">
+            <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl">
               <CardHeader>
                 <CardTitle className="text-lg font-bold flex items-center gap-2">
                   <User className="h-5 w-5 text-orange-400" /> Profile
@@ -173,7 +173,7 @@ export default function SettingsPage() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label className="text-slate-300">Name</Label>
-                  <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="bg-[#182238] border-white/[0.08] text-white" />
+                  <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="bg-white/5 border border-white/10 text-white rounded-xl focus:border-orange-400/50 focus:ring-orange-400/30" />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-slate-300">Phone</Label>
@@ -182,7 +182,7 @@ export default function SettingsPage() {
               </CardContent>
             </Card>
 
-            <Card className="bg-[#131C2E] border-white/[0.08] rounded-2xl">
+            <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl">
               <CardHeader>
                 <CardTitle className="text-lg font-bold flex items-center gap-2">
                   <User className="h-5 w-5 text-orange-400" /> Profile
@@ -191,7 +191,7 @@ export default function SettingsPage() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label className="text-slate-300">Name</Label>
-                  <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="bg-[#182238] border-white/[0.08] text-white" />
+                  <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="bg-white/5 border border-white/10 text-white rounded-xl focus:border-orange-400/50 focus:ring-orange-400/30" />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-slate-300">Email</Label>
@@ -206,7 +206,7 @@ export default function SettingsPage() {
                   <Input value={session?.user?.role || ""} disabled className="bg-[#182238] border-white/[0.08] text-slate-400" />
                 </div>
                 {session?.user?.role === "PLAYER" && (
-                  <div className="p-3 bg-[#17222d] rounded-lg border border-white/[0.08]">
+                  <div className="p-3 bg-white/5 rounded-2xl border border-white/10">
                     <p className="text-xs text-slate-400">CIBIL Score</p>
                     <p className="text-lg font-bold text-orange-400">{profile?.cibilScore || 750}</p>
                     <p className="text-[10px] text-slate-500 mt-1">Join games and complete bookings to improve your score</p>
@@ -215,7 +215,7 @@ export default function SettingsPage() {
               </CardContent>
             </Card>
 
-            <Card className="bg-[#131C2E] border-white/[0.08] rounded-2xl">
+            <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl">
                 <CardHeader>
                   <CardTitle className="text-lg font-bold flex items-center gap-2">
                     <MapPin className="h-5 w-5 text-orange-400" /> Location
@@ -224,13 +224,13 @@ export default function SettingsPage() {
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
                     <Label className="text-slate-300">Address</Label>
-                    <Textarea value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} className="bg-[#182238] border-white/[0.08] text-white" />
+                    <Textarea value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} className="bg-white/5 border border-white/10 text-white rounded-xl focus:border-orange-400/50 focus:ring-orange-400/30" />
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label className="text-slate-300">State</Label>
                       <Select value={form.state} onValueChange={(v) => setForm({ ...form, state: v, city: "" })}>
-                        <SelectTrigger className="bg-[#182238] border-white/[0.08] text-white">
+                        <SelectTrigger className="bg-white/5 border border-white/10 text-white rounded-xl focus:border-orange-400/50 focus:ring-orange-400/30">
                           <SelectValue placeholder="Select state" />
                         </SelectTrigger>
                         <SelectContent>
@@ -250,7 +250,7 @@ export default function SettingsPage() {
                         onChange={(e) => setForm({ ...form, city: e.target.value })}
                         placeholder={cityLoading ? "Loading cities..." : "Type or select city"}
                         disabled={!form.state || cityLoading}
-                        className="bg-[#182238] border-white/[0.08] text-white"
+                        className="bg-white/5 border border-white/10 text-white rounded-xl focus:border-orange-400/50 focus:ring-orange-400/30"
                       />
                       <datalist id="settings-city-options">
                         {cityOptions.map((c) => (
@@ -262,7 +262,7 @@ export default function SettingsPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label className="text-slate-300">Postal Code</Label>
-                      <Input value={form.postalCode} onChange={(e) => setForm({ ...form, postalCode: e.target.value })} className="bg-[#182238] border-white/[0.08] text-white" />
+                      <Input value={form.postalCode} onChange={(e) => setForm({ ...form, postalCode: e.target.value })} className="bg-white/5 border border-white/10 text-white rounded-xl focus:border-orange-400/50 focus:ring-orange-400/30" />
                     </div>
                     <div className="space-y-2 flex items-end">
                       <Button type="button" variant="outline" className="w-full border-white/[0.08] text-white" onClick={() => {
@@ -337,7 +337,7 @@ export default function SettingsPage() {
                   <p className="text-xs text-slate-500">This location will be used as default for new facilities you create.</p>
                 </CardContent>
               </Card>
-            <Card className="bg-[#131C2E] border-white/[0.08] rounded-2xl">
+            <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl">
               <CardHeader>
                 <CardTitle className="text-lg font-bold flex items-center gap-2">
                   <User className="h-5 w-5 text-orange-400" /> Change Password
@@ -346,15 +346,15 @@ export default function SettingsPage() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label className="text-slate-300">Current Password</Label>
-                  <Input type="password" value={passwordForm.currentPassword} onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })} className="bg-[#182238] border-white/[0.08] text-white" />
+                  <Input type="password" value={passwordForm.currentPassword} onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })} className="bg-white/5 border border-white/10 text-white rounded-xl focus:border-orange-400/50 focus:ring-orange-400/30" />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-slate-300">New Password</Label>
-                  <Input type="password" value={passwordForm.newPassword} onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })} className="bg-[#182238] border-white/[0.08] text-white" />
+                  <Input type="password" value={passwordForm.newPassword} onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })} className="bg-white/5 border border-white/10 text-white rounded-xl focus:border-orange-400/50 focus:ring-orange-400/30" />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-slate-300">Confirm Password</Label>
-                  <Input type="password" value={passwordForm.confirmPassword} onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })} className="bg-[#182238] border-white/[0.08] text-white" />
+                  <Input type="password" value={passwordForm.confirmPassword} onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })} className="bg-white/5 border border-white/10 text-white rounded-xl focus:border-orange-400/50 focus:ring-orange-400/30" />
                 </div>
                 <Button type="button" onClick={handlePasswordChange} className="w-full bg-white/10 text-white hover:bg-white/20" disabled={isLoading}>
                   {isLoading ? "Changing..." : "Change Password"}
