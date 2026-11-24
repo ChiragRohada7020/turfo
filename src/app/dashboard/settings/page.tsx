@@ -179,24 +179,6 @@ export default function SettingsPage() {
                   <Label className="text-slate-300">Phone</Label>
                   <Input value={form.phone} disabled className="bg-[#182238] border-white/[0.08] text-slate-400" />
                 </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl">
-              <CardHeader>
-                <CardTitle className="text-lg font-bold flex items-center gap-2">
-                  <User className="h-5 w-5 text-orange-400" /> Profile
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label className="text-slate-300">Name</Label>
-                  <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="bg-white/5 border border-white/10 text-white rounded-xl focus:border-orange-400/50 focus:ring-orange-400/30" />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-slate-300">Phone</Label>
-                  <Input value={form.phone} disabled className="bg-[#182238] border-white/[0.08] text-slate-400" />
-                </div>
                 <div className="space-y-2">
                   <Label className="text-slate-300">Role</Label>
                   <Input value={session?.user?.role || ""} disabled className="bg-[#182238] border-white/[0.08] text-slate-400" />
