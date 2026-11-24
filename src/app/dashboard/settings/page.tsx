@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ArrowLeft, MapPin, Save, User } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import { trpc } from "@/lib/trpc"
@@ -18,6 +19,8 @@ export default function SettingsPage() {
   const { data: session, status } = useSession()
   const [isLoading, setIsLoading] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [cityOptions, setCityOptions] = useState<string[]>([])
+  const [cityLoading, setCityLoading] = useState(false)
   const isOwner = session?.user?.role === "OWNER" || session?.user?.role === "ADMIN"
 
   const [form, setForm] = useState({
@@ -53,6 +56,23 @@ export default function SettingsPage() {
       })
     }
   }, [profile])
+
+  useEffect(() => {
+    if (!form.state) { setCityOptions([]); return }
+    setCityLoading(true)
+    fetch("https://countriesnow.space/api/v0.1/countries/state/cities", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ country: "India", state: form.state }),
+    })
+      .then((r) => r.json())
+      .then((d) => {
+        const list = Array.isArray(d?.data) ? d.data : []
+        setCityOptions(list)
+      })
+      .catch(() => setCityOptions([]))
+      .finally(() => setCityLoading(false))
+  }, [form.state])
 
   const updateProfile = trpc.auth.updateProfile.useMutation({
     onSuccess: () => {
@@ -212,12 +232,35 @@ export default function SettingsPage() {
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label className="text-slate-300">City</Label>
-                      <Input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} className="bg-[#182238] border-white/[0.08] text-white" />
+                      <Label className="text-slate-300">State</Label>
+                      <Select value={form.state} onValueChange={(v) => setForm({ ...form, state: v, city: "" })}>
+                        <SelectTrigger className="bg-[#182238] border-white/[0.08] text-white">
+                          <SelectValue placeholder="Select state" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {[
+                            "Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisgarh","Goa","Gujarat","Haryana","Himachal Pradesh","Jharkhand","Karnataka","Kerala","Madhya Pradesh","Maharashtra","Manipur","Meghalaya","Mizoram","Nagaland","Odisha","Punjab","Rajasthan","Sikkim","Tamil Nadu","Telangana","Tripura","Uttar Pradesh","Uttarakhand","West Bengal","Andaman and Nicobar Islands","Chandigarh","Dadra and Nagar Haveli and Daman and Diu","Delhi","Jammu and Kashmir","Ladakh","Lakshadweep","Puducherry",
+                          ].map((s) => (
+                            <SelectItem key={s} value={s}>{s}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-slate-300">State</Label>
-                      <Input value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} className="bg-[#182238] border-white/[0.08] text-white" />
+                      <Label className="text-slate-300">City</Label>
+                      <Select value={form.city} onValueChange={(v) => setForm({ ...form, city: v })} disabled={!form.state || cityLoading}>
+                        <SelectTrigger className="bg-[#182238] border-white/[0.08] text-white">
+                          <SelectValue placeholder={cityLoading ? "Loading cities..." : "Select city"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {cityOptions.map((c) => (
+                            <SelectItem key={c} value={c}>{c}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {cityOptions.length === 0 && form.state && !cityLoading && (
+                        <Input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} placeholder="Enter city manually" className="bg-[#182238] border-white/[0.08] text-white" />
+                      )}
                     </div>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
