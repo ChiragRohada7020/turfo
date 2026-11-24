@@ -23,6 +23,7 @@ const registerSchema = z.object({
   confirmPassword: z.string(),
   phone: z.string().min(10, "Phone number is required"),
   role: z.enum(["PLAYER", "OWNER", "SPONSOR"]).default("PLAYER"),
+  city: z.string().optional(),
   referralCode: z.string().optional(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
@@ -58,6 +59,7 @@ export default function RegisterPageContent() {
       confirmPassword: "",
       phone: "",
       role: defaultRole,
+      city: "",
       referralCode: searchParams.get("ref") || "",
     },
   })
@@ -96,6 +98,7 @@ export default function RegisterPageContent() {
           password: data.password,
           phone: verifiedPhone || data.phone,
           role: data.role,
+          city: data.city,
            phoneVerified: true,
            referralCode: data.referralCode || searchParams.get("ref") || undefined,
         }),
@@ -300,6 +303,16 @@ export default function RegisterPageContent() {
                   />
                 </div>
                 {errors.phone && <p className="text-sm text-red-500">{errors.phone.message}</p>}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="city" className="text-slate-700 font-semibold">City</Label>
+                <Input
+                  id="city"
+                  placeholder="Your city"
+                  className="bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-orange-500 focus:ring-orange-500"
+                  {...register("city")}
+                />
               </div>
 
               <div className="space-y-2">

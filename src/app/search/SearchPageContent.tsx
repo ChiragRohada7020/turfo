@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { useSearchParams } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
@@ -43,6 +43,20 @@ export default function SearchPageContent() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const { data: profile } = trpc.auth.getProfile.useQuery()
+  const updateProfile = trpc.auth.updateProfile.useMutation()
+  useEffect(() => {
+    if (profile?.city) return
+    if (typeof navigator === "undefined" || !navigator.geolocation) return
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`)
+        const data = await res.json()
+        const addr = data?.address || {}
+        const city = addr.city || addr.town || addr.village || addr.state_district || addr.county
+        if (city) await updateProfile.mutateAsync({ city })
+      } catch {}
+    }, () => {})
+  }, [profile])
   const { data: sportTypesData } = trpc.facilities.sportTypes.useQuery()
   const { data: unreadNotifications } = trpc.notifications.list.useQuery({ isRead: false, limit: 1 })
 

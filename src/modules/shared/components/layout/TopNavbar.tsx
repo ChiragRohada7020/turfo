@@ -16,8 +16,9 @@ interface TopNavbarProps {
   searchSlot?: React.ReactNode
 }
 
-export function TopNavbar({ onMenuClick, showLocation = false, location = "Pachora, Maharashtra", searchSlot }: TopNavbarProps) {
+export function TopNavbar({ onMenuClick, showLocation = false, location, searchSlot }: TopNavbarProps) {
   const { data: session } = useSession()
+  const { data: profile } = trpc.auth.getProfile.useQuery(undefined, { enabled: !!session })
   const { toast } = useToast()
   const { data: unreadNotifications } = trpc.notifications.list.useQuery({ isRead: false, limit: 1 }, { refetchInterval: 10000 })
   const prevCount = useRef(0)
@@ -38,7 +39,7 @@ export function TopNavbar({ onMenuClick, showLocation = false, location = "Pacho
       {showLocation && (
         <div className="hidden shrink-0 items-center gap-2 rounded-xl border border-white/10 bg-[#121c25] px-3 py-2 text-sm text-slate-300 sm:flex">
           <MapPin className="h-4 w-4" />
-          {location}
+          {location || profile?.city || "Your Location"}
           <ChevronDown className="h-4 w-4 text-slate-500" />
         </div>
       )}
