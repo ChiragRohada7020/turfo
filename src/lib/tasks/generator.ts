@@ -192,7 +192,7 @@ async function aiSpecs(situation: any, settings: any): Promise<TaskSpec[] | null
           },
           {
             role: "user",
-            content: `Player situation: ${JSON.stringify(situation)}. Available sports on the platform: ${JSON.stringify(await (async () => { const rows = await prisma.court.findMany({ select: { sportType: true }, distinct: ["sportType"] }); return rows.map((r: any) => r.sportType) })())}. Only create tasks for sports in this list. Max reward per task: ${settings.maxRewardPointsPerTask}. Max active tasks: ${settings.maxActiveTasks}. Generate up to ${settings.maxActiveTasks} relevant, non-duplicate personalized tasks. Financially reasonable rewards. Return JSON array only.`,
+            content: `Player situation: ${JSON.stringify(situation)}. Available sports on the platform: ${JSON.stringify(await (async () => { const rows = await prisma.facility.findMany({ select: { sportTypes: true } }); return Array.from(new Set(rows.flatMap((r: any) => r.sportTypes || []))) })())}. Only create tasks for sports in this list. Max reward per task: ${settings.maxRewardPointsPerTask}. Max active tasks: ${settings.maxActiveTasks}. Generate up to ${settings.maxActiveTasks} relevant, non-duplicate personalized tasks. Financially reasonable rewards. Return JSON array only.`,
           },
         ],
         temperature: 0.3,
