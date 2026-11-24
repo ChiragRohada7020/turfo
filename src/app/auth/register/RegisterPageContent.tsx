@@ -47,6 +47,7 @@ export default function RegisterPageContent() {
   const [selectedState, setSelectedState] = useState("")
   const [cityOptions, setCityOptions] = useState<string[]>([])
   const [cityLoading, setCityLoading] = useState(false)
+  const [detectedCity, setDetectedCity] = useState("")
 
   const {
     register,
@@ -88,6 +89,34 @@ export default function RegisterPageContent() {
       .catch(() => setCityOptions([]))
       .finally(() => setCityLoading(false))
   }, [selectedState])
+
+  useEffect(() => {
+    if (selectedState || typeof navigator === "undefined" || !navigator.geolocation) return
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&addressdetails=1`)
+        const data = await res.json()
+        const addr = data?.address || {}
+        const stateName = addr.state
+        const cityName = addr.city || addr.town || addr.village || addr.state_district || addr.county
+        const states = ["Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisgarh","Goa","Gujarat","Haryana","Himachal Pradesh","Jharkhand","Karnataka","Kerala","Madhya Pradesh","Maharashtra","Manipur","Meghalaya","Mizoram","Nagaland","Odisha","Punjab","Rajasthan","Sikkim","Tamil Nadu","Telangana","Tripura","Uttar Pradesh","Uttarakhand","West Bengal","Andaman and Nicobar Islands","Chandigarh","Dadra and Nagar Haveli and Daman and Diu","Delhi","Jammu and Kashmir","Ladakh","Lakshadweep","Puducherry"]
+        if (stateName && states.includes(stateName)) {
+          setSelectedState(stateName)
+          if (cityName) setDetectedCity(cityName)
+        }
+      } catch {}
+    }, () => {})
+  }, [])
+
+  useEffect(() => {
+    if (!detectedCity) return
+    if (cityOptions.includes(detectedCity)) {
+      setValue("city", detectedCity)
+    } else if (cityOptions.length > 0) {
+      setCityOptions((prev) => (prev.includes(detectedCity) ? prev : [detectedCity, ...prev]))
+      setValue("city", detectedCity)
+    }
+  }, [cityOptions, detectedCity])
 
   const sendOTP = trpc.auth.sendRegistrationOTP.useMutation({
     onSuccess: () => {
