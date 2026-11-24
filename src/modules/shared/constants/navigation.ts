@@ -13,6 +13,7 @@ import {
   MapPin,
   TrendingUp,
   QrCode,
+  Phone,
 } from "lucide-react"
 
 export type NavItem = {
@@ -68,6 +69,8 @@ export const ADMIN_NAV: NavItem[] = [
   { name: "Facilities", href: "/admin?tab=facilities", icon: Building2 },
   { name: "Payouts", href: "/admin?tab=payouts", icon: Wallet },
   { name: "Pending Owners", href: "/admin?tab=pending", icon: ShieldCheck },
+  { name: "WhatsApp OTP", href: "/admin/whatsapp", icon: Phone },
+  { name: "Website QR", href: "/admin/website-qr", icon: QrCode },
   { name: "Settings", href: "/admin?tab=settings", icon: Settings },
   { name: "Support", href: "/support", icon: ShieldCheck },
 ]

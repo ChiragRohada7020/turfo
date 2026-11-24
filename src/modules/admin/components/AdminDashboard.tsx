@@ -25,6 +25,7 @@ import { Sidebar } from "@/components/layout/Sidebar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { trpc } from "@/lib/trpc"
 import { formatCurrency } from "@/lib/utils"
+import { WhatsAppAuthCard } from "./WhatsAppAuthCard"
 
 export default function AdminPage() {
   const { data: session } = useSession()
@@ -168,6 +169,9 @@ export default function AdminPage() {
               </div>
             ))}
           </div>
+
+          {/* WhatsApp OTP Session */}
+          <WhatsAppAuthCard />
 
           {/* Pending Owners */}
           {pendingOwners.length > 0 && (

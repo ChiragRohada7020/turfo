@@ -487,25 +487,35 @@ const { data: availability, isLoading: availabilityLoading, refetch: refetchAvai
           const mm = String(m % 60).padStart(2, "0")
           times.push(`${hh}:${mm}`)
         }
-         return times.map((time) => {
+         // Helper: convert time string to minutes, treating 00:00 as 24:00 (1440) for end times
+     const toSlotMins = (t: string, isEnd = false) => {
+       const [h, m] = t.split(":").map(Number)
+       const mins = h * 60 + m
+       if (isEnd && mins === 0) return 1440
+       return mins
+     }
+          const startIndex = selectedSlot?.start ? times.indexOf(selectedSlot.start) : -1
+          return times.map((time, idx) => {
+           // Effective minutes: if time < start, it's next day (overnight)
+           const effectiveTimeMins = selectedSlot?.start && toSlotMins(time) < toSlotMins(selectedSlot.start) ? toSlotMins(time) + 1440 : toSlotMins(time)
            const isStartSelected = selectedSlot?.start === time
            const isEndSelected = selectedSlot?.end === time
-           const isInRange = selectedSlot?.start && selectedSlot?.end && time > selectedSlot.start && time < selectedSlot.end
-           const isBooked = !availability?.slots?.some((s: any) => s.startTime <= time && s.endTime > time) && !availability?.slots?.some((s: any) => s.startTime === time)
-           const isAvailableTime = availability?.slots?.some((s: any) => s.startTime <= time && s.endTime > time) ?? false
+           const isInRange = selectedSlot?.start && selectedSlot?.end && effectiveTimeMins > toSlotMins(selectedSlot.start) && effectiveTimeMins < toSlotMins(selectedSlot.end, true)
+           const isBooked = !availability?.slots?.some((s: any) => toSlotMins(s.startTime) <= toSlotMins(time) && toSlotMins(s.endTime, true) > toSlotMins(time)) && !availability?.slots?.some((s: any) => s.startTime === time)
+           const isAvailableTime = availability?.slots?.some((s: any) => toSlotMins(s.startTime) <= toSlotMins(time) && toSlotMins(s.endTime, true) > toSlotMins(time)) ?? false
            const canSelectAsStart = !selectedSlot?.start || selectedSlot.start === time
-           const canSelectAsEnd = selectedSlot?.start && time > selectedSlot.start
-           const isInBookedRange = !availability?.slots?.some((s: any) => s.startTime <= time && s.endTime > time)
+           const canSelectAsEnd = selectedSlot?.start && effectiveTimeMins > toSlotMins(selectedSlot.start)
+           const isInBookedRange = !availability?.slots?.some((s: any) => toSlotMins(s.startTime) <= toSlotMins(time) && toSlotMins(s.endTime, true) > toSlotMins(time))
            let wouldOverlapBooked = false
-           if (selectedSlot?.start && time > selectedSlot.start) {
-             const startMins = parseInt(selectedSlot.start.split(":")[0]) * 60 + parseInt(selectedSlot.start.split(":")[1])
-             const endMins = parseInt(time.split(":")[0]) * 60 + parseInt(time.split(":")[1])
+           if (selectedSlot?.start && toSlotMins(time, true) > toSlotMins(selectedSlot.start)) {
+             const startMins = toSlotMins(selectedSlot.start)
+             const endMins = toSlotMins(time, true)
              for (let m = startMins + 30; m < endMins; m += 30) {
-               const hh = String(Math.floor(m / 60)).padStart(2, "0")
+               const hh = String(Math.floor((m % 1440) / 60)).padStart(2, "0")
                const mm = String(m % 60).padStart(2, "0")
                const t = `${hh}:${mm}`
-               if (!availability?.slots?.some((s: any) => s.startTime <= t && s.endTime > t)) {
-                 const slotExists = availability?.slots?.some((s: any) => s.startTime === t || (s.startTime < t && s.endTime > t))
+               if (!availability?.slots?.some((s: any) => toSlotMins(s.startTime) <= toSlotMins(t) && toSlotMins(s.endTime, true) > toSlotMins(t))) {
+                 const slotExists = availability?.slots?.some((s: any) => s.startTime === t || (toSlotMins(s.startTime) < toSlotMins(t) && toSlotMins(s.endTime, true) > toSlotMins(t)))
                  if (!slotExists) { wouldOverlapBooked = true; break }
                }
              }
@@ -513,11 +523,11 @@ const { data: availability, isLoading: availabilityLoading, refetch: refetchAvai
            let bgClass = "border-white/10 text-white hover:border-lime-400/50 active:bg-white/5"
            if (isStartSelected || isEndSelected) bgClass = "bg-lime-400 border-lime-400 text-[#070d12] font-bold"
            else if (isInRange) bgClass = "bg-lime-400/20 border-lime-400/30 text-lime-300"
-           else if (selectedSlot?.start && wouldOverlapBooked) bgClass = "border-red-500/50 text-red-400 bg-red-500/10 cursor-not-allowed"
+            else if (selectedSlot?.start && (wouldOverlapBooked || !isAvailableTime)) bgClass = "border-red-500/50 text-red-400 bg-red-500/10 cursor-not-allowed"
            else if (!isAvailableTime && !selectedSlot?.start) bgClass = "border-red-500/50 text-red-400 bg-red-500/10 cursor-not-allowed"
-           else if (selectedSlot?.start && time <= selectedSlot.start) bgClass = "border-white/5 text-slate-600 cursor-not-allowed opacity-40"
-           else if (!isOwner && selectedSlot?.start && (() => { const sm2 = parseInt(selectedSlot.start.split(":")[0]) * 60 + parseInt(selectedSlot.start.split(":")[1]); const em2 = parseInt(time.split(":")[0]) * 60 + parseInt(time.split(":")[1]); return (em2 - sm2) > 60 })()) bgClass = "border-white/5 text-slate-600 cursor-not-allowed opacity-40"
-            const isDisabled = selectedSlot?.start ? (time < selectedSlot.start || wouldOverlapBooked || (!isOwner && (() => { const sm2 = parseInt(selectedSlot.start.split(":")[0]) * 60 + parseInt(selectedSlot.start.split(":")[1]); const em2 = parseInt(time.split(":")[0]) * 60 + parseInt(time.split(":")[1]); return (em2 - sm2) > 60 })())) : !isAvailableTime
+           else if (selectedSlot?.start && effectiveTimeMins <= toSlotMins(selectedSlot.start)) bgClass = "border-white/5 text-slate-600 cursor-not-allowed opacity-40"
+            else if (!isOwner && selectedSlot?.start && (() => { const sm2 = toSlotMins(selectedSlot.start); let em2 = toSlotMins(time, true); if (em2 <= sm2) em2 += 1440; return (em2 - sm2) > 60 })()) bgClass = "border-white/5 text-slate-600 cursor-not-allowed opacity-40"
+            const isDisabled = selectedSlot?.start ? (idx <= startIndex || wouldOverlapBooked || !isAvailableTime || (!isOwner && (() => { const sm2 = toSlotMins(selectedSlot.start); let em2 = toSlotMins(time, true); if (em2 <= sm2) em2 += 1440; return (em2 - sm2) > 60 })())) : !isAvailableTime
            return (
                 <button key={time} onClick={() => { 
                   if (selectedSlot?.start === time) { 
@@ -527,7 +537,7 @@ const { data: availability, isLoading: availabilityLoading, refetch: refetchAvai
                   if (!selectedSlot?.start) { 
                     if (!isAvailableTime) return; 
                     setSelectedSlot({ start: time, end: "", price: getPriceForTime(time) }); 
-                  } else if (time > selectedSlot.start && !wouldOverlapBooked) { 
+                  } else if (selectedSlot?.start && idx > startIndex) { 
                     setSelectedSlot({ ...selectedSlot, end: time }) 
                   } 
                 }} disabled={isDisabled} className={cn("rounded-lg border px-1 py-2 text-[11px] font-medium transition min-h-[36px]", bgClass)}>
@@ -546,7 +556,10 @@ const { data: availability, isLoading: availabilityLoading, refetch: refetchAvai
             {(() => {
               const [sh, sm] = selectedSlot.start.split(":").map(Number)
               const [eh, em] = selectedSlot.end.split(":").map(Number)
-              const mins = (eh * 60 + em) - (sh * 60 + sm)
+              const startMins = sh * 60 + sm
+              let endMins = eh * 60 + em
+              if (endMins <= startMins) endMins += 24 * 60
+              const mins = endMins - startMins
               return `${mins} mins (${(mins / 60).toFixed(1)} hrs)`
             })()}
           </span>
@@ -561,7 +574,10 @@ const { data: availability, isLoading: availabilityLoading, refetch: refetchAvai
             {formatCurrency((() => {
               const [sh, sm] = selectedSlot.start.split(":").map(Number)
               const [eh, em] = selectedSlot.end.split(":").map(Number)
-              const mins = (eh * 60 + em) - (sh * 60 + sm)
+              const startMins = sh * 60 + sm
+              let endMins = eh * 60 + em
+              if (endMins <= startMins) endMins += 24 * 60
+              const mins = endMins - startMins
               return (slotPrice * mins) / 60
             })())}
           </span>

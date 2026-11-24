@@ -111,27 +111,32 @@ function VerifyBookingInner() {
   useEffect(() => {
     if (!scanning) return
     let cancelled = false
-    const scanner = new Html5Qrcode("qr-reader")
-    scannerRef.current = scanner
-    scanner
-      .start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: { width: 250, height: 250 } },
-        (decodedText) => {
-          scanner.stop().then(() => {
-            scannerRef.current = null
-            setScanning(false)
-          }).catch(() => {})
-          handleVerify(decodedText)
-        },
-        () => {}
-      )
-      .catch((err: any) => {
-        if (cancelled) return
-        console.error("Scanner error:", err)
-        setScanError(err?.message || "Failed to start camera")
-        setScanning(false)
-      })
+    try {
+      const scanner = new Html5Qrcode("qr-reader")
+      scannerRef.current = scanner
+      scanner
+        .start(
+          { facingMode: "environment" },
+          { fps: 10, qrbox: { width: 250, height: 250 } },
+          (decodedText) => {
+            scanner.stop().then(() => {
+              scannerRef.current = null
+              setScanning(false)
+            }).catch(() => {})
+            handleVerify(decodedText)
+          },
+          () => {}
+        )
+        .catch((err: any) => {
+          if (cancelled) return
+          console.error("Scanner error:", err)
+          setScanError(err?.message || "Failed to start camera - please enter code manually")
+          setScanning(false)
+        })
+    } catch (err: any) {
+      setScanError(err?.message || "Camera not available - please enter code manually")
+      setScanning(false)
+    }
     return () => {
       cancelled = true
       if (scannerRef.current) {

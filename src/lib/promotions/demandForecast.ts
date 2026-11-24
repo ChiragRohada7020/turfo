@@ -23,11 +23,12 @@ export async function refreshDemandForecasts(ownerId?: string) {
         const weekday = targetDate.getDay()
 
         const openHour = parseInt((facility.openTime || "06:00").split(":")[0], 10)
-        const closeHour = parseInt((facility.closeTime || "22:00").split(":")[0], 10)
+        let closeHour = parseInt((facility.closeTime || "22:00").split(":")[0], 10)
+        if (closeHour <= openHour) closeHour += 24
 
         for (let hour = openHour; hour < closeHour; hour++) {
           const slotStart = new Date(targetDate)
-          slotStart.setHours(hour, 0, 0, 0)
+          slotStart.setHours(hour % 24, 0, 0, 0)
           const slotEnd = new Date(slotStart.getTime() + 60 * 60 * 1000)
 
           // historical bookings for same weekday/hour over last 8 weeks

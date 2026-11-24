@@ -54,7 +54,12 @@ export function BookingModal({ facility, courtId, date, slot, onClose }: Booking
     onClose()
   }
 
-  const durationMinutes = (new Date(`2000-01-01T${slot.end}`).getTime() - new Date(`2000-01-01T${slot.start}`).getTime()) / (1000 * 60)
+  const [sh, sm] = slot.start.split(":").map(Number)
+  const [eh, em] = (slot.end || "").split(":").map(Number)
+  const startMins = sh * 60 + sm
+  let endMins = slot.end ? (eh * 60 + em) : startMins + 30
+  if (endMins <= startMins) endMins += 24 * 60
+  const durationMinutes = endMins - startMins
   const totalPrice = (slot.price * (isPS ? (parseInt(playerCount) || 1) : 1) * durationMinutes) / 60
 
 
@@ -235,13 +240,24 @@ export function BookingModal({ facility, courtId, date, slot, onClose }: Booking
     setError(null)
 
     const [startHour, startMin] = slot.start.split(":").map(Number)
-    const [endHour, endMin] = slot.end.split(":").map(Number)
+    let endHour, endMin
+    if (slot.end) {
+      [endHour, endMin] = slot.end.split(":").map(Number)
+    } else {
+      endHour = startHour
+      endMin = startMin + 30
+      if (endMin >= 60) { endHour += Math.floor(endMin / 60); endMin = endMin % 60 }
+    }
 
     const startTime = new Date(date)
     startTime.setHours(startHour, startMin, 0, 0)
 
     const endTime = new Date(date)
     endTime.setHours(endHour, endMin, 0, 0)
+    // Handle overnight: if end time is before start time, add 1 day
+    if (endTime <= startTime) {
+      endTime.setDate(endTime.getDate() + 1)
+    }
 
     try {
       await createBooking.mutateAsync({

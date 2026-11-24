@@ -170,7 +170,7 @@ export default function RegisterPageContent() {
                 <ShieldCheck className="w-12 h-12 text-orange-500 mx-auto mb-4" />
                 <h1 className="text-2xl font-black tracking-tight">Verify Phone Number</h1>
                 <p className="mt-2 text-sm text-slate-500">
-                  Enter the OTP sent to {formData?.phone}
+                  Enter the OTP sent to {formData?.phone} via WhatsApp
                 </p>
               </div>
 

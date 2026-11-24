@@ -25,6 +25,10 @@ const nextConfig = {
     },
   },
   webpack: (config, { isServer }) => {
+    if (isServer) {
+      config.externals = config.externals || []
+      config.externals.push("baileys", "protobufjs", "long", "@hapi/boom")
+    }
     if (!isServer) {
       config.resolve.fallback = {
         ...config.resolve.fallback,

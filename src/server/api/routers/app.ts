@@ -11,6 +11,7 @@ import { randomBytes } from "crypto"
 import bcrypt from "bcryptjs"
 import { msg91 } from "@/lib/msg91/service"
 import { authyo } from "@/lib/authyo/service"
+import { sendWhatsAppOTP, verifyWhatsAppOTP, connectWhatsApp, getQrCode, isWhatsAppAuthenticated, disconnectWhatsApp, forceNewQR, getWhatsAppError, sendBookingNotification, sendBookingConfirmationToPlayer, sendBookingCancellationToPlayer, sendBookingCancellationToOwner } from "@/lib/whatsapp/service"
 import { createCashfreeOrder, generateOrderId, createCashfreeRefund, initiateCashfreePayout, createCashfreeContact } from "@/lib/cashfree"
 import { trackTaskProgress } from "@/lib/rewards/taskProgress"
 import { onBookingCompleted, onBookingCancelled } from "@/lib/tasks/refresh"
@@ -148,7 +149,7 @@ export const appRouter = createTRPCRouter({
          return { id: user.id, email: user.email, name: user.name, phone: user.phone, avatarUrl: user.avatarUrl, address: user.address, city: user.city, state: user.state, postalCode: user.postalCode, latitude: user.latitude, longitude: user.longitude }
       }),
 
-    // Public OTP endpoints for registration
+    // Public OTP endpoints for registration (via WhatsApp, falls back to SMS)
     sendRegistrationOTP: publicProcedure
       .input(z.object({ phone: z.string(), email: z.string().email().optional(), role: z.nativeEnum(Role).optional() }))
       .mutation(async ({ input }) => {
@@ -173,8 +174,20 @@ export const appRouter = createTRPCRouter({
           if (existingEmail) throw new Error("Email already registered")
         }
 
-        const result = await authyo.sendOTP(normalizedPhone)
-        if (!result.success) throw new Error(result.message)
+        // Try WhatsApp first, fall back to SMS
+        let otpSent = false
+        if (isWhatsAppAuthenticated()) {
+          const result = await sendWhatsAppOTP(normalizedPhone)
+          if (result.type === "success") {
+            otpSent = true
+          } else {
+            console.log("[WhatsApp] OTP send failed, falling back to SMS:", result.message)
+          }
+        }
+        if (!otpSent) {
+          const result = await authyo.sendOTP(normalizedPhone)
+          if (!result.success) throw new Error(result.message)
+        }
         return { success: true }
       }),
 
@@ -186,6 +199,14 @@ export const appRouter = createTRPCRouter({
           : input.phone.startsWith("91")
           ? `+${input.phone}`
           : `+91${input.phone}`
+
+        // Try WhatsApp OTP first, fall back to SMS
+        try {
+          await verifyWhatsAppOTP(normalizedPhone, input.otp)
+          return { success: true, phone: normalizedPhone }
+        } catch (whatsappErr) {
+          console.log("[WhatsApp] OTP verify failed, trying SMS:", (whatsappErr as Error).message)
+        }
 
         await authyo.verifyOTP(normalizedPhone, input.otp)
         return { success: true, phone: normalizedPhone }
@@ -200,7 +221,13 @@ export const appRouter = createTRPCRouter({
           ? `+${input.phone}`
           : `+91${input.phone}`
 
-        await msg91.verifyOTP(normalizedPhone, input.otp)
+        // Try WhatsApp OTP first, fall back to SMS
+        try {
+          await verifyWhatsAppOTP(normalizedPhone, input.otp)
+        } catch (whatsappErr) {
+          console.log("[WhatsApp] OTP verify failed, trying SMS:", (whatsappErr as Error).message)
+          await msg91.verifyOTP(normalizedPhone, input.otp)
+        }
 
         const user = await prisma.user.update({
           where: { id: ctx.session.user.id },
@@ -219,9 +246,65 @@ export const appRouter = createTRPCRouter({
           ? `+${input.phone}`
           : `+91${input.phone}`
 
-        await msg91.sendOTP(normalizedPhone)
+        // Try WhatsApp first, fall back to SMS
+        let otpSent = false
+        if (isWhatsAppAuthenticated()) {
+          const result = await sendWhatsAppOTP(normalizedPhone)
+          if (result.type === "success") {
+            otpSent = true
+          }
+        }
+        if (!otpSent) {
+          await msg91.sendOTP(normalizedPhone)
+        }
         return { success: true }
       }),
+
+    whatsappConnect: publicProcedure.mutation(async () => {
+      await forceNewQR()
+      return { authenticated: isWhatsAppAuthenticated(), qrCode: getQrCode() }
+    }),
+
+    whatsappStatus: publicProcedure.query(async () => {
+      return {
+        authenticated: isWhatsAppAuthenticated(),
+        qrCode: getQrCode(),
+        error: getWhatsAppError(),
+      }
+    }),
+
+    whatsappDisconnect: publicProcedure.mutation(async () => {
+      await disconnectWhatsApp()
+      return { success: true }
+    }),
+
+    sendWhatsAppOTP: publicProcedure
+      .input(z.object({ phone: z.string() }))
+      .mutation(async ({ input }) => {
+        const normalizedPhone = input.phone.startsWith("+91")
+          ? input.phone
+          : input.phone.startsWith("91")
+          ? `+${input.phone}`
+          : `+91${input.phone}`
+
+        const result = await sendWhatsAppOTP(normalizedPhone)
+        if (result.type === "error") throw new Error(result.message)
+        return { success: true }
+      }),
+
+    verifyWhatsAppOTP: publicProcedure
+      .input(z.object({ phone: z.string(), otp: z.string() }))
+      .mutation(async ({ input }) => {
+        const normalizedPhone = input.phone.startsWith("+91")
+          ? input.phone
+          : input.phone.startsWith("91")
+          ? `+${input.phone}`
+          : `+91${input.phone}`
+
+        await verifyWhatsAppOTP(normalizedPhone, input.otp)
+        return { success: true, phone: normalizedPhone }
+      }),
+
   }),
 
   facilities: createTRPCRouter({
@@ -368,11 +451,7 @@ export const appRouter = createTRPCRouter({
         const user = await prisma.user.findUnique({ where: { id: ctx.session.user.id } })
         if (!user) throw new TRPCError({ code: "UNAUTHORIZED", message: "Session expired. Please log in again." })
 
-         // For now, owners can create only one facility
-         const existingFacility = await prisma.facility.findFirst({ where: { ownerId: ctx.session.user.id } })
-         if (existingFacility) throw new TRPCError({ code: "FORBIDDEN", message: "You can only create one facility. Edit your existing facility instead." })
-
-         if (user.bookingBanUntil && user.bookingBanUntil > new Date() && user.role !== "OWNER" && user.role !== "ADMIN") {
+        if (user.bookingBanUntil && user.bookingBanUntil > new Date() && user.role !== "OWNER" && user.role !== "ADMIN") {
           throw new TRPCError({ code: "FORBIDDEN", message: `You cannot book until ${user.bookingBanUntil.toLocaleString()} due to a recent no-show.` })
         }
 
@@ -495,7 +574,19 @@ export const appRouter = createTRPCRouter({
         })
         if (!facility) throw new Error("Facility not found or access denied")
 
-        return prisma.facility.update({ where: { id }, data })
+        const updated = await prisma.facility.update({ where: { id }, data })
+
+        // If openTime or closeTime changed, update pricing rules too
+        if (input.openTime || input.closeTime) {
+          const newOpenTime = input.openTime || facility.openTime
+          const newCloseTime = input.closeTime || facility.closeTime
+          await prisma.pricingRule.updateMany({
+            where: { facilityId: id },
+            data: { startTime: newOpenTime, endTime: newCloseTime },
+          })
+        }
+
+        return updated
       }),
 
     delete: ownerProcedure
@@ -928,7 +1019,8 @@ export const appRouter = createTRPCRouter({
         }
 
         const startTime = new Date(input.startTime)
-        const endTime = new Date(input.endTime)
+        let endTime = new Date(input.endTime)
+        if (endTime <= startTime) endTime = new Date(endTime.getTime() + 24 * 60 * 60 * 1000)
         const duration = Math.round((endTime.getTime() - startTime.getTime()) / (1000 * 60))
 
         if (!isOwnerBooking) {
@@ -1055,13 +1147,22 @@ export const appRouter = createTRPCRouter({
         const dayOfWeek = istTime.getUTCDay()
         const timeStr = `${istTime.getUTCHours().toString().padStart(2, "0")}:${istTime.getUTCMinutes().toString().padStart(2, "0")}`
 
-        const matchingRules = pricingRules.filter(
-          (r) =>
-            r.dayOfWeek.includes(dayOfWeek) &&
-            r.startTime <= timeStr &&
-            r.endTime > timeStr &&
-            (!r.maxDuration || duration <= r.maxDuration)
-        )
+        const toRuleMins = (t: string) => {
+          const [h, m] = String(t).split(":").map(Number)
+          return (h || 0) * 60 + (m || 0)
+        }
+        const slotMins = toRuleMins(timeStr)
+        const matchingRules = pricingRules.filter((r) => {
+          if (!r.dayOfWeek.includes(dayOfWeek)) return false
+          const ruleStart = toRuleMins(r.startTime)
+          let ruleEnd = toRuleMins(r.endTime)
+          if (ruleEnd <= ruleStart) ruleEnd += 24 * 60
+          let adjustedSlot = slotMins
+          if (adjustedSlot < ruleStart && ruleEnd > 24 * 60) adjustedSlot += 24 * 60
+          if (!(ruleStart <= adjustedSlot && adjustedSlot < ruleEnd)) return false
+          if (r.maxDuration && duration > r.maxDuration) return false
+          return true
+        })
         const applicableRule = matchingRules.sort((a: any, b: any) => {
           const aDur = (parseInt(a.endTime.split(":")[0]) * 60 + parseInt(a.endTime.split(":")[1])) - (parseInt(a.startTime.split(":")[0]) * 60 + parseInt(a.startTime.split(":")[1]))
           const bDur = (parseInt(b.endTime.split(":")[0]) * 60 + parseInt(b.endTime.split(":")[1])) - (parseInt(b.startTime.split(":")[0]) * 60 + parseInt(b.startTime.split(":")[1]))
@@ -1121,9 +1222,12 @@ export const appRouter = createTRPCRouter({
           })
         }, { isolationLevel: "Serializable" })
 
-        // Create notification for facility owner
+        // Create notification for facility owner + send WhatsApp message
         try {
-          const facility = await prisma.facility.findUnique({ where: { id: facilityId }, select: { ownerId: true, name: true } })
+          const facility = await prisma.facility.findUnique({
+            where: { id: facilityId },
+            select: { ownerId: true, name: true, address: true, latitude: true, longitude: true, owner: { select: { name: true, phone: true } } },
+          })
           if (facility?.ownerId && facility.ownerId !== ctx.session.user.id) {
             await prisma.notification.create({
               data: {
@@ -1134,9 +1238,55 @@ export const appRouter = createTRPCRouter({
                 data: { bookingId: booking.id, facilityId },
               },
             })
+
+            // Send WhatsApp message to facility owner
+            const ownerPhone = facility.owner?.phone
+            const player = await prisma.user.findUnique({
+              where: { id: ctx.session.user.id },
+              select: { name: true, phone: true },
+            })
+
+            if (ownerPhone && player) {
+              const scannerUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://strikora.in"}/dashboard/verify?scan=1`
+              await sendBookingNotification(ownerPhone, {
+                facilityName: facility.name,
+                courtName: null,
+                playerName: player.name || "Player",
+                playerPhone: player.phone || "",
+                startTime,
+                endTime,
+                totalPrice: totalPrice,
+                duration,
+                bookingId: booking.id,
+                notes: input.notes,
+                scannerUrl,
+              }).catch((err) => console.error("[WhatsApp] Owner notification failed:", err.message))
+            }
+          }
+
+          // Send WhatsApp confirmation to player with Google Maps link
+          const player = await prisma.user.findUnique({
+            where: { id: ctx.session.user.id },
+            select: { name: true, phone: true },
+          })
+
+          if (player?.phone && facility) {
+            await sendBookingConfirmationToPlayer(player.phone, {
+              facilityName: facility.name,
+              courtName: null,
+              facilityAddress: facility.address || null,
+              facilityLatitude: facility.latitude || null,
+              facilityLongitude: facility.longitude || null,
+              startTime,
+              endTime,
+              totalPrice: totalPrice,
+              duration,
+              bookingId: booking.id,
+              verificationCode: booking.verificationCode,
+            }).catch((err) => console.error("[WhatsApp] Player confirmation failed:", err.message))
           }
         } catch (e) {
-          console.error("Failed to create owner notification:", e)
+          console.error("Failed to send booking WhatsApp notifications:", e)
         }
         let paymentRecord = null
         if (!isOwnerBooking) {
@@ -1293,29 +1443,74 @@ export const appRouter = createTRPCRouter({
           return u
         })
 
-        // Create notification for the other party
-        if (isOwnerOrAdmin) {
-          // Notify player
-          await prisma.notification.create({
-            data: {
-              userId: booking.userId,
-              type: "BOOKING_CANCELLED",
-              title: "Booking Cancelled by Owner",
-              message: `Your booking at ${booking.facility.name} has been cancelled by the facility.`,
-              data: { bookingId: booking.id },
-            },
+        // Create notification for the other party + send WhatsApp cancellation
+        try {
+          const facility = await prisma.facility.findUnique({
+            where: { id: booking.facilityId },
+            select: { ownerId: true, name: true, address: true, latitude: true, longitude: true, owner: { select: { name: true, phone: true } } },
           })
-        } else {
-          // Notify owner
-          await prisma.notification.create({
-            data: {
-              userId: booking.facility.ownerId,
-              type: "BOOKING_CANCELLED",
-              title: "Booking Cancelled by Player",
-              message: `${booking.user?.name || "A player"} cancelled their booking at ${booking.facility.name}.`,
-              data: { bookingId: booking.id },
-            },
+          const player = await prisma.user.findUnique({
+            where: { id: booking.userId },
+            select: { name: true, phone: true },
           })
+
+          if (isOwnerOrAdmin) {
+            // Notify player
+            await prisma.notification.create({
+              data: {
+                userId: booking.userId,
+                type: "BOOKING_CANCELLED",
+                title: "Booking Cancelled by Owner",
+                message: `Your booking at ${booking.facility.name} has been cancelled by the facility.`,
+                data: { bookingId: booking.id },
+              },
+            })
+
+            // WhatsApp to player
+            if (player?.phone && facility) {
+              await sendBookingCancellationToPlayer(player.phone, {
+                facilityName: facility.name,
+                courtName: null,
+                startTime: booking.startTime,
+                endTime: booking.endTime,
+                totalPrice: Number(booking.totalPrice || 0),
+                duration: booking.duration,
+                bookingId: booking.id,
+                cancelledBy: "Facility Owner",
+                reason: input.reason || undefined,
+              }).catch((err) => console.error("[WhatsApp] Player cancellation failed:", err.message))
+            }
+          } else {
+            // Notify owner
+            await prisma.notification.create({
+              data: {
+                userId: booking.facility.ownerId,
+                type: "BOOKING_CANCELLED",
+                title: "Booking Cancelled by Player",
+                message: `${booking.user?.name || "A player"} cancelled their booking at ${booking.facility.name}.`,
+                data: { bookingId: booking.id },
+              },
+            })
+
+            // WhatsApp to owner
+            const ownerPhone = facility?.owner?.phone
+            if (ownerPhone && player && facility) {
+              await sendBookingCancellationToOwner(ownerPhone, {
+                facilityName: facility.name,
+                courtName: null,
+                playerName: player.name || "Player",
+                playerPhone: player.phone || "",
+                startTime: booking.startTime,
+                endTime: booking.endTime,
+                totalPrice: Number(booking.totalPrice || 0),
+                duration: booking.duration,
+                bookingId: booking.id,
+                reason: input.reason || undefined,
+              }).catch((err) => console.error("[WhatsApp] Owner cancellation failed:", err.message))
+            }
+          }
+        } catch (e) {
+          console.error("Failed to send cancellation notifications:", e)
         }
 
         try { await onBookingCancelled(booking.userId, booking.id) } catch (e) { console.error(e) }
@@ -1337,7 +1532,8 @@ export const appRouter = createTRPCRouter({
         const created = []
         for (const slot of input.slots) {
           const startTime = new Date(slot.startTime)
-          const endTime = new Date(slot.endTime)
+          let endTime = new Date(slot.endTime)
+          if (endTime <= startTime) endTime = new Date(endTime.getTime() + 24 * 60 * 60 * 1000)
           const duration = Math.round((endTime.getTime() - startTime.getTime()) / (1000 * 60))
           if (duration < 30) throw new TRPCError({ code: "BAD_REQUEST", message: "Minimum booking duration is 30 minutes" })
 
@@ -1362,8 +1558,18 @@ export const appRouter = createTRPCRouter({
           const istTime = new Date(startTime.getTime() + istOffset)
           const dayOfWeek = istTime.getUTCDay()
           const timeStr = `${istTime.getUTCHours().toString().padStart(2, "0")}:${istTime.getUTCMinutes().toString().padStart(2, "0")}`
+          const toRuleMins2 = (t: string) => { const [h, m] = String(t).split(":").map(Number); return (h || 0) * 60 + (m || 0) }
+          const slotMins2 = toRuleMins2(timeStr)
           const applicableRule = pricingRules
-            .filter((r: any) => r.dayOfWeek.includes(dayOfWeek) && r.startTime <= timeStr && r.endTime > timeStr)
+            .filter((r: any) => {
+              if (!r.dayOfWeek.includes(dayOfWeek)) return false
+              const rs = toRuleMins2(r.startTime)
+              let re = toRuleMins2(r.endTime)
+              if (re <= rs) re += 24 * 60
+              let as = slotMins2
+              if (as < rs && re > 24 * 60) as += 24 * 60
+              return rs <= as && as < re
+            })
             .sort((a: any, b: any) => a.pricePerHour - b.pricePerHour)[0]
           const totalPrice = applicableRule ? (applicableRule.pricePerHour * duration) / 60 : 0
 
@@ -3563,17 +3769,27 @@ function generateAvailableSlots(
   const [startHour, startMin] = startTime.split(":").map(Number)
   const [endHour, endMin] = endTime.split(":").map(Number)
   const startMinutes = startHour * 60 + startMin
-  const endMinutes = endHour * 60 + endMin
+  let endMinutes = endHour * 60 + endMin
+  // Handle overnight hours (e.g., 18:00 - 02:00)
+  if (endMinutes <= startMinutes) {
+    endMinutes += 24 * 60
+  }
 
 const istOffset = 5.5 * 60 * 60 * 1000
 
   const bookedSlots = existingBookings.map((b) => {
     const istStart = new Date(b.startTime.getTime() + istOffset)
     const istEnd = new Date(b.endTime.getTime() + istOffset)
-    return {
-      start: istStart.getUTCHours() * 60 + istStart.getUTCMinutes(),
-      end: istEnd.getUTCHours() * 60 + istEnd.getUTCMinutes(),
+    let start = istStart.getUTCHours() * 60 + istStart.getUTCMinutes()
+    let end = istEnd.getUTCHours() * 60 + istEnd.getUTCMinutes()
+    // Handle overnight bookings - adjust to match slot time scale
+    if (end <= start) end += 24 * 60
+    // If slot range crosses midnight, adjust booked slots that are before startMinutes
+    if (start < startMinutes && startMinutes > 12 * 60) {
+      start += 24 * 60
+      end += 24 * 60
     }
+    return { start, end }
   })
 
   for (let minutes = startMinutes; minutes < endMinutes; minutes += 30) {
@@ -3585,30 +3801,46 @@ const istOffset = 5.5 * 60 * 60 * 1000
 
 const istDate = new Date(date.getTime() + istOffset)
     const dayOfWeek = istDate.getUTCDay()
-    const timeStr = `${String(Math.floor(slotStart / 60)).padStart(2, "0")}:${String(slotStart % 60).padStart(2, "0")}`
+    const timeStr = `${String(Math.floor((slotStart % (24 * 60)) / 60)).padStart(2, "0")}:${String(slotStart % 60).padStart(2, "0")}`
+
+    const slotMinutes = slotStart % (24 * 60)
 
     const matchingRules = pricingRules.filter(
-      (r: any) =>
-        r.dayOfWeek.includes(dayOfWeek) &&
-        r.startTime <= timeStr &&
-        r.endTime > timeStr
+      (r: any) => {
+        if (!r.dayOfWeek.includes(dayOfWeek)) return false
+        const ruleStart = parseInt(r.startTime.split(":")[0]) * 60 + parseInt(r.startTime.split(":")[1])
+        let ruleEnd = parseInt(r.endTime.split(":")[0]) * 60 + parseInt(r.endTime.split(":")[1])
+        if (ruleEnd <= ruleStart) ruleEnd += 24 * 60
+        // Adjust slotMinutes for overnight comparison
+        let adjustedSlot = slotMinutes
+        if (adjustedSlot < ruleStart && ruleEnd > 24 * 60) {
+          adjustedSlot += 24 * 60
+        }
+        return ruleStart <= adjustedSlot && adjustedSlot < ruleEnd
+      }
     )
 
     // Prefer the most specific (narrowest time window) rule
     const rule = matchingRules.sort((a: any, b: any) => {
-      const aDur = (parseInt(a.endTime.split(":")[0]) * 60 + parseInt(a.endTime.split(":")[1])) - (parseInt(a.startTime.split(":")[0]) * 60 + parseInt(a.startTime.split(":")[1]))
-      const bDur = (parseInt(b.endTime.split(":")[0]) * 60 + parseInt(b.endTime.split(":")[1])) - (parseInt(b.startTime.split(":")[0]) * 60 + parseInt(b.startTime.split(":")[1]))
+      const aStart = parseInt(a.startTime.split(":")[0]) * 60 + parseInt(a.startTime.split(":")[1])
+      let aEnd = parseInt(a.endTime.split(":")[0]) * 60 + parseInt(a.endTime.split(":")[1])
+      if (aEnd <= aStart) aEnd += 24 * 60
+      const aDur = aEnd - aStart
+      const bStart = parseInt(b.startTime.split(":")[0]) * 60 + parseInt(b.startTime.split(":")[1])
+      let bEnd = parseInt(b.endTime.split(":")[0]) * 60 + parseInt(b.endTime.split(":")[1])
+      if (bEnd <= bStart) bEnd += 24 * 60
+      const bDur = bEnd - bStart
       return aDur - bDur
     })[0]
 
     if (rule) {
-      slots.push({
-        startTime: timeStr,
-        endTime: `${String(Math.floor(slotEnd / 60)).padStart(2, "0")}:${String(slotEnd % 60).padStart(2, "0")}`,
-        pricePerHour: rule.pricePerHour,
-        minDuration: rule.minDuration,
-        maxDuration: rule.maxDuration,
-      })
+        slots.push({
+          startTime: timeStr,
+          endTime: `${String(Math.floor((slotEnd % (24 * 60)) / 60)).padStart(2, "0")}:${String(slotEnd % 60).padStart(2, "0")}`,
+          pricePerHour: rule.pricePerHour,
+          minDuration: rule.minDuration,
+          maxDuration: rule.maxDuration,
+        })
     }
   }
 

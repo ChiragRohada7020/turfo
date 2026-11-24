@@ -60,3 +60,5 @@ backups/
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+# WhatsApp sessions
+.whatsapp_sessions/

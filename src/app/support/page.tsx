@@ -63,7 +63,7 @@ export default function SupportPage() {
             <CardContent className="p-4 text-center">
               <Phone className="mx-auto mb-2 h-6 w-6 text-orange-400" />
               <p className="text-sm font-bold">Phone</p>
-              <p className="text-xs text-slate-400">+91 70208 80419</p>
+              <p className="text-xs text-slate-400">9356441015</p>
             </CardContent>
           </Card>
           <Card className="bg-[#131C2E] border-white/10">
