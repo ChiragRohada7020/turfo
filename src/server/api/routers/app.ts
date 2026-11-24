@@ -1440,6 +1440,23 @@ export const appRouter = createTRPCRouter({
             where: { id: ctx.session.user.id },
             data: { cibilScore: { decrement: 50 } },
           })
+          // Deduct reward points as cancellation penalty (only for player cancellations)
+          if (isSelf) {
+            await tx.user.update({
+              where: { id: booking.userId },
+              data: { rewardPoints: { decrement: 5 } },
+            })
+            await tx.rewardTransaction.create({
+              data: {
+                userId: booking.userId,
+                points: -5,
+                type: "PENALTY" as any,
+                status: "COMPLETED",
+                description: "Cancellation penalty",
+                referenceId: booking.id,
+              },
+            })
+          }
           return u
         })
 
@@ -1869,6 +1886,17 @@ export const appRouter = createTRPCRouter({
               noShowCount: { increment: 1 },
               cibilScore: { decrement: 30 },
               reliabilityScore: { decrement: 10 },
+              rewardPoints: { decrement: 10 },
+            },
+          })
+          await tx.rewardTransaction.create({
+            data: {
+              userId: input.userId,
+              points: -10,
+              type: "PENALTY" as any,
+              status: "COMPLETED",
+              description: "No-show penalty",
+              referenceId: booking.id,
             },
           })
 
@@ -1916,6 +1944,17 @@ export const appRouter = createTRPCRouter({
                 noShowCount: { increment: 1 },
                 cibilScore: { decrement: 30 },
                 reliabilityScore: { decrement: 10 },
+                rewardPoints: { decrement: 10 },
+              },
+            })
+            await tx.rewardTransaction.create({
+              data: {
+                userId: ns.userId,
+                points: -10,
+                type: "PENALTY" as any,
+                status: "COMPLETED",
+                description: "No-show penalty",
+                referenceId: booking.id,
               },
             })
             await tx.bookingParticipant.delete({ where: { id: ns.id } })

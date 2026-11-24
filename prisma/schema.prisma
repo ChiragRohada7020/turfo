@@ -842,6 +842,7 @@ enum RewardType {
   REDEEMED
   EXPIRED
   BONUS
+  PENALTY
 }
 
 
