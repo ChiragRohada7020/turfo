@@ -18,6 +18,7 @@ import {
   Menu,
   ChevronRight,
   LogOut,
+  Info,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -79,6 +80,7 @@ export default function OffersPage() {
     }
   }, [tasks])
   const { data: rewardPoints } = trpc.offers.myRewardPoints.useQuery()
+  const [showRewardInfo, setShowRewardInfo] = useState(false)
   const trackImpression = trpc.promotions.trackOfferImpression.useMutation()
   const trackClick = trpc.promotions.trackOfferClick.useMutation()
 
@@ -229,7 +231,15 @@ export default function OffersPage() {
               <CardContent className="p-6 sm:p-8">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-xl font-bold">My Rewards</h2>
+                  <button onClick={() => setShowRewardInfo((v) => !v)} className="text-slate-400 hover:text-orange-400">
+                    <Info className="h-5 w-5" />
+                  </button>
                 </div>
+                {showRewardInfo && (
+                  <p className="text-xs text-slate-400 mb-3">
+                    You earn reward points after every game you book. 1 hour of booking = 5 reward points. Points are credited after the booking is completed.
+                  </p>
+                )}
                 <div className="flex items-center gap-6">
                   <div className="flex items-center gap-3">
                     <Gift className="h-12 w-12 text-orange-400" />
