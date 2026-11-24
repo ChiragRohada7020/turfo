@@ -142,7 +142,7 @@ export default function LoginPageContent() {
           <CardContent className="p-6 sm:p-8">
             {step === "phone" && (
               <>
-                <h1 className="text-2xl font-black tracking-tight mb-6">Sign In</h1>
+                <h1 className="text-2xl font-black tracking-tight mb-6 text-black">Sign In</h1>
                 <div className="space-y-2 mb-4">
                   <Label className="text-slate-700 font-semibold">Role</Label>
                   <Select value={role} onValueChange={setRole}>
