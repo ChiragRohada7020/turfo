@@ -94,7 +94,7 @@ export default function RegisterPageContent() {
     if (selectedState || typeof navigator === "undefined" || !navigator.geolocation) return
     navigator.geolocation.getCurrentPosition(async (pos) => {
       try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&addressdetails=1`)
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&addressdetails=1&accept-language=en`)
         const data = await res.json()
         const addr = data?.address || {}
         const stateName = addr.state

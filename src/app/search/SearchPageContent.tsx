@@ -49,7 +49,7 @@ export default function SearchPageContent() {
     if (typeof navigator === "undefined" || !navigator.geolocation) return
     navigator.geolocation.getCurrentPosition(async (pos) => {
       try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`)
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&accept-language=en`)
         const data = await res.json()
         const addr = data?.address || {}
         const city = addr.city || addr.town || addr.village || addr.state_district || addr.county
