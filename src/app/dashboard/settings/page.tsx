@@ -277,7 +277,7 @@ export default function SettingsPage() {
                             const a = data?.address || {}
                             updatedForm = {
                               ...updatedForm,
-                              address: [a.road, a.suburb, a.neighbourhood].filter(Boolean).join(", ") || updatedForm.address,
+                              address: [a.house_number, a.road, a.neighbourhood, a.suburb, a.city_district].filter(Boolean).join(", ") || updatedForm.address,
                               city: (a.city || a.town || a.village || updatedForm.city || "").normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
                               state: a.state || updatedForm.state,
                               postalCode: a.postcode || updatedForm.postalCode,
