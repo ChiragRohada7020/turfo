@@ -7,7 +7,7 @@ import { sendWelcomeEmail } from "@/lib/email/service"
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { name, email, password, phone, role, phoneVerified, referralCode, city } = body
+    const { name, email, password, phone, role, phoneVerified, referralCode, city, state } = body
 
     if (!email || !password) {
       return NextResponse.json({ error: "Email and password are required" }, { status: 400 })
@@ -64,6 +64,7 @@ export async function POST(request: NextRequest) {
         isPhoneVerified: phoneVerified === true,
         isVerified: isAutoVerified,
         city: city?.trim() || null,
+        state: state?.trim() || null,
       },
     })
 

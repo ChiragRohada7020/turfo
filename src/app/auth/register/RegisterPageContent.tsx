@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { useForm } from "react-hook-form"
@@ -23,6 +23,7 @@ const registerSchema = z.object({
   confirmPassword: z.string(),
   phone: z.string().min(10, "Phone number is required"),
   role: z.enum(["PLAYER", "OWNER", "SPONSOR"]).default("PLAYER"),
+  state: z.string().optional(),
   city: z.string().optional(),
   referralCode: z.string().optional(),
 }).refine((data) => data.password === data.confirmPassword, {
@@ -43,6 +44,9 @@ export default function RegisterPageContent() {
   const [otp, setOtp] = useState("")
   const [formData, setFormData] = useState<RegisterForm | null>(null)
   const [verifiedPhone, setVerifiedPhone] = useState("")
+  const [selectedState, setSelectedState] = useState("")
+  const [cityOptions, setCityOptions] = useState<string[]>([])
+  const [cityLoading, setCityLoading] = useState(false)
 
   const {
     register,
@@ -59,12 +63,31 @@ export default function RegisterPageContent() {
       confirmPassword: "",
       phone: "",
       role: defaultRole,
+      state: "",
       city: "",
       referralCode: searchParams.get("ref") || "",
     },
   })
 
   const password = watch("password")
+
+  useEffect(() => {
+    if (!selectedState) { setCityOptions([]); setValue("city", ""); return }
+    setValue("state", selectedState)
+    setCityLoading(true)
+    fetch("https://countriesnow.space/api/v0.1/countries/state/cities", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ country: "India", state: selectedState }),
+    })
+      .then((r) => r.json())
+      .then((d) => {
+        const list = Array.isArray(d?.data) ? d.data : []
+        setCityOptions(list)
+      })
+      .catch(() => setCityOptions([]))
+      .finally(() => setCityLoading(false))
+  }, [selectedState])
 
   const sendOTP = trpc.auth.sendRegistrationOTP.useMutation({
     onSuccess: () => {
@@ -99,6 +122,7 @@ export default function RegisterPageContent() {
           phone: verifiedPhone || data.phone,
           role: data.role,
           city: data.city,
+          state: data.state,
            phoneVerified: true,
            referralCode: data.referralCode || searchParams.get("ref") || undefined,
         }),
@@ -306,13 +330,40 @@ export default function RegisterPageContent() {
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="state" className="text-slate-700 font-semibold">State</Label>
+                <Select onValueChange={(v) => { setSelectedState(v); setValue("state", v); setValue("city", "") }} value={selectedState}>
+                  <SelectTrigger className="bg-white border-slate-200 text-slate-900">
+                    <SelectValue placeholder="Select state" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[
+                      "Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisgarh","Goa","Gujarat","Haryana","Himachal Pradesh","Jharkhand","Karnataka","Kerala","Madhya Pradesh","Maharashtra","Manipur","Meghalaya","Mizoram","Nagaland","Odisha","Punjab","Rajasthan","Sikkim","Tamil Nadu","Telangana","Tripura","Uttar Pradesh","Uttarakhand","West Bengal","Andaman and Nicobar Islands","Chandigarh","Dadra and Nagar Haveli and Daman and Diu","Delhi","Jammu and Kashmir","Ladakh","Lakshadweep","Puducherry",
+                    ].map((s) => (
+                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="city" className="text-slate-700 font-semibold">City</Label>
-                <Input
-                  id="city"
-                  placeholder="Your city"
-                  className="bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-orange-500 focus:ring-orange-500"
-                  {...register("city")}
-                />
+                <Select onValueChange={(v) => setValue("city", v)} value={watch("city")} disabled={!selectedState || cityLoading}>
+                  <SelectTrigger className="bg-white border-slate-200 text-slate-900">
+                    <SelectValue placeholder={cityLoading ? "Loading cities..." : "Select city"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {cityOptions.map((c) => (
+                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {cityOptions.length === 0 && selectedState && !cityLoading && (
+                  <Input
+                    placeholder="Enter city manually"
+                    className="bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-orange-500 focus:ring-orange-500"
+                    onChange={(e) => setValue("city", e.target.value)}
+                  />
+                )}
               </div>
 
               <div className="space-y-2">

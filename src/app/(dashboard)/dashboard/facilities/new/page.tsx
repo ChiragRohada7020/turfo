@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
@@ -89,6 +89,9 @@ export default function AddFacilityPage() {
   const { data: session } = useSession()
   const [selectedSports, setSelectedSports] = useState<string[]>([])
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>([])
+  const [selectedState, setSelectedState] = useState("")
+  const [cityOptions, setCityOptions] = useState<string[]>([])
+  const [cityLoading, setCityLoading] = useState(false)
   const [imageUrls, setImageUrls] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
@@ -117,6 +120,24 @@ export default function AddFacilityPage() {
       amenities: [],
     },
   })
+
+  useEffect(() => {
+    if (!selectedState) { setCityOptions([]); setValue("city", ""); return }
+    setValue("state", selectedState)
+    setCityLoading(true)
+    fetch("https://countriesnow.space/api/v0.1/countries/state/cities", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ country: "India", state: selectedState }),
+    })
+      .then((r) => r.json())
+      .then((d) => {
+        const list = Array.isArray(d?.data) ? d.data : []
+        setCityOptions(list)
+      })
+      .catch(() => setCityOptions([]))
+      .finally(() => setCityLoading(false))
+  }, [selectedState])
 
   const createFacility = trpc.facilities.create.useMutation({
     onSuccess: () => {
@@ -298,29 +319,43 @@ export default function AddFacilityPage() {
                 {errors.address && <p className="text-sm text-red-400">{errors.address.message}</p>}
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="city" className="text-slate-300">City *</Label>
-                  <Input
-                    id="city"
-                    placeholder="e.g. Pachora"
-                    className="h-10 rounded-xl border border-white/10 bg-[#182238] text-white placeholder:text-slate-500 focus:border-orange-400/50"
-                    {...register("city")}
-                  />
-                  {errors.city && <p className="text-sm text-red-400">{errors.city.message}</p>}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="state" className="text-slate-300">State *</Label>
-                  <Input
-                    id="state"
-                    placeholder="e.g. Maharashtra"
-                    className="h-10 rounded-xl border border-white/10 bg-[#182238] text-white placeholder:text-slate-500 focus:border-orange-400/50"
-                    {...register("state")}
-                  />
-                  {errors.state && <p className="text-sm text-red-400">{errors.state.message}</p>}
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="state" className="text-slate-300">State *</Label>
+                <Select onValueChange={(v) => { setSelectedState(v); setValue("state", v); setValue("city", "") }}>
+                  <SelectTrigger className="h-10 rounded-xl border border-white/10 bg-[#182238] text-white focus:border-orange-400/50">
+                    <SelectValue placeholder="Select state" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[
+                      "Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisgarh","Goa","Gujarat","Haryana","Himachal Pradesh","Jharkhand","Karnataka","Kerala","Madhya Pradesh","Maharashtra","Manipur","Meghalaya","Mizoram","Nagaland","Odisha","Punjab","Rajasthan","Sikkim","Tamil Nadu","Telangana","Tripura","Uttar Pradesh","Uttarakhand","West Bengal","Andaman and Nicobar Islands","Chandigarh","Dadra and Nagar Haveli and Daman and Diu","Delhi","Jammu and Kashmir","Ladakh","Lakshadweep","Puducherry",
+                    ].map((s) => (
+                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
+              <div className="space-y-2">
+                <Label htmlFor="city" className="text-slate-300">City *</Label>
+                <Select onValueChange={(v) => setValue("city", v)} disabled={!selectedState || cityLoading}>
+                  <SelectTrigger className="h-10 rounded-xl border border-white/10 bg-[#182238] text-white focus:border-orange-400/50">
+                    <SelectValue placeholder={cityLoading ? "Loading cities..." : "Select city"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {cityOptions.map((c) => (
+                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {cityOptions.length === 0 && selectedState && !cityLoading && (
+                  <Input
+                    placeholder="Enter city manually"
+                    className="h-10 rounded-xl border border-white/10 bg-[#182238] text-white placeholder:text-slate-500 focus:border-orange-400/50"
+                    onChange={(e) => setValue("city", e.target.value)}
+                  />
+                )}
+                {errors.city && <p className="text-sm text-red-400">{errors.city.message}</p>}
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="country" className="text-slate-300">Country</Label>
