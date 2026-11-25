@@ -20,8 +20,8 @@ export async function POST(request: NextRequest) {
     const redemption = await prisma.offerRedemption.findUnique({
       where: { verificationCode },
       include: {
-        offer: { include: { sponsor: true } },
-        user: { select: { id: true, name: true, email: true, avatarUrl: true } },
+        offer: { include: { sponsor: { include: { user: { select: { phone: true, name: true } } } } } },
+        user: { select: { id: true, name: true, email: true, avatarUrl: true, phone: true } },
       },
     })
 
@@ -65,6 +65,31 @@ export async function POST(request: NextRequest) {
           offer: redemption.offer,
         },
       }, { status: 400 })
+    }
+
+    // Send WhatsApp messages to player and sponsor
+    try {
+      const { sendWhatsAppMessage } = await import("@/lib/whatsapp/service")
+      const playerPhone = redemption.user?.phone
+      const sponsorPhone = redemption.offer?.sponsor?.user?.phone
+      const offerTitle = redemption.offer?.title || "Offer"
+      const discount = redemption.discountApplied || 0
+      if (playerPhone) {
+        await sendWhatsAppMessage(playerPhone, `✅ *Coupon Redeemed*
+
+Your coupon for *${offerTitle}* has been verified and used.
+Discount applied: ₹${discount.toFixed(0)}
+Thank you! 🌐 https://strikora.in`)
+      }
+      if (sponsorPhone) {
+        await sendWhatsAppMessage(sponsorPhone, `✅ *Coupon Verified*
+
+A customer redeemed *${offerTitle}*.
+Discount: ₹${discount.toFixed(0)}
+Customer: ${redemption.user?.name || "Player"}`)
+      }
+    } catch (e) {
+      console.error("[Verify Offer] WhatsApp send failed:", e)
     }
 
     return NextResponse.json({
