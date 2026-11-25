@@ -86,6 +86,8 @@ export default function OffersPage() {
     }
   }, [tasks])
   const { data: rewardPoints } = trpc.offers.myRewardPoints.useQuery()
+  const { data: rewardTransactions } = trpc.offers.myRewardTransactions.useQuery()
+  const [showTransactions, setShowTransactions] = useState(false)
   const [showRewardInfo, setShowRewardInfo] = useState(false)
   const trackImpression = trpc.promotions.trackOfferImpression.useMutation()
   const trackClick = trpc.promotions.trackOfferClick.useMutation()
@@ -279,6 +281,20 @@ export default function OffersPage() {
                       <p className="text-xs text-slate-500">Reward Points</p>
                     </div>
                   </div>
+                  <Button variant="outline" className="mt-4 border-white/10 text-white hover:bg-white/5" onClick={() => setShowTransactions((v) => !v)}>
+                    {showTransactions ? "Hide Transactions" : "View Transactions"}
+                  </Button>
+                  {showTransactions && (
+                    <div className="mt-3 space-y-2 max-h-48 overflow-y-auto">
+                      {(rewardTransactions || []).map((t: any) => (
+                        <div key={t.id} className="flex justify-between text-xs border-b border-white/5 pb-1">
+                          <span className="text-slate-300">{t.description || t.type}</span>
+                          <span className={t.points >= 0 ? "text-green-400" : "text-red-400"}>{t.points >= 0 ? "+" : ""}{t.points}</span>
+                        </div>
+                      ))}
+                      {(!rewardTransactions || rewardTransactions.length === 0) && <p className="text-xs text-slate-500">No transactions yet</p>}
+                    </div>
+                  )}
                   <div className="hidden md:block">
                     <div className="flex h-24 w-24 items-center justify-center rounded-full bg-orange-400/10">
                       <Star className="h-12 w-12 text-orange-400" />
