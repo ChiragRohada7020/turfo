@@ -132,6 +132,18 @@ export const authOptions: NextAuthOptions = {
         })
         await authPrisma.user.update({ where: { id: user.id }, data: { referralCode: `REF${user.id.slice(-6).toUpperCase()}` } })
 
+        if (userRole === "SPONSOR") {
+          await authPrisma.sponsor.create({
+            data: {
+              name: credentials.name?.trim() || "Sponsor",
+              contactEmail: user.email || `${normalizedPhone.replace(/\D/g, "")}@phone.local`,
+              userId: user.id,
+              isApproved: false,
+              isActive: true,
+            },
+          })
+        }
+
         // referral handling
         if (credentials.referralCode) {
           const referrer = await authPrisma.user.findUnique({ where: { referralCode: credentials.referralCode.trim().toUpperCase() } })
