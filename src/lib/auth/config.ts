@@ -111,12 +111,12 @@ export const authOptions: NextAuthOptions = {
         if (!expiry || expiry < Date.now()) throw new Error("Phone not verified")
         verifiedPhones.delete(normalizedPhone)
 
-        const existing = await authPrisma.user.findFirst({ where: { phone: normalizedPhone } })
+        const userRole = credentials.role === "OWNER" ? "OWNER" : credentials.role === "SPONSOR" ? "SPONSOR" : "PLAYER"
+        const existing = await authPrisma.user.findFirst({ where: { phone: normalizedPhone, role: userRole as any } })
         if (existing) {
           return { id: existing.id, email: existing.email, name: existing.name, role: existing.role, image: existing.avatarUrl }
         }
 
-        const userRole = credentials.role === "OWNER" ? "OWNER" : credentials.role === "SPONSOR" ? "SPONSOR" : "PLAYER"
         const user = await authPrisma.user.create({
           data: {
             name: credentials.name?.trim() || null,
