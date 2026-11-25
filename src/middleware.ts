@@ -28,6 +28,7 @@ export default withAuth(
         path.startsWith("/dashboard/verify")
       ) {
         if (token.role !== "OWNER" && token.role !== "ADMIN") {
+          if (token.role === "SPONSOR") return NextResponse.redirect(new URL("/dashboard/sponsor", req.url))
           return NextResponse.redirect(new URL("/dashboard?error=unauthorized", req.url))
         }
       }
@@ -35,6 +36,7 @@ export default withAuth(
       // Player-only routes (owners/admins should not access player-only areas)
       if (path.startsWith("/dashboard/open-games") || path.startsWith("/find-players")) {
         if (token.role !== "PLAYER" && token.role !== "ADMIN") {
+          if (token.role === "SPONSOR") return NextResponse.redirect(new URL("/dashboard/sponsor", req.url))
           return NextResponse.redirect(new URL("/dashboard?error=unauthorized", req.url))
         }
       }
