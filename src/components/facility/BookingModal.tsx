@@ -274,7 +274,7 @@ export function BookingModal({ facility, courtId, date, slot, onClose }: Booking
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
       <div className="bg-[#111a22] rounded-2xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto border border-white/10">
          <div className="p-4 border-b border-white/10 flex items-center justify-between">
            <h2 className="text-xl font-bold text-white">Confirm Booking</h2>
@@ -380,7 +380,7 @@ export function BookingModal({ facility, courtId, date, slot, onClose }: Booking
             <Button variant="outline" className="flex-1 border-white/10 text-white hover:bg-white/5" onClick={handleClose} disabled={isLoading}>
               Cancel
             </Button>
-            <Button className="flex-1 bg-lime-400 font-bold text-black hover:bg-lime-300" onClick={handleConfirm} disabled={isLoading || !acknowledged}>
+            <Button className="flex-1 bg-lime-400 font-bold text-black hover:bg-lime-300" onClick={handleConfirm} disabled={isLoading}>
               {isLoading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
