@@ -13,7 +13,7 @@ export const sponsorsRouter = createTRPCRouter({
         website: z.string().optional(),
         contactEmail: z.string().email(),
         contactPhone: z.string().optional(),
-        budget: z.number().min(0).default(0),
+        budget: z.number().min(0).default(100000),
         userId: z.string(),
       }))
       .mutation(async ({ input }) => {
