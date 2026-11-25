@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useSession } from "next-auth/react"
+import { useSession, signOut } from "next-auth/react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -309,6 +309,11 @@ export default function SettingsPage() {
             <Button type="submit" className="w-full bg-orange-400 font-bold text-black hover:bg-orange-300" disabled={isLoading}>
               {isLoading ? "Saving..." : "Save Settings"}
             </Button>
+          <div className="pt-2">
+            <Button type="button" onClick={() => signOut({ callbackUrl: "/" })} className="w-full bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20">
+              Sign Out
+            </Button>
+          </div>
           </form>
         </div>
       </div>
