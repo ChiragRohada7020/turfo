@@ -158,9 +158,14 @@ export default function SettingsPage() {
       <div className="md:pl-[262px]">
         <TopNavbar onMenuClick={() => setSidebarOpen(true)} />
         <div className="max-w-2xl mx-auto p-4 sm:p-6">
-          <div className="mb-6">
-            <h1 className="text-2xl font-bold">Settings</h1>
-            <p className="text-sm text-slate-400">Manage your profile and location</p>
+          <div className="mb-6 flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold">Settings</h1>
+              <p className="text-sm text-slate-400">Manage your profile and location</p>
+            </div>
+            <Button type="button" onClick={() => signOut({ callbackUrl: "/" })} className="bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20">
+              Sign Out
+            </Button>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
