@@ -70,7 +70,7 @@ export function MobileBottomNav() {
           { name: "Home", href: "/", icon: Home },
           { name: "Search", href: "/search", icon: Search },
           { name: "Bookings", href: "/dashboard/bookings", icon: Calendar },
-          { name: "Offers", href: "/offers", icon: Gift },
+          { name: "Profile", href: "/dashboard/settings", icon: User },
         ]
 
   return (
