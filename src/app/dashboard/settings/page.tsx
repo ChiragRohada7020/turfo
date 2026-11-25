@@ -183,13 +183,11 @@ export default function SettingsPage() {
                   <Label className="text-slate-300">Role</Label>
                   <Input value={session?.user?.role || ""} disabled className="bg-[#182238] border-white/[0.08] text-slate-400" />
                 </div>
-                {session?.user?.role === "PLAYER" && (
-                  <div className="p-3 bg-white/5 rounded-2xl border border-white/10">
-                    <p className="text-xs text-slate-400">CIBIL Score</p>
-                    <p className="text-lg font-bold text-orange-400">{profile?.cibilScore || 750}</p>
-                    <p className="text-[10px] text-slate-500 mt-1">Join games and complete bookings to improve your score</p>
-                  </div>
-                )}
+                <div className="p-3 bg-white/5 rounded-2xl border border-white/10">
+                  <p className="text-xs text-slate-400">CIBIL Score</p>
+                  <p className="text-lg font-bold text-orange-400">{profile?.cibilScore || 750}</p>
+                  <p className="text-[10px] text-slate-500 mt-1">Join games and complete bookings to improve your score</p>
+                </div>
               </CardContent>
             </Card>
 

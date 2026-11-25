@@ -65,12 +65,10 @@ export default function LoginPageContent() {
         toast({ title: "Error", description: result.error, variant: "destructive" })
         return
       }
-      const session = await getSession()
-      const userRole = (session?.user as any)?.role
       let target = callbackUrl
-      if (userRole === "SPONSOR") target = "/dashboard/sponsor"
-      else if (userRole === "OWNER") target = "/dashboard"
-      else if (userRole === "ADMIN") target = "/admin"
+      if (role === "SPONSOR") target = "/dashboard/sponsor"
+      else if (role === "OWNER") target = "/dashboard"
+      else if (role === "ADMIN") target = "/admin"
       window.location.href = result?.url || target
     } catch (e: any) {
       toast({ title: "Error", description: e?.message || "Verification failed", variant: "destructive" })
@@ -100,12 +98,10 @@ export default function LoginPageContent() {
         toast({ title: "Error", description: result.error, variant: "destructive" })
         return
       }
-      const session = await getSession()
-      const userRole = (session?.user as any)?.role
       let target = callbackUrl
-      if (userRole === "SPONSOR") target = "/dashboard/sponsor"
-      else if (userRole === "OWNER") target = "/dashboard"
-      else if (userRole === "ADMIN") target = "/admin"
+      if (role === "SPONSOR") target = "/dashboard/sponsor"
+      else if (role === "OWNER") target = "/dashboard"
+      else if (role === "ADMIN") target = "/admin"
       window.location.href = result?.url || target
     } catch (e: any) {
       toast({ title: "Error", description: e?.message || "Registration failed", variant: "destructive" })
