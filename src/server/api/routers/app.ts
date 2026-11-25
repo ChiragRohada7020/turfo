@@ -2697,8 +2697,9 @@ payments: createTRPCRouter({
           const offerList = eligible.map((o: any) => ({ id: o.id, title: o.title, discountValue: o.discountValue, minBookingAmount: o.minBookingAmount }))
           const prompt = `You are an offer recommendation engine for a sports booking platform. Decide which offers to show to this player to increase engagement and bookings.
 Player stats: completedBookings=${completedCount}, totalBookings=${totalBookings}, cibilScore=${user?.cibilScore}, rewardPoints=${user?.rewardPoints}.
+If rewardPoints > 500, the player should also receive at least one offer (if available).
 Candidate offers: ${JSON.stringify(offerList)}.
-Return ONLY a JSON array of offer IDs to show to this player. Return at most 2 offer IDs. Distribute offers gradually to avoid showing all at once. If player has completed at least 3 bookings, favor rewarding them; otherwise show at most 1 offer.`
+Return ONLY a JSON array of offer IDs to show to this player. Return at most 2 offer IDs. Distribute offers gradually to avoid showing all at once. If player has completed at least 3 bookings or rewardPoints > 500, favor rewarding them; otherwise show at most 1 offer.`
           const res = await fetch(apiUrl, {
             method: "POST",
             headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
@@ -2729,8 +2730,9 @@ Return ONLY a JSON array of offer IDs to show to this player. Return at most 2 o
 
       // Fallback heuristic (gradual distribution)
       let result: any[] = []
-      if (completedCount >= 3) result = eligible.slice(0, 2)
+      if (completedCount >= 3 || (user?.rewardPoints || 0) > 500) result = eligible.slice(0, 2)
       else result = eligible.slice(0, 1)
+      if (result.length === 0 && eligible.length > 0 && (user?.rewardPoints || 0) > 500) result = eligible.slice(0, 1)
 
       // AI branch returns directly above; if reached here, store cache
       await prisma.offerRecommendation.upsert({
