@@ -236,11 +236,6 @@ export function BookingModal({ facility, courtId, date, slot, onClose }: Booking
       return
     }
 
-    if (!acknowledged) {
-      toast({ title: "Acknowledgment Required", description: "Please acknowledge the cancellation policy before proceeding", variant: "destructive" })
-      return
-    }
-
     setIsLoading(true)
     setError(null)
 
@@ -368,20 +363,6 @@ export function BookingModal({ facility, courtId, date, slot, onClose }: Booking
               </div>
             </div>
           </div>
-
-          {/* Acknowledgment */}
-          <label className="flex items-start gap-3 p-3 bg-[#17222d] rounded-lg border border-white/[0.08] cursor-pointer">
-            <input
-              type="checkbox"
-              checked={acknowledged}
-              onChange={(e) => setAcknowledged(e.target.checked)}
-              className="mt-1 w-4 h-4 rounded border-white/20 bg-[#121b24] text-lime-400 focus:ring-lime-400"
-              disabled={isLoading}
-            />
-            <span className="text-xs text-slate-300">
-              I understand and agree to the cancellation policy. I acknowledge that repeated cancellations may affect my credit score and could result in account suspension.
-            </span>
-          </label>
 
           <div>
             <label className="block text-sm font-medium mb-2 text-slate-300">Notes (Optional)</label>
