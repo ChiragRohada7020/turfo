@@ -93,7 +93,7 @@ function VerifyOfferInner() {
       scannerRef.current = scanner
       scanner
         .start(
-          { facingMode: "user" },
+          { facingMode: "environment" },
           { fps: 10, qrbox: { width: 250, height: 250 } },
           (decodedText) => {
             if (scanner) scanner.stop().then(() => { scannerRef.current = null; setScanning(false) }).catch(() => {})
