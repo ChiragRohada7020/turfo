@@ -587,7 +587,7 @@ function Sidebar({ items, active, onNavigate }: { items: any[]; active: (href: s
   return (
     <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto px-4 py-6">
       {items.map((item: any) => {
-        const isLocked = item.locked && !unlocked
+        const isLocked = item.locked && (item.name === "Teams" || !unlocked)
         return isLocked ? (
           <Link key={item.name} href={item.href} onClick={onNavigate} className="flex items-center gap-3 rounded-xl px-4 py-3.5 text-sm font-medium text-slate-500 opacity-60 transition hover:opacity-80">
             <item.icon className="h-[18px] w-[18px]" />{item.name}
