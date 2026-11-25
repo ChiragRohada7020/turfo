@@ -187,7 +187,12 @@ export default function OffersPage() {
                 const isUsed = redemption?.status === "REDEEMED"
                 const isClaimed = !!redemption
                 return (
-                <Card key={offer.id || offer.brand} className={`shrink-0 w-64 overflow-hidden rounded-2xl border-white/[0.09] bg-[#131C2E] transition hover:border-orange-400/30 ${isUsed ? "opacity-70" : ""}`}>
+                <Card key={offer.id || offer.brand} className={`relative shrink-0 w-64 overflow-hidden rounded-2xl border-white/[0.09] bg-[#131C2E] transition hover:border-orange-400/30 ${isUsed ? "opacity-70" : ""}`}>
+                  {isUsed && (
+                    <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/50 pointer-events-none">
+                      <span className="text-3xl font-black text-white/80 rotate-[-20deg] border-4 border-white/60 px-4 py-1 rounded-lg">USED</span>
+                    </div>
+                  )}
                   <CardContent className="p-4">
                     <div>
                     <div className="relative h-32 overflow-hidden rounded-xl border-white/[0.05] bg-[#17271e] flex items-center justify-center">
