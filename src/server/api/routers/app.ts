@@ -2504,7 +2504,7 @@ payments: createTRPCRouter({
             _count: { couponCode: true },
           }),
           prisma.offerRedemption.findMany({
-            where: { offerId: { in: offerIds } },
+            where: { offerId: { in: offerIds }, status: "REDEEMED" },
             select: { offerId: true, userId: true },
           }),
         ])
@@ -2540,12 +2540,12 @@ payments: createTRPCRouter({
         })
         const offerIds = offers.map((o) => o.id)
         return prisma.offerRedemption.findMany({
-          where: { offerId: { in: offerIds } },
+          where: { offerId: { in: offerIds }, status: "REDEEMED" },
           include: {
             user: { select: { id: true, name: true, email: true } },
             offer: { select: { id: true, code: true, title: true } },
           },
-          orderBy: { redeemedAt: "desc" },
+          orderBy: { usedAt: "desc" },
           take: input.limit,
         })
       }),
