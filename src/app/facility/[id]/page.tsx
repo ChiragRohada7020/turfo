@@ -528,7 +528,7 @@ const { data: availability, isLoading: availabilityLoading, refetch: refetchAvai
            else if (!isAvailableTime && !selectedSlot?.start) bgClass = "border-red-500/50 text-red-400 bg-red-500/10 cursor-not-allowed"
            else if (selectedSlot?.start && effectiveTimeMins <= toSlotMins(selectedSlot.start)) bgClass = "border-white/5 text-slate-600 cursor-not-allowed opacity-40"
             else if (!isOwner && selectedSlot?.start && (() => { const sm2 = toSlotMins(selectedSlot.start); let em2 = toSlotMins(time, true); if (em2 <= sm2) em2 += 1440; return (em2 - sm2) > 60 })()) bgClass = "border-white/5 text-slate-600 cursor-not-allowed opacity-40"
-            const isDisabled = selectedSlot?.start ? (idx <= startIndex || wouldOverlapBooked || !isAvailableTime || (!isOwner && (() => { const sm2 = toSlotMins(selectedSlot.start); let em2 = toSlotMins(time, true); if (em2 <= sm2) em2 += 1440; return (em2 - sm2) > 60 })())) : !isAvailableTime
+            const isDisabled = selectedSlot?.start && selectedSlot.start !== time ? (idx <= startIndex || wouldOverlapBooked || !isAvailableTime || (!isOwner && (() => { const sm2 = toSlotMins(selectedSlot.start); let em2 = toSlotMins(time, true); if (em2 <= sm2) em2 += 1440; return (em2 - sm2) > 60 })())) : !isAvailableTime
            return (
                 <button key={time} onClick={() => { 
                   if (selectedSlot?.start === time) { 
