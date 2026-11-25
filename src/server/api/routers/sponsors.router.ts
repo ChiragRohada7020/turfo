@@ -56,10 +56,24 @@ export const sponsorsRouter = createTRPCRouter({
     // Get sponsor by userId
     getByUser: protectedProcedure
       .query(async ({ ctx }) => {
-        return prisma.sponsor.findUnique({
+        let sponsor = await prisma.sponsor.findUnique({
           where: { userId: ctx.session.user.id },
           include: { offers: true },
         })
+        if (!sponsor && ctx.session.user.role === "SPONSOR") {
+          const user = await prisma.user.findUnique({ where: { id: ctx.session.user.id } })
+          sponsor = await prisma.sponsor.create({
+            data: {
+              name: user?.name || "Sponsor",
+              contactEmail: user?.email || `${user?.phone}@phone.local`,
+              userId: ctx.session.user.id,
+              isApproved: false,
+              isActive: true,
+            },
+            include: { offers: true },
+          })
+        }
+        return sponsor
       }),
 
     // Approve sponsor (admin)

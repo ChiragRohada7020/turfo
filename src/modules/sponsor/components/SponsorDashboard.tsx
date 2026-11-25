@@ -66,7 +66,7 @@ export default function SponsorDashboardPage() {
     imageUrl: "",
   })
 
-  const { data: sponsor } = trpc.sponsors.getByUser.useQuery()
+  const { data: sponsor } = trpc.sponsors.getByUser.useQuery(undefined, { enabled: !!session?.user?.id })
   const { data: offers, isLoading, refetch } = trpc.offers.myOffers.useQuery()
   const { data: recentRedemptions } = trpc.offers.recentRedemptions.useQuery({ limit: 5 })
 
