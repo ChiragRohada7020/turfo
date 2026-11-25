@@ -634,7 +634,7 @@ const { data: availability, isLoading: availabilityLoading, refetch: refetchAvai
                       </Button>
                     </div>
 
-                    <div className="fixed bottom-0 left-0 right-0 z-30 md:hidden bg-[#070d12]/95 backdrop-blur border-t border-white/10 p-3">
+                    <div className="fixed bottom-16 left-0 right-0 z-50 md:hidden bg-[#070d12]/95 backdrop-blur border-t border-white/10 p-3">
                       <Button
                         className="w-full bg-lime-400 font-bold text-black hover:bg-lime-300"
                         onClick={() => {

@@ -182,6 +182,7 @@ function TeamCard({
 
 export default function TeamsPage() {
   const { data: session, status } = useSession()
+  const unlockStatus = trpc.tasks.isUnlocked.useQuery()
   const [tab, setTab] = useState<"my" | "joined" | "invites">("my")
 
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null)
@@ -307,15 +308,6 @@ export default function TeamsPage() {
     )
   }
 
-  const unlockStatus = trpc.tasks.isUnlocked.useQuery()
-  if (unlockStatus.isLoading) return <div className="min-h-screen flex items-center justify-center text-slate-400">Loading...</div>
-  if (!unlockStatus.data?.unlocked) {
-    return (
-      <div className="min-h-screen bg-[#06100e] text-white">
-        <LockedFeatureGate>{null}</LockedFeatureGate>
-      </div>
-    )
-  }
 
   return (
     <div className="min-h-screen bg-[#06100e] text-white">

@@ -3,6 +3,7 @@
 import Link from "next/link"
 import Image from "next/image"
 import { motion, useReducedMotion } from "motion/react"
+import PwaInstallButton from "@/components/PwaInstallButton"
 import {
   ArrowRight,
   Bell,
@@ -236,6 +237,7 @@ export default function HomePageContent() {
               <Bell className="h-[18px] w-[18px]" />
               <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-orange-500 ring-2 ring-white" />
             </Link>
+            <PwaInstallButton />
             <Link
               href="/search"
               className="hidden rounded-xl bg-orange-500 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-orange-500/20 transition hover:-translate-y-0.5 hover:bg-orange-600 sm:inline-flex"

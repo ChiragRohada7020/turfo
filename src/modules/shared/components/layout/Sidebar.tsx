@@ -102,7 +102,7 @@ export function Sidebar({ session, extra, mobileOpen, onMobileOpenChange }: Side
         </nav>
         {extra && <div className="px-3 py-2">{extra}</div>}
         {session && (
-          <div className="border-t border-white/[0.08] p-4 md:hidden">
+          <div className="border-t border-white/[0.08] p-4 pb-20 md:hidden">
             <div className="flex items-center justify-between mb-3">
               <Link href="/notifications" onClick={() => setSidebarOpen(false)} className="relative flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-slate-300 hover:bg-white/5 hover:text-white">
                 <Bell className="h-4 w-4" /> Notifications

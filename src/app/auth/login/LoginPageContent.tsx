@@ -162,7 +162,7 @@ export default function LoginPageContent() {
 
             {step === "otp" && (
               <>
-                <h1 className="text-2xl font-black tracking-tight mb-6">Verify OTP</h1>
+                <h1 className="text-2xl font-black tracking-tight mb-6 text-black">Verify OTP</h1>
                 <div className="space-y-2 mb-4">
                   <Label htmlFor="otp" className="text-slate-700 font-semibold">OTP Code</Label>
                   <Input id="otp" placeholder="Enter OTP" value={otp} onChange={(e) => setOtp(e.target.value)} className="bg-white border-slate-200 text-slate-900 text-center text-2xl tracking-widest" />

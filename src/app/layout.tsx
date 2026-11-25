@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
+import PushNotificationRegistrar from "@/components/PushNotificationRegistrar"
+import { MobileBottomNav } from "@/components/layout/Header"
 import { Providers } from "./providers"
 import { Toaster } from "@/components/ui/toaster"
 
@@ -116,8 +118,10 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen bg-background font-sans text-foreground">
         <Providers>
-          <main className="min-h-screen">
+          <main className="min-h-screen pb-16 md:pb-0">
             {children}
+      <MobileBottomNav />
+      <PushNotificationRegistrar />
           </main>
           <Toaster />
         </Providers>

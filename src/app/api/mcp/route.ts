@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth/config"
 import prisma from "@/lib/prisma"
+import { sendPushToUser } from "@/lib/push"
 import { appRouter } from "@/server/api/routers/app"
 import bcrypt from "bcryptjs"
 import { encode, decode } from "next-auth/jwt"
@@ -40,6 +41,9 @@ const TOOLS = [
   { name: "admin.payouts", description: "Admin payouts", params: { status: "string", page: "number" } },
   { name: "sponsor.createOffer", description: "Create offer", params: { title: "string", description: "string", discount: "number", validFrom: "string", validTo: "string", targetCity: "string" } },
   { name: "sponsor.verifyCoupon", description: "Verify coupon", params: { code: "string" } },
+  { name: "notifications.send", description: "Send notification to a user", params: { userId: "string", email: "string", title: "string", message: "string", type: "string" } },
+  { name: "sponsor.activateOffer", description: "Activate an offer", params: { offerId: "string", isActive: "boolean" } },
+  { name: "sponsor.assignCoupon", description: "Assign a coupon to a player", params: { offerId: "string", userId: "string", email: "string", discountApplied: "number" } },
   { name: "promotions.ownerSettings", description: "Get owner promo settings", params: {} },
   { name: "promotions.updateOwnerSettings", description: "Update owner promo settings", params: {} },
   { name: "promotions.forecasts", description: "Get demand forecasts", params: { facilityId: "string", date: "string" } },
@@ -340,7 +344,15 @@ async function runTool(tool: string, params: any, req: NextRequest) {
       needAuth()
       const sponsor = await prisma.sponsor.findUnique({ where: { userId: ctx.session.user.id } })
       if (!sponsor) throw new Error("Sponsor not found")
-      const code = (p.code || `OFFER${Date.now()}`).toUpperCase()
+      let code = p.code
+      if (!code) {
+        const { randomBytes } = await import("crypto")
+        const bytes = randomBytes(6)
+        const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+        code = ""
+        for (let i = 0; i < bytes.length; i++) code += alphabet[bytes[i] % alphabet.length]
+      }
+      code = code.toUpperCase()
       return await c.offers.create({
         sponsorId: sponsor.id,
         code,
@@ -359,6 +371,71 @@ async function runTool(tool: string, params: any, req: NextRequest) {
         targetCity: p.targetCity,
         imageUrl: p.imageUrl || p.image,
       })
+    }
+    case "sponsor.assignCoupon":
+    case "assign_coupon":
+    case "issue_coupon": {
+      needAuth()
+      const offer = await prisma.offer.findUnique({ where: { id: p.offerId } })
+      if (!offer) throw new Error("Offer not found")
+      const targetUser = p.userId
+        ? await prisma.user.findUnique({ where: { id: p.userId } })
+        : await prisma.user.findUnique({ where: { email: (p.email || "").toLowerCase() } })
+      if (!targetUser) throw new Error("User not found")
+      // sponsor ownership check (admins bypass)
+      if (ctx.session.user.role !== "ADMIN") {
+        const sponsor = await prisma.sponsor.findUnique({ where: { userId: ctx.session.user.id } })
+        if (!sponsor || sponsor.id !== offer.sponsorId) throw new Error("Not authorized for this offer")
+      }
+      const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+      const length = Math.min(32, Math.max(12, Number(p.codeLength) || 16))
+      const { randomBytes } = await import("crypto")
+      const bytes = randomBytes(length)
+      let code = ""
+      for (let i = 0; i < length; i++) code += alphabet[bytes[i] % alphabet.length]
+      const grouped = code.match(/.{1,4}/g)?.join("-") || code
+      const redemption = await prisma.offerRedemption.create({
+        data: {
+          offerId: offer.id,
+          userId: targetUser.id,
+          verificationCode: code,
+          discountApplied: p.discountApplied ?? offer.discountValue,
+          status: "ACTIVE",
+        },
+      })
+      return { verificationCode: code, displayCode: grouped, redemptionId: redemption.id, offerId: offer.id, userId: targetUser.id }
+    }
+    case "sponsor.activateOffer":
+    case "activate_offer":
+    case "update_offer": {
+      needAuth()
+      const offer = await prisma.offer.findUnique({ where: { id: p.offerId } })
+      if (!offer) throw new Error("Offer not found")
+      if (ctx.session.user.role !== "ADMIN") {
+        const sponsor = await prisma.sponsor.findUnique({ where: { userId: ctx.session.user.id } })
+        if (!sponsor || sponsor.id !== offer.sponsorId) throw new Error("Not authorized")
+      }
+      const updated = await prisma.offer.update({ where: { id: p.offerId }, data: { isActive: p.isActive !== false } })
+      return updated
+    }
+    case "notifications.send":
+    case "send_notification":
+    case "notify_user": {
+      needAuth()
+      const targetUser = p.userId
+        ? await prisma.user.findUnique({ where: { id: p.userId } })
+        : await prisma.user.findUnique({ where: { email: (p.email || "").toLowerCase() } })
+      if (!targetUser) throw new Error("User not found")
+      const notif = await prisma.notification.create({
+        data: {
+          userId: targetUser.id,
+          type: p.type || "SYSTEM",
+          title: p.title || "Notification",
+          message: p.message || "",
+        },
+      })
+      await sendPushToUser(targetUser.id, { title: p.title || "Notification", body: p.message || "", url: "/" })
+      return { success: true, notificationId: notif.id, userId: targetUser.id }
     }
     case "sponsor.verifyCoupon":
     case "verify_coupon":

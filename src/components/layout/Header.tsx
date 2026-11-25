@@ -20,6 +20,10 @@ import {
   User,
   MapPin,
   ChevronDown,
+  Gift,
+  Building2,
+  Wallet,
+  QrCode,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -37,17 +41,42 @@ const navigation = [
   { name: "Home", href: "/", icon: Home },
   { name: "Search", href: "/search", icon: Search },
   { name: "Bookings", href: "/dashboard/bookings", icon: Calendar },
-  { name: "Teams", href: "/dashboard/teams", icon: Users },
+  { name: "Offers", href: "/offers", icon: Gift },
 ]
 
 export function MobileBottomNav() {
   const pathname = usePathname()
   const { data: session } = useSession()
+  const role = (session?.user as any)?.role
+
+  if (pathname === "/" || pathname.startsWith("/auth")) return null
+
+  const navItems =
+    role === "OWNER"
+      ? [
+          { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+          { name: "Facilities", href: "/dashboard/facilities", icon: Building2 },
+          { name: "Bookings", href: "/dashboard/bookings", icon: Calendar },
+          { name: "Scan QR", href: "/dashboard/verify", icon: QrCode },
+        ]
+      : role === "SPONSOR"
+      ? [
+          { name: "Dashboard", href: "/dashboard/sponsor", icon: LayoutDashboard },
+          { name: "Offers", href: "/dashboard/sponsor/offers", icon: Gift },
+          { name: "Verify", href: "/dashboard/verify-offer", icon: QrCode },
+          { name: "Profile", href: "/dashboard/settings", icon: User },
+        ]
+      : [
+          { name: "Home", href: "/", icon: Home },
+          { name: "Search", href: "/search", icon: Search },
+          { name: "Bookings", href: "/dashboard/bookings", icon: Calendar },
+          { name: "Offers", href: "/offers", icon: Gift },
+        ]
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-background border-t border-border">
       <div className="grid grid-cols-4">
-        {navigation.map((item) => {
+        {navItems.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(item.href + "/")
           return (
             <Link

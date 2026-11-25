@@ -204,9 +204,20 @@ export default function OffersPage() {
                     </div>
                     <div className="mt-4 flex items-start justify-between">
                       <div className="min-w-0">
-                        <p className="text-xs font-bold text-orange-400">{offer.sponsorName || offer.category}</p>
+                        <p className="text-xs font-bold text-orange-400">{offer.sponsor?.name || offer.sponsorName || offer.category}</p>
                         <h3 className="mt-1 font-bold text-white">{offer.title}</h3>
                         <p className="mt-1 text-xs text-slate-400">{offer.description || offer.subtitle}</p>
+                        <p className="mt-1 text-[10px] text-slate-500">Valid till {offer.validTo ? new Date(offer.validTo).toLocaleDateString() : "-"}</p>
+                        {(offer.sponsor?.user?.city || offer.targetCity) && (
+                          <a
+                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([offer.sponsor?.user?.city || offer.targetCity, offer.sponsor?.user?.state].filter(Boolean).join(", "))}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-1 inline-flex items-center gap-1 text-[10px] text-orange-300 hover:text-orange-200"
+                          >
+                            <MapPin className="h-3 w-3" /> {offer.sponsor?.user?.city || offer.targetCity}{offer.sponsor?.user?.state ? `, ${offer.sponsor.user.state}` : ""}
+                          </a>
+                        )}
                       </div>
                       <div className="text-right">
                         <span className="text-2xl font-black text-orange-400">
