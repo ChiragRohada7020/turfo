@@ -35,6 +35,7 @@ export default function SponsorOffersPage() {
     code: "",
     title: "",
     description: "",
+    terms: "",
     discountType: "PERCENTAGE",
     discountValue: 10,
     minBookingAmount: 0,
@@ -152,6 +153,10 @@ export default function SponsorOffersPage() {
                     <div className="space-y-2">
                       <Label className="text-slate-300">Description</Label>
                       <Textarea value={newOffer.description} onChange={(e) => setNewOffer({ ...newOffer, description: e.target.value })} placeholder="Describe your offer" className="bg-[#182238] border-white/10 text-white focus:border-orange-400 min-h-[80px]" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-slate-300">Terms & Conditions</Label>
+                      <Textarea value={newOffer.terms} onChange={(e) => setNewOffer({ ...newOffer, terms: e.target.value })} placeholder="Add terms and conditions" className="bg-[#182238] border-white/10 text-white focus:border-orange-400 min-h-[80px]" />
                     </div>
                   </div>
 

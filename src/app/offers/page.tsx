@@ -43,6 +43,7 @@ export default function OffersPage() {
   const { data: session } = useSession()
   const [activeFilter, setActiveFilter] = useState("All Offers")
   const [selectedOffer, setSelectedOffer] = useState<any>(null)
+  const [termsOfferId, setTermsOfferId] = useState<string | null>(null)
   const utils = trpc.useUtils()
   const createRedemption = trpc.offers.createRedemption.useMutation({
     onSuccess: () => {
@@ -207,6 +208,11 @@ export default function OffersPage() {
                         <p className="text-xs font-bold text-orange-400">{offer.sponsor?.name || offer.sponsorName || offer.category}</p>
                         {(offer.sponsor?.city || offer.sponsorCity) && <p className="text-[10px] text-slate-500">{offer.sponsor?.city || offer.sponsorCity}{(offer.sponsor?.state || offer.sponsorState) ? `, ${offer.sponsor?.state || offer.sponsorState}` : ""}</p>}
                         <h3 className="mt-1 font-bold text-white">{offer.title}</h3>
+                        {offer.terms && (
+                          <button onClick={() => setTermsOfferId(termsOfferId === offer.id ? null : offer.id)} className="text-slate-400 hover:text-orange-400">
+                            <Info className="h-4 w-4" />
+                          </button>
+                        )}
                         <p className="mt-1 text-xs text-slate-400">{offer.description || offer.subtitle}</p>
                         <p className="mt-1 text-[10px] text-slate-500">Valid till {offer.validTo ? new Date(offer.validTo).toLocaleDateString() : "-"}</p>
                         {(offer.sponsor?.user?.city || offer.targetCity) && (
@@ -227,6 +233,9 @@ export default function OffersPage() {
                         <p className="text-[10px] text-slate-400">OFF</p>
                       </div>
                     </div>
+                    {termsOfferId === offer.id && offer.terms && (
+                      <p className="mt-2 text-xs text-slate-400 border-t border-white/10 pt-2">{offer.terms}</p>
+                    )}
                     <div className="mt-4">
                       <Button className="w-full bg-orange-400 font-bold text-black hover:bg-orange-300 text-sm py-2.5" onClick={() => handleUseOffer(offer)} disabled={createRedemption.isPending || isUsed}>
                         {isUsed ? "Used" : createRedemption.isPending ? "Generating..." : "Use Offer"}

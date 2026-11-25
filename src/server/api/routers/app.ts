@@ -2396,6 +2396,7 @@ payments: createTRPCRouter({
         targetSport: z.nativeEnum(SportType).optional(),
         targetCity: z.string().optional(),
         imageUrl: z.string().optional(),
+        terms: z.string().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         let sponsorId = input.sponsorId

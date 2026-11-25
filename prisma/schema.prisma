@@ -276,6 +276,7 @@ model Offer {
   targetSport      SportType?
   targetCity       String?
   imageUrl         String?
+  terms            String?
   impressions      Int        @default(0)
   clicks           Int        @default(0)
   isActive         Boolean    @default(true)
