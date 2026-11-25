@@ -2594,7 +2594,17 @@ payments: createTRPCRouter({
         select: { couponCode: true, isHoldout: true },
       })
       const codes = recipients.filter((r) => !r.isHoldout).map((r) => r.couponCode)
-      if (codes.length === 0) return []
+      if (codes.length === 0) {
+        // Fallback: show offers that have been assigned to this user via redemptions
+        const userRedemptions = await prisma.offerRedemption.findMany({ where: { userId: ctx.session.user.id, status: "ACTIVE" }, select: { offerId: true } })
+        const assignedOfferIds = userRedemptions.map((r) => r.offerId)
+        if (assignedOfferIds.length === 0) return []
+        const assignedOffers = await prisma.offer.findMany({
+          where: { id: { in: assignedOfferIds }, isActive: true, validFrom: { lte: now }, validTo: { gte: now }, sponsor: { isApproved: true, isActive: true } },
+          include: { sponsor: { select: { name: true, logoUrl: true, budget: true, spentBudget: true } } },
+        })
+        return assignedOffers.filter((o: any) => o.usedCount < o.maxUses && o.sponsor.spentBudget < o.sponsor.budget)
+      }
 
       const offers = await prisma.offer.findMany({
         where: {
