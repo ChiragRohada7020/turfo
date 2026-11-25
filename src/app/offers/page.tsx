@@ -205,6 +205,7 @@ export default function OffersPage() {
                     <div className="mt-4 flex items-start justify-between">
                       <div className="min-w-0">
                         <p className="text-xs font-bold text-orange-400">{offer.sponsor?.name || offer.sponsorName || offer.category}</p>
+                        {(offer.sponsor?.city || offer.sponsorCity) && <p className="text-[10px] text-slate-500">{offer.sponsor?.city || offer.sponsorCity}{(offer.sponsor?.state || offer.sponsorState) ? `, ${offer.sponsor?.state || offer.sponsorState}` : ""}</p>}
                         <h3 className="mt-1 font-bold text-white">{offer.title}</h3>
                         <p className="mt-1 text-xs text-slate-400">{offer.description || offer.subtitle}</p>
                         <p className="mt-1 text-[10px] text-slate-500">Valid till {offer.validTo ? new Date(offer.validTo).toLocaleDateString() : "-"}</p>
