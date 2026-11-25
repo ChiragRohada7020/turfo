@@ -111,15 +111,29 @@ function VerifyBookingInner() {
   useEffect(() => {
     if (!scanning) return
     let cancelled = false
-    try {
-      const scanner = new Html5Qrcode("qr-reader")
+    let scanner: Html5Qrcode | null = null
+    let timeoutId: ReturnType<typeof setTimeout> | null = null
+
+    const init = () => {
+      if (cancelled) return
+      if (!document.getElementById("qr-reader")) {
+        timeoutId = setTimeout(init, 50)
+        return
+      }
+      try {
+        scanner = new Html5Qrcode("qr-reader")
+      } catch (err: any) {
+        setScanError(err?.message || "Camera not available - please enter code manually")
+        setScanning(false)
+        return
+      }
       scannerRef.current = scanner
       scanner
         .start(
-          { facingMode: "environment" },
+          { facingMode: "user" },
           { fps: 10, qrbox: { width: 250, height: 250 } },
           (decodedText) => {
-            scanner.stop().then(() => {
+            if (scanner) scanner.stop().then(() => {
               scannerRef.current = null
               setScanning(false)
             }).catch(() => {})
@@ -129,18 +143,22 @@ function VerifyBookingInner() {
         )
         .catch((err: any) => {
           if (cancelled) return
-          console.error("Scanner error:", err)
-          setScanError(err?.message || "Failed to start camera - please enter code manually")
+                    const raw = typeof err === "string" ? err : (err?.message || "Failed to start camera - please enter code manually")
+          const msg = /permission|notallowed/i.test(raw) ? "Camera permission blocked. Allow camera in browser settings, then try again." : raw
+                    setScanError(msg)
+          toast({ title: "Camera error", description: msg, variant: "destructive" })
+          scannerRef.current = null
           setScanning(false)
         })
-    } catch (err: any) {
-      setScanError(err?.message || "Camera not available - please enter code manually")
-      setScanning(false)
     }
+
+    init()
+
     return () => {
       cancelled = true
+      if (timeoutId) clearTimeout(timeoutId)
       if (scannerRef.current) {
-        scannerRef.current.stop().catch(() => {})
+        try { scannerRef.current.stop().catch(() => {}) } catch (e) {}
         scannerRef.current = null
       }
     }
@@ -205,7 +223,7 @@ function VerifyBookingInner() {
           </div>
 
           {/* QR Scanner */}
-          {scanning && (
+          <div className={scanning ? "" : "hidden"}>
             <Card className="bg-[#131C2E] border-white/10 mb-4">
               <CardContent className="p-4">
                 <div id="qr-reader" className="w-full" />
@@ -217,8 +235,11 @@ function VerifyBookingInner() {
                 </p>
               </CardContent>
             </Card>
-          )}
+          </div>
 
+          {scanError && !scanning && (
+            <p className="text-red-400 text-sm mb-2">{scanError}</p>
+          )}
           {/* Manual entry */}
           {!scanning && !showConfirm && (
             <Card className="bg-[#131C2E] border-white/10 mb-6">

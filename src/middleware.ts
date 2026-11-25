@@ -25,7 +25,7 @@ export default withAuth(
         path.startsWith("/dashboard/analytics") ||
         path.startsWith("/dashboard/promotions") ||
         path.startsWith("/dashboard/campaigns") ||
-        path.startsWith("/dashboard/verify")
+        (path === "/dashboard/verify" || path.startsWith("/dashboard/verify/"))
       ) {
         if (token.role !== "OWNER" && token.role !== "ADMIN") {
           if (token.role === "SPONSOR") return NextResponse.redirect(new URL("/dashboard/sponsor", req.url))

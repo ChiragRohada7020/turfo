@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { useSession } from "next-auth/react"
 import Link from "next/link"
@@ -13,7 +13,7 @@ import { toast } from "@/hooks/use-toast"
 import { Sidebar } from "@/components/layout/Sidebar"
 import { TopNavbar } from "@/modules/shared/components/layout/TopNavbar"
 
-export default function VerifyOfferPage() {
+function VerifyOfferInner() {
   const { data: session, status } = useSession()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [code, setCode] = useState("")
@@ -71,27 +71,54 @@ export default function VerifyOfferPage() {
   useEffect(() => {
     if (!scanning) return
     let cancelled = false
-    const scanner = new Html5Qrcode("offer-qr-reader")
-    scannerRef.current = scanner
-    scanner
-      .start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: { width: 250, height: 250 } },
-        (decodedText) => {
-          scanner.stop().then(() => { scannerRef.current = null; setScanning(false) }).catch(() => {})
-          handleVerify(decodedText)
-        },
-        () => {}
-      )
-      .catch((err: any) => {
-        if (cancelled) return
-        setScanError(err?.message || "Failed to start camera")
+    let scanner: Html5Qrcode | null = null
+    let timeoutId: ReturnType<typeof setTimeout> | null = null
+
+    const init = () => {
+      if (cancelled) return
+      if (!document.getElementById("offer-qr-reader")) {
+        timeoutId = setTimeout(init, 50)
+        return
+      }
+      try {
+        scanner = new Html5Qrcode("offer-qr-reader")
+      } catch (err: any) {
+        const raw = typeof err === "string" ? err : (err?.message || "Camera element not ready")
+        const msg = /permission|notallowed/i.test(raw) ? "Camera permission blocked. Allow camera in browser settings, then try again." : raw
+                setScanError(msg)
+        toast({ title: "Camera error", description: msg, variant: "destructive" })
         setScanning(false)
-      })
+        return
+      }
+      scannerRef.current = scanner
+      scanner
+        .start(
+          { facingMode: "user" },
+          { fps: 10, qrbox: { width: 250, height: 250 } },
+          (decodedText) => {
+            if (scanner) scanner.stop().then(() => { scannerRef.current = null; setScanning(false) }).catch(() => {})
+            handleVerify(decodedText)
+          },
+          () => {}
+        )
+        .catch((err: any) => {
+          if (cancelled) return
+          const raw = typeof err === "string" ? err : (err?.message || "Failed to start camera")
+          const msg = /permission|notallowed/i.test(raw) ? "Camera permission blocked. Allow camera in browser settings, then try again." : raw
+                    setScanError(msg)
+          toast({ title: "Camera error", description: msg, variant: "destructive" })
+          scannerRef.current = null
+          setScanning(false)
+        })
+    }
+
+    init()
+
     return () => {
       cancelled = true
+      if (timeoutId) clearTimeout(timeoutId)
       if (scannerRef.current) {
-        scannerRef.current.stop().catch(() => {})
+        try { scannerRef.current.stop().catch(() => {}) } catch (e) {}
         scannerRef.current = null
       }
     }
@@ -103,7 +130,7 @@ export default function VerifyOfferPage() {
 
   useEffect(() => {
     return () => {
-      if (scannerRef.current) scannerRef.current.stop().catch(() => {})
+      if (scannerRef.current) { try { scannerRef.current.stop().catch(() => {}) } catch (e) {} }
     }
   }, [])
 
@@ -169,8 +196,7 @@ export default function VerifyOfferPage() {
                   </Button>
                 </div>
 
-                {scanning && (
-                  <div className="mb-5">
+                <div className={scanning ? "mb-5" : "hidden"}>
                     <div className="relative mx-auto max-w-sm overflow-hidden rounded-2xl border border-orange-400/30 bg-black/40 shadow-inner">
                       <div id="offer-qr-reader" className="w-full" />
                       <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-inset ring-orange-400/20" />
@@ -185,8 +211,13 @@ export default function VerifyOfferPage() {
                       Point the camera at the QR code shown on the player's device
                     </p>
                   </div>
-                )}
 
+                {scanError && (
+                  <div className="mb-3 flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/5 px-3 py-2 text-sm text-red-400">
+                    <AlertTriangle className="h-4 w-4 shrink-0" />
+                    {scanError}
+                  </div>
+                )}
                 <div className="flex flex-col sm:flex-row gap-2">
                   <input
                     value={code}
@@ -307,5 +338,14 @@ export default function VerifyOfferPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+
+export default function VerifyOfferPage() {
+  return (
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center bg-[#0B1020]"><div className="h-8 w-8 animate-spin rounded-full border-2 border-orange-400 border-t-transparent" /></div>}>
+      <VerifyOfferInner />
+    </Suspense>
   )
 }
