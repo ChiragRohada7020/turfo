@@ -90,6 +90,7 @@ export default function BookingsPage() {
   const refetch: any = isOwner ? refetchOwner : refetchMy
 
   const cancelBooking = trpc.bookings.cancel.useMutation()
+  const completeBooking = trpc.bookings.complete.useMutation({ onSuccess: () => { refetch(); toast({ title: "Completed", description: "Booking marked as completed." }) }, onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }) })
 
   const togglePublic = trpc.bookings.togglePublic.useMutation({
     onSuccess: () => {
@@ -572,6 +573,17 @@ export default function BookingsPage() {
                                   </span>
                                 </button>
                               )}
+
+                            {booking.status === "CONFIRMED" && booking.userId !== booking.facility?.ownerId && (
+                              <button
+                                onClick={() => completeBooking.mutate({ bookingId: booking.id })}
+                                disabled={completeBooking.isPending}
+                                className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-orange-400 px-4 py-3 font-bold text-black transition hover:bg-orange-300 disabled:opacity-50"
+                              >
+                                <CheckCircle2 className="h-5 w-5" />
+                                {completeBooking.isPending ? "Completing..." : "Complete Booking (No Scan)"}
+                              </button>
+                            )}
 
                             {booking.status === "CONFIRMED" && booking.userId === booking.facility?.ownerId && (
                               <button

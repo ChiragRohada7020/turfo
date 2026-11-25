@@ -2159,6 +2159,64 @@ Thank you for playing! 🌐 https://strikora.in`
           status: "COMPLETED",
         }
       }),
+
+    complete: ownerProcedure
+      .input(z.object({ bookingId: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        const booking = await prisma.booking.findFirst({
+          where: { id: input.bookingId, facility: { ownerId: ctx.session.user.id } },
+          include: { facility: true, user: { select: { name: true, email: true, phone: true } } },
+        })
+        if (!booking) throw new Error("Booking not found or access denied")
+        if (booking.status === BookingStatus.CANCELLED) throw new Error("Booking is cancelled")
+        if (booking.status === BookingStatus.COMPLETED) throw new Error("Booking already completed")
+
+        await prisma.booking.update({ where: { id: booking.id }, data: { status: BookingStatus.COMPLETED } })
+
+        try { await onBookingCompleted(booking.userId, booking.id) } catch (e) { console.error(e) }
+
+        const rewardPointsEarned = Math.max(1, Math.round((booking.duration / 60) * 5))
+        let totalRewardPoints = 0
+        try {
+          const { creditPoints } = await import("@/lib/tasks/reward")
+          await creditPoints({
+            userId: booking.userId,
+            points: rewardPointsEarned,
+            description: `Reward for completed booking (${booking.duration} min)`,
+            referenceId: booking.id,
+            idempotencyKey: `booking-reward:${booking.id}`,
+          })
+          const u = await prisma.user.findUnique({ where: { id: booking.userId }, select: { rewardPoints: true } })
+          totalRewardPoints = u?.rewardPoints || 0
+        } catch (e) { console.error("Failed to credit reward points:", e) }
+
+        await prisma.notification.create({
+          data: {
+            userId: booking.userId,
+            type: "BOOKING_CONFIRMED",
+            title: "Booking Completed",
+            message: `Your booking has been completed. You earned ${rewardPointsEarned} reward points. Total reward points: ${totalRewardPoints}.`,
+            data: { bookingId: booking.id },
+          },
+        })
+
+        if (booking.user?.phone) {
+          try {
+            const { sendWhatsAppMessage } = await import("@/lib/whatsapp/service")
+            const msg = `✅ *Booking Completed*
+
+🏟️ *Facility:* ${booking.facility?.name || ""}
+⏱️ *Duration:* ${booking.duration} minutes
+🎁 *Reward Points Earned:* ${rewardPointsEarned}
+⭐ *Total Reward Points:* ${totalRewardPoints}
+
+Thank you for playing! 🌐 https://strikora.in`
+            await sendWhatsAppMessage(booking.user.phone, msg)
+          } catch (e) { console.error("Failed to send WhatsApp completion message:", e) }
+        }
+
+        return { success: true, bookingId: booking.id }
+      }),
   }),
 
 payments: createTRPCRouter({
