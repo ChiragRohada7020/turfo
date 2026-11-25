@@ -57,7 +57,7 @@ export const OWNER_NAV: NavItem[] = [
 export const SPONSOR_NAV: NavItem[] = [
   { name: "Dashboard", href: "/dashboard", icon: Home },
   { name: "My Offers", href: "/dashboard/sponsor/offers", icon: Gift },
-  { name: "Verify Coupon", href: "/dashboard/verify-offer", icon: QrCode },
+  { name: "Verify Coupon", href: "/dashboard/verify-offer?scan=1", icon: QrCode },
   { name: "Notifications", href: "/notifications", icon: Bell },
   { name: "Settings", href: "/dashboard/settings", icon: Settings },
   { name: "Support", href: "/support", icon: ShieldCheck },

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import { useSession } from "next-auth/react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -18,6 +19,8 @@ export default function VerifyOfferPage() {
   const [code, setCode] = useState("")
   const [result, setResult] = useState<any>(null)
   const [loading, setLoading] = useState(false)
+  const searchParams = useSearchParams()
+  const autoScan = searchParams.get("scan") === "1"
   const [scanning, setScanning] = useState(false)
   const [scanError, setScanError] = useState<string | null>(null)
   const scannerRef = useRef<Html5Qrcode | null>(null)
@@ -60,6 +63,10 @@ export default function VerifyOfferPage() {
     setScanning(true)
     setResult(null)
   }
+
+  useEffect(() => {
+    if (autoScan) setScanning(true)
+  }, [autoScan])
 
   useEffect(() => {
     if (!scanning) return
