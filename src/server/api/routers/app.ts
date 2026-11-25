@@ -2583,7 +2583,7 @@ payments: createTRPCRouter({
       const cached = await prisma.offerRecommendation.findUnique({ where: { userId: ctx.session.user.id } })
       if (cached && cached.expiresAt > now) {
         const cachedOffers = await prisma.offer.findMany({
-          where: { id: { in: cached.offerIds }, isActive: true, validFrom: { lte: now }, validTo: { gte: now }, sponsor: { isApproved: true, isActive: true } },
+          where: { id: { in: cached.offerIds }, validFrom: { lte: now }, validTo: { gte: now }, sponsor: { isApproved: true, isActive: true }, OR: [{ isActive: true }, { redemptions: { some: { userId: ctx.session.user.id } } }] },
           include: { sponsor: { select: { name: true, logoUrl: true, budget: true, spentBudget: true, user: { select: { city: true, state: true } } } } },
         })
         return cachedOffers.filter((o: any) => o.usedCount < o.maxUses && o.sponsor.spentBudget < o.sponsor.budget)
@@ -2600,7 +2600,7 @@ payments: createTRPCRouter({
         const assignedOfferIds = userRedemptions.map((r) => r.offerId)
         if (assignedOfferIds.length === 0) return []
         const assignedOffers = await prisma.offer.findMany({
-          where: { id: { in: assignedOfferIds }, isActive: true, validFrom: { lte: now }, validTo: { gte: now }, sponsor: { isApproved: true, isActive: true } },
+          where: { id: { in: assignedOfferIds }, validFrom: { lte: now }, validTo: { gte: now }, sponsor: { isApproved: true, isActive: true }, OR: [{ isActive: true }, { redemptions: { some: { userId: ctx.session.user.id } } }] },
           include: { sponsor: { select: { name: true, logoUrl: true, budget: true, spentBudget: true, user: { select: { city: true, state: true } } } } },
         })
         return assignedOffers.filter((o: any) => o.usedCount < o.maxUses && o.sponsor.spentBudget < o.sponsor.budget)
@@ -2609,10 +2609,10 @@ payments: createTRPCRouter({
       const offers = await prisma.offer.findMany({
         where: {
           code: { in: codes },
-          isActive: true,
           validFrom: { lte: now },
           validTo: { gte: now },
           sponsor: { isApproved: true, isActive: true },
+          OR: [{ isActive: true }, { redemptions: { some: { userId: ctx.session.user.id } } }],
         },
         include: { sponsor: { select: { name: true, logoUrl: true, budget: true, spentBudget: true, user: { select: { city: true, state: true } } } } },
       })
