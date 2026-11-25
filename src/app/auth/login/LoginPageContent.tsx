@@ -69,7 +69,7 @@ export default function LoginPageContent() {
       if (role === "SPONSOR") target = "/dashboard/sponsor"
       else if (role === "OWNER") target = "/dashboard"
       else if (role === "ADMIN") target = "/admin"
-      window.location.href = result?.url || target
+      window.location.href = target
     } catch (e: any) {
       toast({ title: "Error", description: e?.message || "Verification failed", variant: "destructive" })
     } finally {
@@ -102,7 +102,7 @@ export default function LoginPageContent() {
       if (role === "SPONSOR") target = "/dashboard/sponsor"
       else if (role === "OWNER") target = "/dashboard"
       else if (role === "ADMIN") target = "/admin"
-      window.location.href = result?.url || target
+      window.location.href = target
     } catch (e: any) {
       toast({ title: "Error", description: e?.message || "Registration failed", variant: "destructive" })
     } finally {
