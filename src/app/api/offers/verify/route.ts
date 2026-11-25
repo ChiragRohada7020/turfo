@@ -34,8 +34,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if sponsor or admin
-    if (!redemption.offer.sponsor || (session.user.role !== "ADMIN" && redemption.offer.sponsor.userId !== session.user.id)) {
-      return NextResponse.json({ error: "This coupon belongs to a different sponsor account" }, { status: 403 })
+    if (!redemption.offer.sponsor || (session.user.role !== "ADMIN" && session.user.role !== "SPONSOR")) {
+      return NextResponse.json({ error: "Access denied" }, { status: 403 })
     }
 
     const validityDays = (redemption.offer as any).validityDays || 30
