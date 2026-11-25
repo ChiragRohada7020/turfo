@@ -217,7 +217,7 @@ export default function OffersPage() {
                     </div>
                     <div className="mt-4">
                       <Button className="w-full bg-orange-400 font-bold text-black hover:bg-orange-300 text-sm py-2.5" onClick={() => handleUseOffer(offer)} disabled={createRedemption.isPending || isUsed}>
-                        {isUsed ? "Used" : isClaimed ? "View Code" : createRedemption.isPending ? "Generating..." : "Use Offer"}
+                        {isUsed ? "Used" : createRedemption.isPending ? "Generating..." : "Use Offer"}
                       </Button>
                     </div>
                     </div>
