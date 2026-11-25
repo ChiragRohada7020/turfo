@@ -55,6 +55,11 @@ export default function OffersPage() {
   const pendingCount = totalRedemptions - redeemedCount
   const redeemedPoints = (myRedemptions || []).filter((r: any) => r.status === "REDEEMED").reduce((sum: number, r: any) => sum + (r.discountApplied || 0), 0)
   const handleUseOffer = async (offer: any) => {
+    const existing = myRedemptions?.find((r: any) => r.offerId === offer.id || r.offer?.id === offer.id)
+    if (existing?.verificationCode) {
+      setSelectedOffer({ ...offer, verificationCode: existing.verificationCode })
+      return
+    }
     try {
       const res = await createRedemption.mutateAsync({ offerId: offer.id })
       setSelectedOffer({ ...offer, verificationCode: res.verificationCode })
@@ -206,8 +211,8 @@ export default function OffersPage() {
                       </div>
                     </div>
                     <div className="mt-4">
-                      <Button className="w-full bg-orange-400 font-bold text-black hover:bg-orange-300 text-sm py-2.5" onClick={() => handleUseOffer(offer)} disabled={createRedemption.isPending || isClaimed}>
-                        {isUsed ? "Used" : isClaimed ? "Claimed" : createRedemption.isPending ? "Generating..." : "Use Offer"}
+                      <Button className="w-full bg-orange-400 font-bold text-black hover:bg-orange-300 text-sm py-2.5" onClick={() => handleUseOffer(offer)} disabled={createRedemption.isPending || isUsed}>
+                        {isUsed ? "Used" : isClaimed ? "View Code" : createRedemption.isPending ? "Generating..." : "Use Offer"}
                       </Button>
                     </div>
                     </div>
